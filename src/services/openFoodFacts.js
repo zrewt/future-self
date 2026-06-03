@@ -16,106 +16,116 @@ export function detectServingKey(name) {
   return null
 }
 
-// Words that indicate a processed/branded/prepared item — filter these out
-const JUNK_WORDS = [
+// These words in a food name mean it's not a raw ingredient
+const EXCLUDE_WORDS = [
+  'dried', 'dehydrated', 'concentrate', 'powder', 'freeze-dried',
   'sauce', 'seasoning', 'flavored', 'flavour', 'seasoned', 'breaded',
-  'frozen', 'canned', 'prepared', 'restaurant', 'fast food', 'brand',
-  'mix', 'instant', 'powder', 'supplement', 'extract', 'concentrate',
-  'baby food', 'infant', 'formula', 'drink', 'beverage', 'juice blend',
+  'frozen', 'canned', 'prepared', 'restaurant', 'fast food',
+  'mix', 'instant', 'supplement', 'extract', 'syrup', 'juice',
+  'baby food', 'infant', 'formula', 'drink', 'beverage',
   'spread', 'dip', 'dressing', 'marinade', 'glaze', 'battered',
+  'pickled', 'smoked', 'salted', 'sweetened', 'coated',
 ]
 
-function isJunk(name) {
+function isExcluded(name) {
   const lower = name.toLowerCase()
-  return JUNK_WORDS.some((w) => lower.includes(w))
+  return EXCLUDE_WORDS.some((w) => lower.includes(w))
 }
 
 function getNutrient(nutrients, name, unit) {
   const n = nutrients.find(
-    (x) => x.nutrientName?.toLowerCase().includes(name) &&
+    (x) =>
+      x.nutrientName?.toLowerCase().includes(name) &&
       (!unit || x.unitName === unit)
   )
-  return n ? Math.round(n.value) : null
+  return n != null ? Math.round(n.value) : null
 }
 
-function toTitleCase(str) {
-  // Take everything before the first comma to drop long descriptors
-  return str
+// Clean name: take only first segment before comma, title case
+function cleanName(raw) {
+  return raw
     .split(',')[0]
     .trim()
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function scoreMatch(name, query) {
+// Score how well a food name matches the query — lower is better
+function matchScore(name, query) {
   const n = name.toLowerCase()
   const q = query.toLowerCase()
-  // Exact match
+  const words = n.split(/\s+/)
   if (n === q) return 0
-  // Starts with query
-  if (n.startsWith(q)) return 1
-  // First word matches
-  if (n.split(' ')[0] === q.split(' ')[0]) return 2
-  // Contains full query
+  if (words[0] === q || words.slice(0, 2).join(' ') === q) return 1
+  if (n.startsWith(q)) return 2
   if (n.includes(q)) return 3
-  // Contains first word of query
-  if (n.includes(q.split(' ')[0])) return 4
-  return 5
+  return 4
+}
+
+// After cleaning names, deduplicate — keep the entry with most complete macros
+function deduplicate(foods) {
+  const seen = new Map()
+  for (const food of foods) {
+    const key = food.name.toLowerCase()
+    if (!seen.has(key)) {
+      seen.set(key, food)
+    } else {
+      // Replace if this one has more macro data
+      const existing = seen.get(key)
+      const existingScore = [existing.calories, existing.protein, existing.carbs, existing.fat].filter(v => v != null).length
+      const newScore = [food.calories, food.protein, food.carbs, food.fat].filter(v => v != null).length
+      if (newScore > existingScore) seen.set(key, food)
+    }
+  }
+  return Array.from(seen.values())
 }
 
 export async function searchFoods(query, signal) {
   const q = query.trim()
   if (q.length < 2) return []
 
-  try {
-    return await searchUSDA(q, signal)
-  } catch (err) {
-    if (err.name === 'AbortError') throw err
-    // Silent fallback — return empty rather than showing junk
-    return []
-  }
-}
-
-async function searchUSDA(q, signal) {
   const params = new URLSearchParams({
     query: q,
     api_key: USDA_KEY,
-    pageSize: '25', // fetch more so we can filter down to good ones
-    dataType: 'Foundation,SR Legacy', // Foundation = real whole foods, SR Legacy = standard reference
+    pageSize: '50', // fetch a lot so we have enough after filtering
+    dataType: 'Foundation,SR Legacy',
   })
 
-  const controller = signal
-    ? undefined
-    : new AbortController()
+  try {
+    const res = await fetch(`${USDA_URL}?${params}`, { signal })
+    if (!res.ok) throw new Error('USDA unavailable')
+    const data = await res.json()
 
-  const res = await fetch(`${USDA_URL}?${params}`, {
-    signal: signal || controller?.signal,
-  })
+    const results = (data.foods || [])
+      .filter((f) => f.description && !isExcluded(f.description))
+      .map((f) => {
+        const nutrients = f.foodNutrients || []
+        const name = cleanName(f.description)
+        return {
+          offCode: String(f.fdcId),
+          name,
+          brand: '',
+          calories: getNutrient(nutrients, 'energy', 'KCAL'),
+          protein: getNutrient(nutrients, 'protein', 'G'),
+          carbs: getNutrient(nutrients, 'carbohydrate', 'G'),
+          fat: getNutrient(nutrients, 'total lipid', 'G'),
+          category: f.foodCategory || '',
+          _score: matchScore(f.description, q),
+        }
+      })
+      // Only keep foods with at least calories OR protein data
+      .filter((f) => f.calories != null || f.protein != null)
+      // Sort by match quality first, then name length (shorter = more specific)
+      .sort((a, b) => a._score - b._score || a.name.length - b.name.length)
 
-  if (!res.ok) throw new Error('USDA unavailable')
+    // Deduplicate by cleaned name, keeping best macro data
+    const deduped = deduplicate(results)
 
-  const data = await res.json()
-
-  const results = (data.foods || [])
-    .filter((f) => f.description && !isJunk(f.description))
-    .map((f) => {
-      const nutrients = f.foodNutrients || []
-      return {
-        offCode: String(f.fdcId),
-        name: toTitleCase(f.description),
-        brand: '',
-        calories: getNutrient(nutrients, 'energy', 'KCAL'),
-        protein: getNutrient(nutrients, 'protein', 'G'),
-        carbs: getNutrient(nutrients, 'carbohydrate', 'G'),
-        fat: getNutrient(nutrients, 'total lipid', 'G'),
-        category: f.foodCategory || '',
-        score: scoreMatch(f.description, q),
-      }
-    })
-    .sort((a, b) => a.score - b.score || a.name.length - b.name.length)
-    .slice(0, 8)
-
-  return results
+    return deduped.slice(0, 6)
+  } catch (err) {
+    if (err.name === 'AbortError') throw err
+    return []
+  }
 }
 
 export function foodToLogItem(product) {
