@@ -99,7 +99,7 @@ export default function NavBar() {
               <IconSparkles className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-bold text-slate-900 dark:text-white leading-tight">Future Self</p>
+              <p className="font-bold text-slate-900 dark:text-white leading-tight">Qyven</p>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Level up daily</p>
             </div>
           </div>

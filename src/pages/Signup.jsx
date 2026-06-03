@@ -73,7 +73,7 @@ export default function Signup() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-teal to-primary text-white text-3xl shadow-glow mb-4">
               🚀
             </div>
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Join Future Self</h1>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Join Qyven</h1>
             <p className="text-slate-500 text-sm mt-2 font-medium">Start building your best self</p>
           </div>
 

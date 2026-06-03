@@ -80,7 +80,8 @@ export default function Onboarding() {
     <div className="app-bg min-h-screen px-4 py-10">
       <div className="max-w-lg mx-auto animate-slide-up">
         <div className="mb-8">
-          <p className="section-title mb-2">Step {step} of 3</p>
+          <p className="section-title mb-1">Welcome to Qyven</p>
+          <p className="text-xs text-slate-400 font-medium mb-3">Step {step} of 3</p>
           <div className="h-2 bg-slate-200/80 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary-400 rounded-full transition-all duration-500 ease-out"
@@ -185,7 +186,7 @@ export default function Onboarding() {
                 disabled={loading}
                 className="btn-primary flex-1 shadow-glow"
               >
-                {loading ? 'Saving…' : 'Start journey'}
+                {loading ? 'Saving…' : 'Start your Qyven journey'}
               </button>
             </div>
           </div>
