@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { searchFoods, foodToLogItem } from '../../services/openFoodFacts'
+import { searchFoods, foodToLogItem, detectServingKey } from '../../services/openFoodFacts'
 
-export default function FoodDetailSection({ foods, onChange }) {
+export default function FoodDetailSection({ foods, onChange, onServingDetected, onServingRemoved }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -22,15 +22,16 @@ export default function FoodDetailSection({ foods, onChange }) {
       try {
         const items = await searchFoods(query, controller.signal)
         setResults(items)
+        if (!items.length) setSearchError('No results — try adding manually below')
       } catch (err) {
         if (err.name !== 'AbortError') {
-          setSearchError('Search failed — try again or add manually')
+          setSearchError('Search failed — add manually below')
           setResults([])
         }
       } finally {
         setSearching(false)
       }
-    }, 400)
+    }, 500)
 
     return () => {
       clearTimeout(timer)
@@ -39,32 +40,52 @@ export default function FoodDetailSection({ foods, onChange }) {
   }, [query])
 
   function addFood(item) {
-    onChange([...foods, item])
+    const foodItem = { ...item, servingKey: detectServingKey(item.name) }
+    onChange([...foods, foodItem])
     setQuery('')
     setResults([])
+    if (foodItem.servingKey && onServingDetected) onServingDetected(foodItem.servingKey)
   }
 
   function addCustom() {
     const name = customName.trim()
     if (!name) return
-    addFood({
+    const key = detectServingKey(name)
+    const item = {
       id: crypto.randomUUID(),
       name,
       brand: '',
       calories: null,
+      protein: null,
+      carbs: null,
+      fat: null,
       serving: '1 serving',
-    })
+      servingKey: key,
+    }
+    onChange([...foods, item])
+    if (key && onServingDetected) onServingDetected(key)
     setCustomName('')
   }
 
   function removeFood(id) {
+    const food = foods.find((f) => f.id === id)
     onChange(foods.filter((f) => f.id !== id))
+    if (food?.servingKey && onServingRemoved) onServingRemoved(food.servingKey)
+  }
+
+  function macroString(f) {
+    const parts = []
+    if (f.calories != null) parts.push(`${f.calories} kcal`)
+    if (f.protein != null) parts.push(`P ${f.protein}g`)
+    if (f.carbs != null) parts.push(`C ${f.carbs}g`)
+    if (f.fat != null) parts.push(`F ${f.fat}g`)
+    return parts.length ? parts.join(' · ') : 'No macro data'
   }
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-500 font-medium leading-relaxed">
-        Powered by Open Food Facts — search packaged foods or add your own.
+        Search real ingredients — macros per 100g from USDA database.
       </p>
 
       {foods.length > 0 && (
@@ -77,16 +98,12 @@ export default function FoodDetailSection({ foods, onChange }) {
               <span className="text-lg shrink-0">🍽️</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{f.name}</p>
-                <p className="text-xs text-slate-500">
-                  {[f.brand, f.serving, f.calories != null ? `~${f.calories} kcal/100g` : null]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
+                <p className="text-xs text-slate-400 font-medium">{macroString(f)}</p>
               </div>
               <button
                 type="button"
                 onClick={() => removeFood(f.id)}
-                className="text-slate-400 hover:text-coral text-sm font-bold px-1"
+                className="text-slate-400 hover:text-coral text-sm font-bold px-1 shrink-0"
                 aria-label="Remove"
               >
                 ×
@@ -101,7 +118,7 @@ export default function FoodDetailSection({ foods, onChange }) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search foods…"
+          placeholder="e.g. chicken breast, brown rice, kale…"
           className="input-field text-sm pr-10"
           autoComplete="off"
         />
@@ -110,10 +127,12 @@ export default function FoodDetailSection({ foods, onChange }) {
         )}
       </div>
 
-      {searchError && <p className="text-xs text-coral font-medium">{searchError}</p>}
+      {searchError && (
+        <p className="text-xs text-coral font-medium">{searchError}</p>
+      )}
 
       {results.length > 0 && (
-        <ul className="max-h-48 overflow-y-auto rounded-2xl border border-surface-border bg-white shadow-card divide-y divide-slate-100">
+        <ul className="max-h-52 overflow-y-auto rounded-2xl border border-surface-border bg-white shadow-card divide-y divide-slate-100">
           {results.map((p) => (
             <li key={p.offCode}>
               <button
@@ -121,10 +140,16 @@ export default function FoodDetailSection({ foods, onChange }) {
                 onClick={() => addFood(foodToLogItem(p))}
                 className="w-full text-left px-3 py-2.5 hover:bg-primary-50/40 transition-colors"
               >
-                <p className="text-sm font-semibold text-slate-800 line-clamp-1">{p.name}</p>
-                <p className="text-xs text-slate-500">
-                  {p.brand}
-                  {p.calories != null ? ` · ~${p.calories} kcal/100g` : ''}
+                <p className="text-sm font-semibold text-slate-800">{p.name}</p>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  {[
+                    p.calories != null ? `${p.calories} kcal` : null,
+                    p.protein != null ? `P ${p.protein}g` : null,
+                    p.carbs != null ? `C ${p.carbs}g` : null,
+                    p.fat != null ? `F ${p.fat}g` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || 'per 100g'}
                 </p>
               </button>
             </li>
@@ -138,10 +163,14 @@ export default function FoodDetailSection({ foods, onChange }) {
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustom())}
-          placeholder="Or type a meal…"
+          placeholder="Or type a meal manually…"
           className="input-field text-sm flex-1"
         />
-        <button type="button" onClick={addCustom} className="btn-secondary !py-2.5 !px-4 text-sm shrink-0">
+        <button
+          type="button"
+          onClick={addCustom}
+          className="btn-secondary !py-2.5 !px-4 text-sm shrink-0"
+        >
           Add
         </button>
       </div>

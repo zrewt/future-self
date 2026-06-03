@@ -259,8 +259,17 @@ export default function Log() {
           <ServingStepper label="Protein" emoji="🥩" value={form.protein_servings} onChange={(v) => updateField('protein_servings', v)} />
           <ServingStepper label="Processed" emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
           <DetailToggle label="Search specific foods" badge={details.foods.length}>
-            <FoodDetailSection foods={details.foods} onChange={(foods) => setDetails((d) => ({ ...d, foods }))} />
-          </DetailToggle>
+  <FoodDetailSection
+    foods={details.foods}
+    onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+    onServingDetected={(key) =>
+      setForm((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
+    }
+    onServingRemoved={(key) =>
+      setForm((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) - 1) }))
+    }
+  />
+</DetailToggle>
         </div>
 
         <div className="glass-card p-5">
