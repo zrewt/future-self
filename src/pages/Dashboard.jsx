@@ -176,7 +176,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <FutureProjectionCard recentScores={recentScores} currentScore={currentFSS} />
+<FutureProjectionCard currentScore={currentFSS} />
 
       {todayLog && (
         <ScoreBreakdown scores={{ ...log, mood: log.mood }} streakDays={profile.current_streak} />
