@@ -1,7 +1,6 @@
 // Curated food database with real macros per 100g
 // Sources: USDA Foundation Foods + standard nutrition references
 
-
 export const FOODS = [
     // ── FRUITS ──────────────────────────────────────────────
     { id: 'apple',           name: 'Apple',                 cal: 52,  p: 0.3,  c: 14,  f: 0.2,  cat: 'fruit_servings' },
