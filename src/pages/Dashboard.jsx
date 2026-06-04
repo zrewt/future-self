@@ -7,6 +7,7 @@ import { IconFlame } from '../components/ui/Icons'
 import FutureProjectionCard from '../components/home/FutureProjectionCard'
 import DailyQuests from '../components/home/DailyQuests'
 import ScoreBreakdown from '../components/home/ScoreBreakdown'
+import ScoreCard from '../components/home/scorecard'
 import EmptyHome from '../components/home/EmptyHome'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
@@ -90,6 +91,7 @@ function MidnightCountdown() {
 
 export default function Dashboard() {
   const { profile, todayLog, recentScores } = useUserStore()
+  const [showScoreCard, setShowScoreCard] = useState(false)
 
   if (!profile) {
     return (
@@ -113,7 +115,36 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-3 animate-slide-up max-w-lg mx-auto">
-      {/* Above-the-fold hero */}
+      {/* Score card modal */}
+      {showScoreCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setShowScoreCard(false)}
+        >
+          <div
+            className="w-full max-w-sm animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-extrabold text-white text-lg">Your score card</p>
+              <button
+                type="button"
+                onClick={() => setShowScoreCard(false)}
+                className="text-white/60 hover:text-white text-2xl font-bold leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <ScoreCard
+              profile={profile}
+              log={log}
+              streak={profile.current_streak}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Hero card */}
       <div className="glass-card p-4 bg-gradient-to-br from-primary/10 via-white to-white dark:from-teal/10 dark:via-slate-950/40 dark:to-primary/10">
         <div className="flex items-start justify-between gap-3">
           <Link to="/profile" className="flex items-center gap-3 min-w-0">
@@ -173,10 +204,26 @@ export default function Dashboard() {
             </Link>
           </div>
           <MidnightCountdown />
+
+          {/* Share score card button — only shows after logging */}
+          <button
+            type="button"
+            onClick={() => setShowScoreCard(true)}
+            className="w-full glass-card p-3 flex items-center justify-between hover:shadow-card-hover transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏆</span>
+              <div className="text-left">
+                <p className="font-bold text-slate-900 text-sm">Share your score</p>
+                <p className="text-xs text-slate-500 font-medium">Show your Qyven card today</p>
+              </div>
+            </div>
+            <span className="text-primary font-bold text-sm">↑ Share</span>
+          </button>
         </>
       )}
 
-<FutureProjectionCard currentScore={currentFSS} />
+      <FutureProjectionCard recentScores={recentScores} currentScore={currentFSS} />
 
       {todayLog && (
         <ScoreBreakdown scores={{ ...log, mood: log.mood }} streakDays={profile.current_streak} />
