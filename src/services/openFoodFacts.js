@@ -1,7 +1,7 @@
 import { searchLocalFoods } from '../data/foods'
 
 const CATEGORY_KEYWORDS = {
-  fruit_servings: ['apple', 'banana', 'orange', 'berry', 'mango', 'grape', 'peach', 'pear', 'melon', 'pineapple', 'strawberry', 'blueberry', 'kiwi', 'watermelon', 'fruit', 'cherry', 'plum', 'raspberry', 'avocado', 'cantaloupe'],
+  fruit_servings: ['apple', 'banana', 'orange', 'berry', 'mango', 'grape', 'peach', 'pear', 'melon', 'pineapple', 'strawberry', 'blueberry', 'blueberries', 'kiwi', 'watermelon', 'fruit', 'cherry', 'plum', 'raspberry', 'avocado', 'cantaloupe'],
   vegetable_servings: ['broccoli', 'spinach', 'kale', 'carrot', 'salad', 'lettuce', 'tomato', 'cucumber', 'pepper', 'onion', 'celery', 'zucchini', 'asparagus', 'vegetable', 'veggie', 'cabbage', 'cauliflower', 'mushroom', 'corn', 'peas', 'edamame', 'garlic', 'sweet potato'],
   protein_servings: ['chicken', 'beef', 'fish', 'salmon', 'tuna', 'egg', 'tofu', 'turkey', 'steak', 'shrimp', 'protein', 'yogurt', 'cheese', 'milk', 'lamb', 'pork', 'lentil', 'bean', 'cod', 'tilapia', 'sardine', 'tempeh', 'chickpea', 'cottage'],
   processed_servings: ['chips', 'candy', 'soda', 'cookie', 'cake', 'pizza', 'burger', 'fries', 'donut', 'chocolate', 'ice cream', 'nugget', 'hot dog', 'popcorn', 'muffin', 'brownie', 'nachos', 'pancake', 'fried'],

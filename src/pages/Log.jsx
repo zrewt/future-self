@@ -14,6 +14,9 @@ import {
   isPerfectDay,
   calcNutritionFromServings,
   calcFitnessFromWorkout,
+  calcFoodQualityScore,
+  calcFoodLongevityScore,
+  calcMacroSummary,
 } from '../utils/scoring'
 import { checkAndAwardAchievements } from '../utils/achievementStats'
 import { emptyLogDetails, parseLogDetails } from '../utils/logDetails'
@@ -108,10 +111,19 @@ export default function Log() {
     setDetails(parseLogDetails(todayLog.log_details))
   }, [todayLog])
 
+  const previewFoods = details.foods || []
   const previewLog = useMemo(() => ({ ...form, sleep_hours: Number(form.sleep_hours) }), [form])
-  const previewScores = useMemo(() => buildAllScores(previewLog, profile?.current_streak || 0), [previewLog, profile?.current_streak])
-  const nutritionPreview = calcNutritionFromServings(previewLog)
+  const previewScores = useMemo(
+    () => buildAllScores(previewLog, profile?.current_streak || 0, previewFoods),
+    [previewLog, profile?.current_streak, previewFoods]
+  )
+  const nutritionPreview = calcNutritionFromServings(previewLog, previewFoods)
   const fitnessPreview = calcFitnessFromWorkout(previewLog)
+
+  // Food analysis — only computed when real foods are logged
+  const foodQuality = calcFoodQualityScore(previewFoods)
+  const foodLongevity = calcFoodLongevityScore(previewFoods)
+  const macros = calcMacroSummary(previewFoods)
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -137,7 +149,8 @@ export default function Log() {
       : computeStreak(profile, today, false).current_streak
 
     const logPayload = { ...form, sleep_hours: Number(form.sleep_hours) }
-    const scores = buildAllScores(logPayload, streakForCalc)
+    const foods = details.foods || []
+    const scores = buildAllScores(logPayload, streakForCalc, foods)
     const is_perfect_day = isPerfectDay(logPayload)
 
     const prevQuests = getCompletedQuestIds(todayLog)
@@ -252,26 +265,74 @@ export default function Log() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* ── NUTRITION ─────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Nutrition — today&apos;s servings</label>
           <ServingStepper label="Fruit" emoji="🍎" value={form.fruit_servings} onChange={(v) => updateField('fruit_servings', v)} />
           <ServingStepper label="Vegetables" emoji="🥬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
           <ServingStepper label="Protein" emoji="🥩" value={form.protein_servings} onChange={(v) => updateField('protein_servings', v)} />
           <ServingStepper label="Processed" emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
+
           <DetailToggle label="Search specific foods" badge={details.foods.length}>
-  <FoodDetailSection
-    foods={details.foods}
-    onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
-    onServingDetected={(key) =>
-      setForm((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
-    }
-    onServingRemoved={(key) =>
-      setForm((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) - 1) }))
-    }
-  />
-</DetailToggle>
+            <FoodDetailSection
+              foods={details.foods}
+              onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+              onServingDetected={(key) =>
+                setForm((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
+              }
+              onServingRemoved={(key) =>
+                setForm((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) - 1) }))
+              }
+            />
+
+            {/* Food analysis panel — only shows when foods are added */}
+            {foodQuality !== null && (
+              <div className="mt-3 p-3 rounded-2xl bg-primary-50/60 border border-primary-100/60 space-y-2">
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Food analysis</p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/70 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Food Quality</p>
+                    <p className="text-xl font-extrabold text-primary tabular-nums">{foodQuality}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {foodQuality >= 75 ? 'Excellent 🌿' : foodQuality >= 55 ? 'Pretty solid 👍' : foodQuality >= 35 ? 'Room to improve' : 'High processed load'}
+                    </p>
+                  </div>
+                  <div className="bg-white/70 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Longevity</p>
+                    <p className="text-xl font-extrabold text-teal tabular-nums">{foodLongevity}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {foodLongevity >= 75 ? 'Anti-inflammatory 🔬' : foodLongevity >= 55 ? 'Good base' : foodLongevity >= 35 ? 'Add whole foods' : 'Low whole food ratio'}
+                    </p>
+                  </div>
+                </div>
+
+                {macros && (
+                  <div className="grid grid-cols-4 gap-1 text-center">
+                    {[
+                      { label: 'kcal', value: macros.calories },
+                      { label: 'protein', value: `${macros.protein}g` },
+                      { label: 'carbs', value: `${macros.carbs}g` },
+                      { label: 'fat', value: `${macros.fat}g` },
+                    ].map((m) => (
+                      <div key={m.label} className="bg-white/70 rounded-xl py-1.5">
+                        <p className="text-sm font-extrabold text-slate-800 tabular-nums">{m.value}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Macros estimated at 150g per food · affects your nutrition & longevity scores
+                </p>
+              </div>
+            )}
+          </DetailToggle>
         </div>
 
+        {/* ── WORKOUT ───────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Workout</label>
           <div className="flex flex-wrap gap-2 mb-3">
@@ -305,6 +366,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
+        {/* ── SLEEP ─────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -320,6 +382,7 @@ export default function Log() {
           <p className="text-xs text-primary font-bold mt-2">Energy score: {previewScores.energy_score}</p>
         </div>
 
+        {/* ── WATER ─────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Water</label>
           <input type="range" min={0} max={4000} step={100} value={form.water_ml} onChange={(e) => updateField('water_ml', Number(e.target.value))} className="w-full" />
@@ -330,9 +393,10 @@ export default function Log() {
               </button>
             ))}
           </div>
-          <p className="text-sm mt-2">{ '🥛'.repeat(glasses) || '—' } · {form.water_ml} ml</p>
+          <p className="text-sm mt-2">{'🥛'.repeat(glasses) || '—'} · {form.water_ml} ml</p>
         </div>
 
+        {/* ── FOCUS ─────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Focus (min)</label>
           <input type="number" min={0} value={form.focus_minutes} onChange={(e) => updateField('focus_minutes', Number(e.target.value))} className="input-field" />
@@ -341,6 +405,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
+        {/* ── READING ───────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Reading (min)</label>
           <input type="number" min={0} value={form.reading_minutes} onChange={(e) => updateField('reading_minutes', Number(e.target.value))} className="input-field" />
@@ -349,6 +414,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
+        {/* ── MEDITATION ────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Meditation (min)</label>
           <input type="number" min={0} value={form.meditation_minutes} onChange={(e) => updateField('meditation_minutes', Number(e.target.value))} className="input-field" />
@@ -357,6 +423,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
+        {/* ── MOOD ──────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Mood</label>
           <div className="flex flex-wrap gap-1.5 justify-between">

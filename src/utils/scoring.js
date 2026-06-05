@@ -8,7 +8,124 @@ function legacyFitness(log) {
   return Math.min(100, Math.round((log.exercise_intensity || 0) * 0.7 + (log.sleep_quality || 5) * 3))
 }
 
-export function calcNutritionFromServings(log) {
+// ─── FOOD QUALITY SCORE ───────────────────────────────────────────────────────
+// Computed from actual logged foods (macros per 100g)
+// Returns 0-100 based on protein density, calorie quality, and food categories
+
+export function calcFoodQualityScore(foods = []) {
+  if (!foods || foods.length === 0) return null
+
+  const realFoods = foods.filter((f) => f.calories != null || f.protein != null)
+  if (realFoods.length === 0) return null
+
+  let totalScore = 0
+  let totalWeight = 0
+
+  for (const food of realFoods) {
+    const cal = food.calories ?? 150
+    const protein = food.protein ?? 0
+    const carbs = food.carbs ?? 0
+    const fat = food.fat ?? 0
+    const key = food.servingKey || ''
+
+    // Protein density: protein per 100 kcal (ideal is 8g+)
+    const proteinDensity = cal > 0 ? (protein / cal) * 100 : 0
+    const proteinScore = Math.min(proteinDensity / 8, 1) * 30
+
+    // Calorie density penalty: very high cal foods (>500 kcal) lose points
+    const calDensityScore = Math.max(0, (1 - Math.max(0, cal - 300) / 600)) * 20
+
+    // Category bonus
+    let categoryBonus = 0
+    if (key === 'fruit_servings') categoryBonus = 20
+    else if (key === 'vegetable_servings') categoryBonus = 25
+    else if (key === 'protein_servings') categoryBonus = 20
+    else if (key === 'processed_servings') categoryBonus = -15
+
+    // Macro balance: reward foods where protein > fat and carbs are moderate
+    const macroTotal = protein + carbs + fat
+    const macroBalance = macroTotal > 0
+      ? Math.max(0, 1 - Math.abs(protein / macroTotal - 0.25) * 2) * 15
+      : 0
+
+    const foodScore = Math.max(0, proteinScore + calDensityScore + categoryBonus + macroBalance)
+    totalScore += foodScore
+    totalWeight += 1
+  }
+
+  return Math.min(100, Math.max(0, Math.round(totalScore / totalWeight)))
+}
+
+// ─── FOOD LONGEVITY SCORE ─────────────────────────────────────────────────────
+// Based on anti-inflammatory foods, whole foods ratio, and processed food penalty
+
+export function calcFoodLongevityScore(foods = []) {
+  if (!foods || foods.length === 0) return null
+
+  const realFoods = foods.filter((f) => f.calories != null || f.protein != null)
+  if (realFoods.length === 0) return null
+
+  let wholeCount = 0
+  let processedCount = 0
+  let antiInflammatoryCount = 0
+
+  const ANTI_INFLAMMATORY = [
+    'salmon', 'sardine', 'tuna', 'blueberr', 'strawberr', 'raspberry',
+    'spinach', 'kale', 'broccoli', 'avocado', 'walnut', 'olive',
+    'turmeric', 'ginger', 'green tea', 'almond', 'quinoa', 'lentil',
+    'chickpea', 'black bean', 'sweet potato', 'tomato', 'cherry',
+  ]
+
+  for (const food of realFoods) {
+    const name = (food.name || '').toLowerCase()
+    const key = food.servingKey || ''
+
+    if (key === 'processed_servings') processedCount++
+    else wholeCount++
+
+    if (ANTI_INFLAMMATORY.some((k) => name.includes(k))) antiInflammatoryCount++
+  }
+
+  const total = realFoods.length
+  const wholeFoodRatio = wholeCount / total
+  const processedPenalty = Math.min(processedCount * 15, 45)
+  const antiInflamBonus = Math.min(antiInflammatoryCount * 12, 36)
+
+  const base = wholeFoodRatio * 64 + antiInflamBonus - processedPenalty
+  return Math.min(100, Math.max(0, Math.round(base)))
+}
+
+// ─── MACRO SUMMARY ────────────────────────────────────────────────────────────
+// Returns total estimated macros from logged foods
+
+export function calcMacroSummary(foods = []) {
+  if (!foods || foods.length === 0) return null
+
+  const realFoods = foods.filter((f) => f.calories != null)
+  if (realFoods.length === 0) return null
+
+  // Assume average 150g serving per food item
+  const SERVING_G = 150
+
+  const totals = realFoods.reduce(
+    (acc, f) => {
+      const factor = SERVING_G / 100
+      return {
+        calories: acc.calories + Math.round((f.calories ?? 0) * factor),
+        protein: acc.protein + Math.round((f.protein ?? 0) * factor),
+        carbs: acc.carbs + Math.round((f.carbs ?? 0) * factor),
+        fat: acc.fat + Math.round((f.fat ?? 0) * factor),
+      }
+    },
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  )
+
+  return totals
+}
+
+// ─── NUTRITION SCORE ─────────────────────────────────────────────────────────
+
+export function calcNutritionFromServings(log, foods = []) {
   const fruit = log.fruit_servings ?? 0
   const veg = log.vegetable_servings ?? 0
   const protein = log.protein_servings ?? 0
@@ -18,14 +135,24 @@ export function calcNutritionFromServings(log) {
     return legacyNutrition(log)
   }
 
-  let score =
+  // Base score from servings
+  let baseScore =
     (Math.min(fruit, 3) / 3) * 25 +
     (Math.min(veg, 4) / 4) * 30 +
     (Math.min(protein, 3) / 3) * 30 +
     Math.min((log.water_ml || 0) / 2500, 1) * 15 -
     Math.min(processed, 5) * 8
 
-  return Math.min(100, Math.max(0, Math.round(score)))
+  baseScore = Math.min(100, Math.max(0, Math.round(baseScore)))
+
+  // If real foods were logged, blend in the food quality score
+  const foodQuality = calcFoodQualityScore(foods)
+  if (foodQuality !== null) {
+    // 60% base servings score, 40% actual food quality
+    return Math.min(100, Math.round(baseScore * 0.6 + foodQuality * 0.4))
+  }
+
+  return baseScore
 }
 
 const WORKOUT_TYPE_FACTOR = { gym: 1, run: 1.1, sport: 1.05, yoga: 0.85, rest: 0.25 }
@@ -61,8 +188,8 @@ export function calcFocusScore(log) {
   )
 }
 
-export function calcLongevityScore(log, fitnessScore, nutritionScore) {
-  return Math.min(
+export function calcLongevityScore(log, fitnessScore, nutritionScore, foods = []) {
+  const base = Math.min(
     100,
     Math.round(
       (Number(log.sleep_hours || 0) / 8) * 30 +
@@ -71,6 +198,14 @@ export function calcLongevityScore(log, fitnessScore, nutritionScore) {
         Math.min((log.water_ml || 0) / 3000, 1) * 20
     )
   )
+
+  // If real foods logged, blend in food longevity score
+  const foodLongevity = calcFoodLongevityScore(foods)
+  if (foodLongevity !== null) {
+    return Math.min(100, Math.round(base * 0.65 + foodLongevity * 0.35))
+  }
+
+  return base
 }
 
 export function calcFutureSelfScore(scores, streakDays) {
@@ -85,12 +220,12 @@ export function calcFutureSelfScore(scores, streakDays) {
   return Math.min(100, Math.round(weighted * consistency))
 }
 
-export function buildAllScores(log, streakDays = 0) {
+export function buildAllScores(log, streakDays = 0, foods = []) {
   const fitness = calcFitnessFromWorkout(log)
-  const nutrition = calcNutritionFromServings(log)
+  const nutrition = calcNutritionFromServings(log, foods)
   const energy = calcEnergyFromSleep(log)
   const focus = calcFocusScore(log)
-  const longevity = calcLongevityScore(log, fitness, nutrition)
+  const longevity = calcLongevityScore(log, fitness, nutrition, foods)
   const mood = (log.mood || 5) * 10
   const future_self_score = calcFutureSelfScore(
     { fitness, nutrition, energy, focus, longevity, mood },
