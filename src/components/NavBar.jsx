@@ -13,11 +13,19 @@ import {
   IconSignOut,
 } from './ui/Icons'
 
+function IconLightning({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  )
+}
+
 const tabs = [
   { to: '/dashboard', label: 'Home', Icon: IconHome },
   { to: '/log', label: 'Log', Icon: IconLog, fab: true },
   { to: '/weekly', label: 'Week', Icon: IconChart },
-  { to: '/achievements', label: 'Awards', Icon: IconTrophy },
+  { to: '/challenges', label: 'Challenges', Icon: IconLightning },
 ]
 
 const hiddenPaths = ['/login', '/signup', '/onboarding']
@@ -28,9 +36,7 @@ export default function NavBar() {
   const { profile, reset } = useUserStore()
   const { theme, toggleTheme } = useTheme()
 
-  if (hiddenPaths.includes(location.pathname)) {
-    return null
-  }
+  if (hiddenPaths.includes(location.pathname)) return null
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -52,11 +58,7 @@ export default function NavBar() {
 
               if (tab.fab) {
                 return (
-                  <NavLink
-                    key={tab.to}
-                    to={tab.to}
-                    className="relative -mt-7 flex flex-col items-center"
-                  >
+                  <NavLink key={tab.to} to={tab.to} className="relative -mt-7 flex flex-col items-center">
                     <span className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-700 dark:from-teal dark:to-primary text-white shadow-glow ring-4 ring-surface-muted dark:ring-[#080A12]">
                       <Icon className="w-6 h-6" />
                     </span>
@@ -117,7 +119,13 @@ export default function NavBar() {
           </div>
 
           <div className="flex-1 flex flex-col gap-1 mt-2">
-            {tabs.map((tab) => {
+            {[
+              { to: '/dashboard', label: 'Home', Icon: IconHome },
+              { to: '/log', label: 'Log', Icon: IconLog, fab: true },
+              { to: '/weekly', label: 'Week', Icon: IconChart },
+              { to: '/challenges', label: 'Challenges', Icon: IconLightning },
+              { to: '/achievements', label: 'Awards', Icon: IconTrophy },
+            ].map((tab) => {
               const { Icon } = tab
               return (
                 <NavLink
@@ -129,8 +137,8 @@ export default function NavBar() {
                       tab.fab && !isActive
                         ? 'bg-gradient-to-r from-primary/10 to-primary-50 dark:from-teal/15 dark:to-primary/10 text-primary dark:text-teal border border-primary/20 dark:border-teal/20'
                         : isActive
-                          ? 'bg-primary dark:bg-teal text-white shadow-md shadow-primary/25 dark:shadow-teal/20'
-                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-slate-100',
+                        ? 'bg-primary dark:bg-teal text-white shadow-md shadow-primary/25 dark:shadow-teal/20'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-slate-100',
                     ].join(' ')
                   }
                 >
@@ -146,7 +154,6 @@ export default function NavBar() {
               type="button"
               onClick={toggleTheme}
               className="btn-secondary !px-3 !py-2.5 !rounded-xl text-xs"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               <ThemeIcon className="w-4 h-4" />
               {theme === 'dark' ? 'Light' : 'Dark'}
@@ -168,7 +175,6 @@ export default function NavBar() {
           type="button"
           onClick={toggleTheme}
           className="h-11 w-11 rounded-2xl bg-white/85 dark:bg-slate-950/85 border border-white/80 dark:border-white/10 shadow-card dark:shadow-none backdrop-blur-xl flex items-center justify-center text-slate-700 dark:text-slate-100"
-          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           <ThemeIcon className="w-5 h-5" />
         </button>
@@ -176,7 +182,6 @@ export default function NavBar() {
           type="button"
           onClick={handleSignOut}
           className="h-11 w-11 rounded-2xl bg-red-50/90 dark:bg-red-500/10 border border-red-100 dark:border-red-400/20 shadow-card dark:shadow-none backdrop-blur-xl flex items-center justify-center text-red-600 dark:text-red-200"
-          title="Sign out"
         >
           <IconSignOut className="w-5 h-5" />
         </button>

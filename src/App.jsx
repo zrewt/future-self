@@ -13,6 +13,7 @@ import Log from './pages/Log'
 import Profile from './pages/Profile'
 import Achievements from './pages/Achievements'
 import WeeklyReview from './pages/WeeklyReview'
+import Challenges from './pages/Challenges'
 
 function AppLayout() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/weekly" element={<WeeklyReview />} />
           <Route path="/achievements" element={<Achievements />} />
+          <Route path="/challenges" element={<Challenges />} />
         </Route>
       </Routes>
     </BrowserRouter>
