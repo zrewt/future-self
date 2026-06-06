@@ -6,6 +6,228 @@ import Spinner from '../components/ui/Spinner'
 import EmptyHome from '../components/home/EmptyHome'
 import { localWeekStartISO } from '../utils/date'
 
+// ── INSIGHT ENGINE ────────────────────────────────────────────────────────────
+// Pure logic — no AI, just your real data turned into sentences
+
+function generateInsights(logs, profile) {
+  if (!logs.length) return []
+
+  const insights = []
+
+  const avg = (key) =>
+    Math.round(logs.reduce((s, l) => s + (l[key] || 0), 0) / logs.length)
+
+  const total = (key) =>
+    logs.reduce((s, l) => s + (l[key] || 0), 0)
+
+  // ── Training ───────────────────────────────────────────────────────────────
+  const workoutDays = logs.filter(
+    (l) => (l.workout_duration_min || 0) >= 20 || (l.exercise_type && l.exercise_type !== 'rest')
+  ).length
+  const totalWorkoutMins = total('workout_duration_min')
+  const avgWorkoutMins = Math.round(totalWorkoutMins / Math.max(workoutDays, 1))
+
+  if (workoutDays >= 5) {
+    insights.push({
+      icon: '💪',
+      tone: 'positive',
+      text: `You trained ${workoutDays} out of 7 days this week — that's elite consistency. ${avgWorkoutMins > 0 ? `Averaging ${avgWorkoutMins} min per session.` : ''}`,
+    })
+  } else if (workoutDays >= 3) {
+    insights.push({
+      icon: '🏋️',
+      tone: 'neutral',
+      text: `${workoutDays} workout days this week. Solid base — adding one more session next week would push your fitness score noticeably higher.`,
+    })
+  } else if (workoutDays > 0) {
+    insights.push({
+      icon: '⚡',
+      tone: 'improve',
+      text: `Only ${workoutDays} workout day${workoutDays > 1 ? 's' : ''} logged. Even 20 min of movement on off days adds ~8 pts to your Future Self Score.`,
+    })
+  } else {
+    insights.push({
+      icon: '🛋️',
+      tone: 'improve',
+      text: `No workouts logged this week. A single 30-min session can shift your fitness score from 0 to 50+.`,
+    })
+  }
+
+  // ── Sleep ──────────────────────────────────────────────────────────────────
+  const avgSleep = logs.reduce((s, l) => s + Number(l.sleep_hours || 0), 0) / logs.length
+  const avgSleepRounded = Math.round(avgSleep * 10) / 10
+  const goodSleepDays = logs.filter((l) => Number(l.sleep_hours) >= 7.5).length
+  const avgSleepQuality = avg('sleep_quality')
+
+  if (avgSleep >= 7.5) {
+    insights.push({
+      icon: '😴',
+      tone: 'positive',
+      text: `Great sleep week — averaging ${avgSleepRounded}h with quality at ${avgSleepQuality}/10. Sleep is your biggest energy multiplier and it's working.`,
+    })
+  } else if (avgSleep >= 6.5) {
+    insights.push({
+      icon: '🌙',
+      tone: 'neutral',
+      text: `Averaging ${avgSleepRounded}h sleep. You're close to the 7.5h sweet spot — getting there on ${7 - goodSleepDays} more nights would add ~6 pts to your energy score.`,
+    })
+  } else {
+    insights.push({
+      icon: '⚠️',
+      tone: 'improve',
+      text: `Sleep averaged only ${avgSleepRounded}h this week. Low sleep is dragging your energy and longevity scores. Prioritise this before anything else.`,
+    })
+  }
+
+  // ── Nutrition ─────────────────────────────────────────────────────────────
+  const avgVeg = avg('vegetable_servings')
+  const avgFruit = avg('fruit_servings')
+  const avgProtein = avg('protein_servings')
+  const avgProcessed = avg('processed_servings')
+  const avgWater = Math.round(total('water_ml') / logs.length)
+
+  // Weekend vs weekday nutrition drop
+  const weekendLogs = logs.filter((l) => {
+    const d = new Date(l.log_date).getDay()
+    return d === 0 || d === 6
+  })
+  const weekdayLogs = logs.filter((l) => {
+    const d = new Date(l.log_date).getDay()
+    return d !== 0 && d !== 6
+  })
+  const weekendNutAvg = weekendLogs.length
+    ? Math.round(weekendLogs.reduce((s, l) => s + (l.nutrition_score || 0), 0) / weekendLogs.length)
+    : null
+  const weekdayNutAvg = weekdayLogs.length
+    ? Math.round(weekdayLogs.reduce((s, l) => s + (l.nutrition_score || 0), 0) / weekdayLogs.length)
+    : null
+
+  if (weekendNutAvg !== null && weekdayNutAvg !== null && weekdayNutAvg - weekendNutAvg >= 10) {
+    insights.push({
+      icon: '📉',
+      tone: 'improve',
+      text: `Your nutrition drops on weekends — weekday avg ${weekdayNutAvg} vs weekend avg ${weekendNutAvg}. One prepped meal on Saturday can close that gap.`,
+    })
+  } else if (avgVeg < 3) {
+    const projectedFSS = Math.min(99, avg('future_self_score') + Math.round((5 - avgVeg) * 2.5))
+    insights.push({
+      icon: '🥬',
+      tone: 'improve',
+      text: `Averaging ${avgVeg} veg serving${avgVeg !== 1 ? 's' : ''} daily. Hitting 5 servings would push your projected Future Self Score to ~${projectedFSS}.`,
+    })
+  } else if (avgProcessed >= 3) {
+    insights.push({
+      icon: '🍟',
+      tone: 'improve',
+      text: `Processed food averaged ${avgProcessed} servings/day. Cutting that to 1 would add roughly 7-10 pts to your nutrition score.`,
+    })
+  } else {
+    insights.push({
+      icon: '🥗',
+      tone: 'positive',
+      text: `Solid nutrition week — ${avgVeg} veg, ${avgFruit} fruit, ${avgProtein} protein servings on average. ${avgProcessed <= 1 ? 'Low processed food too — excellent.' : ''}`,
+    })
+  }
+
+  // ── Focus ──────────────────────────────────────────────────────────────────
+  const totalFocus = total('focus_minutes')
+  const totalReading = total('reading_minutes')
+  const avgFocusScore = avg('focus_score')
+
+  if (totalFocus >= 300) {
+    insights.push({
+      icon: '🧠',
+      tone: 'positive',
+      text: `${Math.round(totalFocus / 60)}h of deep work logged this week. ${totalReading > 0 ? `Plus ${totalReading} min reading.` : ''} Your focus score averaged ${avgFocusScore} — top tier.`,
+    })
+  } else if (totalFocus >= 120) {
+    insights.push({
+      icon: '🎯',
+      tone: 'neutral',
+      text: `${totalFocus} min of focus logged. Building — hitting 300+ min next week would move your focus score above 70.`,
+    })
+  } else if (totalFocus > 0) {
+    insights.push({
+      icon: '🎯',
+      tone: 'improve',
+      text: `Only ${totalFocus} min of focused work this week. Even 45 min/day of deep work compounding over months is transformative.`,
+    })
+  }
+
+  // ── Hydration ─────────────────────────────────────────────────────────────
+  const goodWaterDays = logs.filter((l) => (l.water_ml || 0) >= 2500).length
+  if (avgWater < 1800) {
+    insights.push({
+      icon: '💧',
+      tone: 'improve',
+      text: `Averaging ${Math.round(avgWater / 100) / 10}L water — below the 2.5L target. Hydration directly impacts your energy and longevity scores.`,
+    })
+  } else if (goodWaterDays >= 5) {
+    insights.push({
+      icon: '💧',
+      tone: 'positive',
+      text: `Hit the 2.5L water target ${goodWaterDays} days this week. Consistently hydrated — keep it up.`,
+    })
+  }
+
+  // ── Trend vs last week ────────────────────────────────────────────────────
+  const avgFSS = avg('future_self_score')
+  const streak = profile?.current_streak ?? 0
+
+  if (streak >= 7) {
+    insights.push({
+      icon: '🔥',
+      tone: 'positive',
+      text: `${streak}-day streak active. Streaks compound — your score multiplier is at ${Math.round((0.7 + Math.min(streak, 100) / 100 * 0.3) * 100)}% of max.`,
+    })
+  }
+
+  // ── Perfect days ──────────────────────────────────────────────────────────
+  const perfectDays = logs.filter((l) => l.is_perfect_day).length
+  if (perfectDays >= 3) {
+    insights.push({
+      icon: '⭐',
+      tone: 'positive',
+      text: `${perfectDays} perfect days this week. Perfect days earn bonus XP and push projections significantly — you're in a strong rhythm.`,
+    })
+  }
+
+  // ── One-line summary projection ───────────────────────────────────────────
+  const weakestCategory = [
+    { key: 'fitness_score', label: 'fitness', fix: 'add one workout' },
+    { key: 'nutrition_score', label: 'nutrition', fix: 'add 2 veg servings' },
+    { key: 'energy_score', label: 'sleep', fix: 'sleep 30 min longer' },
+    { key: 'focus_score', label: 'focus', fix: 'log 45 min of deep work' },
+  ]
+    .map((c) => ({ ...c, avg: avg(c.key) }))
+    .sort((a, b) => a.avg - b.avg)[0]
+
+  const projectedGain = Math.round((100 - weakestCategory.avg) * 0.08)
+
+  insights.push({
+    icon: '📈',
+    tone: 'projection',
+    text: `Your weakest pillar is ${weakestCategory.label} (avg ${weakestCategory.avg}). If you ${weakestCategory.fix} daily, your Future Self Score could rise by ~${projectedGain} pts over the next 30 days.`,
+  })
+
+  return insights
+}
+
+// ── TONE STYLES ───────────────────────────────────────────────────────────────
+const TONE_STYLES = {
+  positive: 'bg-teal/5 border-teal/20',
+  neutral: 'bg-slate-50 border-slate-200/60 dark:bg-white/5 dark:border-white/10',
+  improve: 'bg-amber-50/60 border-amber-200/40 dark:bg-amber/5 dark:border-amber/20',
+  projection: 'bg-primary/5 border-primary/20',
+}
+
+const TONE_LABEL = {
+  positive: { text: 'Win', color: 'text-teal bg-teal/10' },
+  neutral: { text: 'Note', color: 'text-slate-500 bg-slate-100 dark:bg-white/10' },
+  improve: { text: 'Opportunity', color: 'text-amber-700 bg-amber-100/80 dark:text-amber dark:bg-amber/10' },
+  projection: { text: 'Projection', color: 'text-primary bg-primary/10' },
+}
+
 export default function WeeklyReview() {
   const { user, profile } = useUserStore()
   const [loading, setLoading] = useState(true)
@@ -66,14 +288,14 @@ export default function WeeklyReview() {
   const best = ranked[0]
   const worst = ranked[ranked.length - 1]
   const xpEarned = weekLogs.reduce((s, l) => s + (l.xp_earned || 0), 0)
-  const habitRate = Math.round(
-    (weekLogs.filter((l) => l.future_self_score >= 50).length / 7) * 100
-  )
+  const perfectDays = weekLogs.filter((l) => l.is_perfect_day).length
   const streakNow = profile?.current_streak ?? 0
-  const streakDelta = weekLogs.length >= 2 ? (streakNow > 0 ? '+' : '') + streakNow : '—'
+  const avgFSS = avg('future_self_score')
+
+  const insights = generateInsights(weekLogs, profile)
 
   return (
-    <div className="space-y-4 animate-slide-up pb-6">
+    <div className="space-y-4 animate-slide-up pb-6 max-w-lg mx-auto">
       <header>
         <p className="section-title">Insights</p>
         <h1 className="text-2xl font-extrabold text-slate-900">Weekly review</h1>
@@ -82,29 +304,45 @@ export default function WeeklyReview() {
         </p>
       </header>
 
+      {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card p-4">
-          <p className="text-xs font-bold text-slate-400 uppercase">XP earned</p>
-          <p className="text-2xl font-extrabold text-primary mt-1">{xpEarned}</p>
+          <p className="text-xs font-bold text-slate-400 uppercase">Avg Future Self</p>
+          <p className="text-3xl font-extrabold text-primary mt-1">{avgFSS}</p>
         </div>
         <div className="glass-card p-4">
-          <p className="text-xs font-bold text-slate-400 uppercase">Habit rate</p>
-          <p className="text-2xl font-extrabold text-teal mt-1">{habitRate}%</p>
+          <p className="text-xs font-bold text-slate-400 uppercase">XP earned</p>
+          <p className="text-3xl font-extrabold text-primary mt-1">{xpEarned}</p>
         </div>
-        <div className="glass-card p-4 col-span-2">
-          <p className="text-xs font-bold text-slate-400 uppercase">Avg Future Self</p>
-          <p className="text-3xl font-extrabold text-primary mt-1">{avg('future_self_score')}</p>
+        <div className="glass-card p-4">
+          <p className="text-xs font-bold text-slate-400 uppercase">Perfect days</p>
+          <p className="text-2xl font-extrabold text-teal mt-1">{perfectDays}</p>
+        </div>
+        <div className="glass-card p-4">
+          <p className="text-xs font-bold text-slate-400 uppercase">Streak</p>
+          <p className="text-2xl font-extrabold text-coral mt-1">{streakNow} 🔥</p>
         </div>
       </div>
 
+      {/* Category bars */}
       <div className="glass-card p-4">
         <p className="section-title mb-3">Category averages</p>
         <ul className="space-y-2">
           {ranked.map((c) => (
             <li key={c.key} className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-500 w-20">{c.label}</span>
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-primary/70 rounded-full" style={{ width: `${c.avg}%` }} />
+              <div className="flex-1 h-2 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${c.avg}%`,
+                    background: c.avg >= 70
+                      ? '#1D9E75'
+                      : c.avg >= 50
+                      ? '#7F77DD'
+                      : '#EF9F27',
+                  }}
+                />
               </div>
               <span className="text-sm font-bold tabular-nums w-8 text-right">{c.avg}</span>
             </li>
@@ -112,25 +350,45 @@ export default function WeeklyReview() {
         </ul>
       </div>
 
+      {/* Best / worst */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card p-4 border-teal/20 bg-teal/5">
-          <p className="text-[10px] font-bold text-teal uppercase">Best</p>
+          <p className="text-[10px] font-bold text-teal uppercase">Strongest</p>
           <p className="font-extrabold text-slate-900 mt-1">{best.label}</p>
           <p className="text-2xl font-bold text-teal">{best.avg}</p>
         </div>
-        <div className="glass-card p-4 border-coral/20 bg-coral/5">
-          <p className="text-[10px] font-bold text-coral uppercase">Grow next</p>
+        <div className="glass-card p-4 border-amber-200/40 bg-amber-50/40 dark:bg-amber/5 dark:border-amber/20">
+          <p className="text-[10px] font-bold text-amber-600 dark:text-amber uppercase">Focus next</p>
           <p className="font-extrabold text-slate-900 mt-1">{worst.label}</p>
-          <p className="text-2xl font-bold text-coral">{worst.avg}</p>
+          <p className="text-2xl font-bold text-amber-600 dark:text-amber">{worst.avg}</p>
         </div>
       </div>
 
-      <div className="glass-card p-4">
-        <p className="section-title mb-2">Streak</p>
-        <p className="text-lg font-bold text-slate-800">
-          Current streak: <span className="text-primary">{streakNow} days</span>
-        </p>
-        <p className="text-xs text-slate-500 mt-1">Keep logging daily to maintain momentum.</p>
+      {/* ── AI-style insights — pure logic ────────────────────────────────── */}
+      <div>
+        <p className="section-title mb-3">This week's breakdown</p>
+        <div className="space-y-3">
+          {insights.map((insight, i) => (
+            <div
+              key={i}
+              className={`glass-card p-4 border ${TONE_STYLES[insight.tone]}`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-xl shrink-0 mt-0.5">{insight.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <span
+                    className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full mb-1.5 ${TONE_LABEL[insight.tone].color}`}
+                  >
+                    {TONE_LABEL[insight.tone].text}
+                  </span>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
+                    {insight.text}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Link to="/log" className="btn-primary w-full block text-center">
