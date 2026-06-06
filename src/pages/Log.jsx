@@ -7,6 +7,7 @@ import DetailToggle from '../components/log/DetailToggle'
 import FoodDetailSection from '../components/log/FoodDetailSection'
 import ServingStepper from '../components/log/ServingStepper'
 import { TextField, SelectField } from '../components/log/TextDetailFields'
+import ScoreCard from '../components/home/ScoreCard'
 import {
   buildAllScores,
   calcXP,
@@ -87,7 +88,7 @@ export default function Log() {
   const [details, setDetails] = useState(emptyLogDetails)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(null)
+  const [success, setSuccess] = useState(null) // { xp, savedLog }
 
   const isUpdate = Boolean(todayLog)
 
@@ -120,7 +121,6 @@ export default function Log() {
   const nutritionPreview = calcNutritionFromServings(previewLog, previewFoods)
   const fitnessPreview = calcFitnessFromWorkout(previewLog)
 
-  // Food analysis — only computed when real foods are logged
   const foodQuality = calcFoodQualityScore(previewFoods)
   const foodLongevity = calcFoodLongevityScore(previewFoods)
   const macros = calcMacroSummary(previewFoods)
@@ -213,28 +213,47 @@ export default function Log() {
       .update({ total_xp: newTotalXP, level: newLevel, ...streakUpdate })
       .eq('id', user.id)
 
-    setProfile({ ...profile, total_xp: newTotalXP, level: newLevel, ...streakUpdate })
+    const updatedProfile = { ...profile, total_xp: newTotalXP, level: newLevel, ...streakUpdate }
+    setProfile(updatedProfile)
     setTodayLog({ ...row, id: todayLog?.id })
     await loadUserData(user.id)
 
     setLoading(false)
-    setSuccess(xp_earned + bonusXP)
+    setSuccess({ xp: xp_earned + bonusXP, savedLog: row })
     confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
-    setTimeout(() => navigate('/dashboard'), 2000)
   }
 
+  // ── SUCCESS SCREEN ──────────────────────────────────────────────────────────
   if (success !== null) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up">
-        <div className="glass-card p-10 text-center">
+      <div className="max-w-lg mx-auto pb-8 animate-slide-up space-y-4">
+        <div className="glass-card p-5 text-center">
           <p className="text-4xl mb-2">🔒</p>
           <p className="text-2xl font-extrabold text-slate-900">Locked in!</p>
-          <p className="text-xl font-bold text-primary mt-2">+{success} XP</p>
+          <p className="text-xl font-bold text-primary mt-1">+{success.xp} XP</p>
         </div>
+
+        <div>
+          <p className="section-title mb-2 px-1">Your score card</p>
+          <ScoreCard
+            profile={profile}
+            log={success.savedLog}
+            streak={profile?.current_streak ?? 0}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="btn-secondary w-full"
+        >
+          Back to dashboard →
+        </button>
       </div>
     )
   }
 
+  // ── FORM ────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-lg mx-auto pb-8 animate-slide-up">
       <header className="mb-4">
@@ -266,9 +285,8 @@ export default function Log() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* ── NUTRITION ─────────────────────────────────────── */}
         <div className="glass-card p-5">
-          <label className="label-text">Nutrition — today&apos;s servings</label>
+          <label className="label-text">Nutrition — today's servings</label>
           <ServingStepper label="Fruit" emoji="🍎" value={form.fruit_servings} onChange={(v) => updateField('fruit_servings', v)} />
           <ServingStepper label="Vegetables" emoji="🥬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
           <ServingStepper label="Protein" emoji="🥩" value={form.protein_servings} onChange={(v) => updateField('protein_servings', v)} />
@@ -285,12 +303,9 @@ export default function Log() {
                 setForm((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) - 1) }))
               }
             />
-
-            {/* Food analysis panel — only shows when foods are added */}
             {foodQuality !== null && (
               <div className="mt-3 p-3 rounded-2xl bg-primary-50/60 border border-primary-100/60 space-y-2">
                 <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Food analysis</p>
-
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-white/70 rounded-xl px-3 py-2">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Food Quality</p>
@@ -307,7 +322,6 @@ export default function Log() {
                     </p>
                   </div>
                 </div>
-
                 {macros && (
                   <div className="grid grid-cols-4 gap-1 text-center">
                     {[
@@ -323,7 +337,6 @@ export default function Log() {
                     ))}
                   </div>
                 )}
-
                 <p className="text-[10px] text-slate-400 font-medium">
                   Macros estimated at 150g per food · affects your nutrition & longevity scores
                 </p>
@@ -332,7 +345,6 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── WORKOUT ───────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Workout</label>
           <div className="flex flex-wrap gap-2 mb-3">
@@ -366,7 +378,6 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── SLEEP ─────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -382,7 +393,6 @@ export default function Log() {
           <p className="text-xs text-primary font-bold mt-2">Energy score: {previewScores.energy_score}</p>
         </div>
 
-        {/* ── WATER ─────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Water</label>
           <input type="range" min={0} max={4000} step={100} value={form.water_ml} onChange={(e) => updateField('water_ml', Number(e.target.value))} className="w-full" />
@@ -396,7 +406,6 @@ export default function Log() {
           <p className="text-sm mt-2">{'🥛'.repeat(glasses) || '—'} · {form.water_ml} ml</p>
         </div>
 
-        {/* ── FOCUS ─────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Focus (min)</label>
           <input type="number" min={0} value={form.focus_minutes} onChange={(e) => updateField('focus_minutes', Number(e.target.value))} className="input-field" />
@@ -405,7 +414,6 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── READING ───────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Reading (min)</label>
           <input type="number" min={0} value={form.reading_minutes} onChange={(e) => updateField('reading_minutes', Number(e.target.value))} className="input-field" />
@@ -414,7 +422,6 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── MEDITATION ────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Meditation (min)</label>
           <input type="number" min={0} value={form.meditation_minutes} onChange={(e) => updateField('meditation_minutes', Number(e.target.value))} className="input-field" />
@@ -423,7 +430,6 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── MOOD ──────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Mood</label>
           <div className="flex flex-wrap gap-1.5 justify-between">

@@ -1,0 +1,4264 @@
+﻿
+========== src\App.jsx ==========
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { useAuthInit } from './hooks/useAuthInit'
+import { useTheme } from './hooks/useTheme'
+import { useUserStore } from './store/useUserStore'
+import NavBar from './components/NavBar'
+import AuthGuard from './components/AuthGuard'
+import Spinner from './components/ui/Spinner'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Onboarding from './pages/Onboarding'
+import Dashboard from './pages/Dashboard'
+import Log from './pages/Log'
+import Profile from './pages/Profile'
+import Achievements from './pages/Achievements'
+import WeeklyReview from './pages/WeeklyReview'
+
+function AppLayout() {
+  return (
+    <div className="app-bg min-h-screen">
+      <NavBar />
+      <main className="relative px-4 pt-6 pb-28 md:pb-8 md:pl-[252px] max-w-2xl lg:max-w-3xl mx-auto animate-fade-in">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
+function ProtectedLayout() {
+  return (
+    <AuthGuard>
+      <AppLayout />
+    </AuthGuard>
+  )
+}
+
+function HomeRedirect() {
+  const { user, authReady } = useUserStore()
+
+  if (!authReady) {
+    return (
+      <div className="app-bg min-h-screen flex items-center justify-center">
+        <Spinner />
+      </div>
+    )
+  }
+
+  return <Navigate to={user ? '/dashboard' : '/login'} replace />
+}
+
+export default function App() {
+  useAuthInit()
+  useTheme()
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        <Route
+          path="/onboarding"
+          element={
+            <AuthGuard onboardingRoute>
+              <Onboarding />
+            </AuthGuard>
+          }
+        />
+
+        <Route element={<ProtectedLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/log" element={<Log />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/weekly" element={<WeeklyReview />} />
+          <Route path="/achievements" element={<Achievements />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+========== src\components\AuthGuard.jsx ==========
+import { Navigate } from 'react-router-dom'
+import { useUserStore, needsOnboarding } from '../store/useUserStore'
+import Spinner from './ui/Spinner'
+
+export default function AuthGuard({ children, onboardingRoute = false }) {
+  const { user, profile, authReady, dataLoading } = useUserStore()
+
+  if (!authReady || dataLoading) {
+    return (
+      <div className="app-bg min-h-screen flex flex-col items-center justify-center gap-4">
+        <Spinner />
+        <p className="text-sm font-medium text-slate-400">Loading your journeyâ€¦</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  const mustOnboard = needsOnboarding(user, profile)
+
+  if (onboardingRoute) {
+    if (!mustOnboard) return <Navigate to="/dashboard" replace />
+    return children
+  }
+
+  if (mustOnboard) return <Navigate to="/onboarding" replace />
+
+  return children
+}
+
+========== src\components\home\DailyQuests.jsx ==========
+import { Link } from 'react-router-dom'
+import { evaluateQuests } from '../../data/quests'
+
+export default function DailyQuests({ todayLog }) {
+  const quests = evaluateQuests(todayLog)
+  const done = quests.filter((q) => q.done).length
+
+  return (
+    <div className="glass-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="section-title">Daily quests</p>
+        <span className="pill bg-amber/15 text-amber-800 dark:text-amber text-[10px]">
+          {done}/{quests.length}
+        </span>
+      </div>
+      <ul className="space-y-2">
+        {quests.map((q) => (
+          <li
+            key={q.id}
+            className={[
+              'flex items-center gap-3 rounded-2xl px-3 py-2 text-sm',
+              q.done
+                ? 'bg-teal/10 border border-teal/20'
+                : 'bg-slate-50 dark:bg-white/5 border border-transparent dark:border-white/5',
+            ].join(' ')}
+          >
+            <span className="text-lg">{q.icon}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-slate-800">{q.name}</p>
+              <p className="text-[10px] text-slate-500">{q.desc}</p>
+            </div>
+            <span className="text-[10px] font-bold text-primary shrink-0">+{q.xp}</span>
+            <span
+              className={[
+                'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
+                q.done ? 'bg-teal text-white' : 'border-2 border-dashed border-slate-300 dark:border-slate-600',
+              ].join(' ')}
+            >
+              {q.done ? 'âœ“' : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {!todayLog && (
+        <Link to="/log" className="btn-primary w-full mt-3 text-sm !py-2.5">
+          Log to complete quests
+        </Link>
+      )}
+    </div>
+  )
+}
+
+========== src\components\home\EmptyHome.jsx ==========
+import { Link } from 'react-router-dom'
+
+const CARDS = [
+  {
+    icon: 'ðŸ”¥',
+    title: 'Streaks',
+    body: 'Log every day to build your streak. Longer streaks multiply your Future Self Score.',
+  },
+  {
+    icon: 'âš¡',
+    title: 'XP & levels',
+    body: 'Complete habits and daily quests to earn XP. Level up and unlock new titles.',
+  },
+  {
+    icon: 'ðŸ”®',
+    title: 'Future Self Score',
+    body: 'One number that blends fitness, nutrition, energy, focus, and longevity from your logs.',
+  },
+]
+
+export default function EmptyHome() {
+  return (
+    <div className="space-y-4 animate-slide-up">
+      <div className="glass-card p-6 text-center bg-gradient-to-br from-primary-50 to-white">
+        <p className="text-4xl mb-2">ðŸ‘‹</p>
+        <h2 className="text-xl font-extrabold text-slate-900">Welcome to Future Self</h2>
+        <p className="text-sm text-slate-500 mt-2 font-medium max-w-sm mx-auto">
+          Your Duolingo for self-improvement. Log once today to start earning XP and building momentum.
+        </p>
+        <Link to="/log" className="btn-primary mt-5 inline-flex shadow-glow">
+          Log your first day
+        </Link>
+      </div>
+      {CARDS.map((c) => (
+        <div key={c.title} className="glass-card p-4 flex gap-4">
+          <span className="text-2xl">{c.icon}</span>
+          <div>
+            <p className="font-bold text-slate-900">{c.title}</p>
+            <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">{c.body}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+========== src\components\home\FutureProjectionCard.jsx ==========
+import { computeFutureProjection } from '../../utils/projection'
+import { useUserStore } from '../../store/useUserStore'
+
+export default function FutureProjectionCard({ currentScore }) {
+  const { recentLogs } = useUserStore()
+
+  const proj = computeFutureProjection(recentLogs, currentScore)
+  const d6 = proj.month6 - proj.current
+  const d12 = proj.year1 - proj.current
+  const hasEnoughData = recentLogs.length >= 3
+
+  return (
+    <div className="glass-card p-4 bg-gradient-to-br from-primary-50/80 via-white to-white dark:from-teal/10 dark:via-slate-950/40 dark:to-primary/10">
+      <div className="flex items-center justify-between mb-3">
+        <p className="section-title">Future projection</p>
+        <span className="pill bg-white/70 dark:bg-white/5 text-slate-500 dark:text-slate-300 text-[10px] border border-white/60 dark:border-white/10">
+          {hasEnoughData ? 'Live' : 'Preview'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {[
+          { label: 'Now', score: proj.current, delta: null },
+          { label: '6 mo', score: proj.month6, delta: d6 },
+          { label: '1 yr', score: proj.year1, delta: d12 },
+        ].map((c) => (
+          <div key={c.label} className="metric-tile">
+            <p className="text-[10px] font-bold text-slate-400 uppercase">{c.label}</p>
+            <p className="text-2xl font-extrabold text-primary tabular-nums">{c.score}</p>
+            {c.delta !== null && (
+              <p className={`text-[10px] font-bold ${c.delta >= 0 ? 'text-teal' : 'text-coral'}`}>
+                {c.delta >= 0 ? 'â†‘ +' : 'â†“ '}{c.delta}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {hasEnoughData ? (
+        <ul className="space-y-1.5 border-t border-slate-100 dark:border-white/10 pt-3">
+          {proj.drivers.slice(0, 4).map((d) => (
+            <li key={d.label} className="flex items-center justify-between text-xs">
+              <span className="text-slate-600 font-medium">{d.label}</span>
+              <span className={`font-bold tabular-nums ${d.trend === 'up' ? 'text-teal' : 'text-slate-500'}`}>
+                {d.trend === 'up' ? 'â†‘' : 'â†’'} {d.value}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-slate-500 font-medium border-t border-slate-100 dark:border-white/10 pt-3">
+          Log {Math.max(0, 3 - recentLogs.length)} more day{3 - recentLogs.length !== 1 ? 's' : ''} to unlock live projections.
+        </p>
+      )}
+    </div>
+  )
+}
+========== src\components\home\ScoreBreakdown.jsx ==========
+import { useState } from 'react'
+import { getScoreBreakdown } from '../../utils/scoring'
+
+export default function ScoreBreakdown({ scores, streakDays }) {
+  const [open, setOpen] = useState(false)
+
+  if (!scores?.future_self_score && scores?.future_self_score !== 0) return null
+
+  const scoreInput = {
+    fitness: scores.fitness_score ?? 0,
+    nutrition: scores.nutrition_score ?? 0,
+    energy: scores.energy_score ?? 0,
+    focus: scores.focus_score ?? 0,
+    longevity: scores.longevity_score ?? 0,
+    mood: (scores.mood ?? 5) * 10,
+  }
+
+  const items = getScoreBreakdown(scoreInput, streakDays)
+  const total = scores.future_self_score ?? items.reduce((s, i) => s + i.points, 0)
+
+  return (
+    <div className="glass-card p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <div>
+          <p className="section-title">Future Self Score</p>
+          <p className="text-3xl font-extrabold text-primary tabular-nums">{total}</p>
+        </div>
+        <span className="text-xs font-bold text-primary">{open ? 'Hide' : 'How it works'} â–¼</span>
+      </button>
+      {open && (
+        <ul className="mt-4 space-y-2 border-t border-slate-100 dark:border-white/10 pt-3">
+          {items.map((item) => (
+            <li key={item.key}>
+              <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
+                <span>
+                  {item.label} ({item.percent}% weight)
+                </span>
+                <span className="tabular-nums">+{item.points} pts</span>
+              </div>
+              <div className="h-1.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary/70 dark:bg-teal/80 rounded-full"
+                  style={{ width: `${Math.min(100, item.value)}%` }}
+                />
+              </div>
+            </li>
+          ))}
+          <p className="text-[10px] text-slate-400 pt-2 leading-relaxed">
+            Streak multiplier boosts your score when you log consistently ({streakDays} day streak).
+          </p>
+        </ul>
+      )}
+    </div>
+  )
+}
+
+========== src\components\home\ScoreCard.jsx ==========
+import { useRef, useState } from 'react'
+import { calcFoodLongevityScore } from '../../utils/scoring'
+
+export default function ScoreCard({ profile, log, streak }) {
+  const cardRef = useRef(null)
+  const [copying, setCopying] = useState(false)
+
+  const score = log?.future_self_score ?? 0
+  const nutrition = log?.nutrition_score ?? 0
+  const fitness = log?.fitness_score ?? 0
+  const energy = log?.energy_score ?? 0
+  const focus = log?.focus_score ?? 0
+  const longevity = log?.longevity_score ?? 0
+  const username = profile?.username || 'Qyven'
+  const level = profile?.level || 1
+
+  // Check if user logged real foods â€” if so show food longevity
+  const loggedFoods = log?.log_details?.foods || []
+  const foodLongevity = calcFoodLongevityScore(loggedFoods)
+  const showFoodLongevity = foodLongevity !== null
+
+  function getScoreLabel(s) {
+    if (s >= 85) return 'Elite'
+    if (s >= 70) return 'Strong'
+    if (s >= 55) return 'Building'
+    if (s >= 40) return 'Rising'
+    return 'Starting'
+  }
+
+  function getScoreEmoji(s) {
+    if (s >= 85) return 'ðŸ”¥'
+    if (s >= 70) return 'ðŸ’ª'
+    if (s >= 55) return 'ðŸ“ˆ'
+    if (s >= 40) return 'âš¡'
+    return 'ðŸŒ±'
+  }
+
+  async function handleShare() {
+    setCopying(true)
+
+    const longevityLine = showFoodLongevity
+      ? `ðŸ§¬ Food Longevity: ${foodLongevity}\n`
+      : ''
+
+    const text =
+      `${getScoreEmoji(score)} My Qyven score today: ${score}/99\n\n` +
+      `ðŸ¥— Nutrition: ${nutrition}\n` +
+      `ðŸ‹ï¸ Fitness: ${fitness}\n` +
+      `âš¡ Energy: ${energy}\n` +
+      `ðŸŽ¯ Focus: ${focus}\n` +
+      `ðŸ›¡ï¸ Longevity: ${longevity}\n` +
+      longevityLine +
+      `ðŸ”¥ Streak: ${streak} days\n\n` +
+      `Building my future self on Qyven âœ¨`
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        setTimeout(() => setCopying(false), 2000)
+        return
+      }
+    } catch {
+      // user cancelled
+    }
+
+    setCopying(false)
+  }
+
+  const date = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  // Base scores always shown
+  const baseScores = [
+    { label: 'Nutrition', value: nutrition, emoji: 'ðŸ¥—' },
+    { label: 'Fitness', value: fitness, emoji: 'ðŸ‹ï¸' },
+    { label: 'Energy', value: energy, emoji: 'âš¡' },
+    { label: 'Focus', value: focus, emoji: 'ðŸŽ¯' },
+  ]
+
+  return (
+    <div className="space-y-3">
+      {/* Visual card */}
+      <div
+        ref={cardRef}
+        className="relative overflow-hidden rounded-3xl p-5 bg-gradient-to-br from-[#7F77DD] via-[#6366f1] to-[#14b8a6] text-white shadow-xl"
+      >
+        {/* Background decoration */}
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/5 -translate-y-10 translate-x-10" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-white/5 translate-y-8 -translate-x-8" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 relative">
+          <div>
+            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Qyven</p>
+            <p className="font-extrabold text-lg">{username}</p>
+            <p className="text-white/60 text-xs font-medium">Level {level} Â· {date}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-white/60 text-xs font-bold uppercase">Future Self</p>
+            <p className="text-5xl font-extrabold tabular-nums leading-none">{score}</p>
+            <p className="text-white/80 text-sm font-bold">{getScoreLabel(score)} {getScoreEmoji(score)}</p>
+          </div>
+        </div>
+
+        {/* Base score grid */}
+        <div className="grid grid-cols-2 gap-2 relative">
+          {baseScores.map((s) => (
+            <div key={s.label} className="bg-white/10 rounded-2xl px-3 py-2 flex items-center gap-2">
+              <span className="text-lg">{s.emoji}</span>
+              <div>
+                <p className="text-white/60 text-[10px] font-bold uppercase">{s.label}</p>
+                <p className="text-white font-extrabold tabular-nums text-lg leading-tight">{s.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Longevity row â€” always shown */}
+        <div className="mt-2 grid grid-cols-2 gap-2 relative">
+          <div className="bg-white/10 rounded-2xl px-3 py-2 flex items-center gap-2">
+            <span className="text-lg">ðŸ›¡ï¸</span>
+            <div>
+              <p className="text-white/60 text-[10px] font-bold uppercase">Longevity</p>
+              <p className="text-white font-extrabold tabular-nums text-lg leading-tight">{longevity}</p>
+            </div>
+          </div>
+
+          {/* Food longevity â€” only shows if user searched real foods */}
+          {showFoodLongevity && (
+            <div className="bg-white/20 rounded-2xl px-3 py-2 flex items-center gap-2 ring-1 ring-white/30">
+              <span className="text-lg">ðŸ§¬</span>
+              <div>
+                <p className="text-white/70 text-[10px] font-bold uppercase">Food Longevity</p>
+                <p className="text-white font-extrabold tabular-nums text-lg leading-tight">{foodLongevity}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Streak */}
+        {streak > 0 && (
+          <div className="mt-2 flex items-center gap-2 bg-white/10 rounded-2xl px-3 py-2 relative">
+            <span className="text-xl">ðŸ”¥</span>
+            <p className="font-bold text-sm">
+              {streak} day streak â€” keep going
+            </p>
+          </div>
+        )}
+
+        {/* Food longevity badge */}
+        {showFoodLongevity && (
+          <div className="mt-2 flex items-center gap-2 bg-white/10 rounded-2xl px-3 py-2 relative">
+            <span className="text-base">ðŸŒ¿</span>
+            <p className="text-white/80 text-xs font-medium">
+              {foodLongevity >= 75
+                ? 'Anti-inflammatory day â€” excellent food choices'
+                : foodLongevity >= 55
+                ? 'Good whole food base today'
+                : 'Add more whole foods to boost longevity'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Share button */}
+      <button
+        type="button"
+        onClick={handleShare}
+        className="btn-primary w-full flex items-center justify-center gap-2"
+      >
+        <span>{copying ? 'âœ“ Copied!' : 'â†‘ Share my score'}</span>
+      </button>
+    </div>
+  )
+}
+========== src\components\log\DetailToggle.jsx ==========
+import { useState } from 'react'
+
+export default function DetailToggle({ label, badge, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen || (badge > 0))
+
+  return (
+    <div className="mt-4 pt-4 border-t border-slate-100/80">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-left group"
+      >
+        <span className="text-sm font-semibold text-primary group-hover:text-primary-700 transition-colors">
+          {label}
+          {badge > 0 && (
+            <span className="ml-2 pill bg-primary-50 text-primary-700 text-[10px]">{badge}</span>
+          )}
+        </span>
+        <span
+          className={[
+            'text-slate-400 text-xs font-bold transition-transform duration-200',
+            open ? 'rotate-180' : '',
+          ].join(' ')}
+        >
+          â–¼
+        </span>
+      </button>
+      {open && <div className="mt-3 space-y-3 animate-fade-in">{children}</div>}
+    </div>
+  )
+}
+
+========== src\components\log\FoodDetailSection.jsx ==========
+import { useEffect, useState } from 'react'
+import { searchFoods, foodToLogItem, detectServingKey } from '../../services/openFoodFacts'
+
+export default function FoodDetailSection({ foods, onChange, onServingDetected, onServingRemoved }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState('')
+  const [customName, setCustomName] = useState('')
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([])
+      setSearchError('')
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      setSearchError('')
+      try {
+        const items = await searchFoods(query, controller.signal)
+        setResults(items)
+        if (!items.length) setSearchError('No results â€” try adding manually below')
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setSearchError('Search failed â€” add manually below')
+          setResults([])
+        }
+      } finally {
+        setSearching(false)
+      }
+    }, 500)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [query])
+
+  function addFood(item) {
+    const foodItem = { ...item, servingKey: detectServingKey(item.name) }
+    onChange([...foods, foodItem])
+    setQuery('')
+    setResults([])
+    if (foodItem.servingKey && onServingDetected) onServingDetected(foodItem.servingKey)
+  }
+
+  function addCustom() {
+    const name = customName.trim()
+    if (!name) return
+    const key = detectServingKey(name)
+    const item = {
+      id: crypto.randomUUID(),
+      name,
+      brand: '',
+      calories: null,
+      protein: null,
+      carbs: null,
+      fat: null,
+      serving: '1 serving',
+      servingKey: key,
+    }
+    onChange([...foods, item])
+    if (key && onServingDetected) onServingDetected(key)
+    setCustomName('')
+  }
+
+  function removeFood(id) {
+    const food = foods.find((f) => f.id === id)
+    onChange(foods.filter((f) => f.id !== id))
+    if (food?.servingKey && onServingRemoved) onServingRemoved(food.servingKey)
+  }
+
+  function macroString(f) {
+    const parts = []
+    if (f.calories != null) parts.push(`${f.calories} kcal`)
+    if (f.protein != null) parts.push(`P ${f.protein}g`)
+    if (f.carbs != null) parts.push(`C ${f.carbs}g`)
+    if (f.fat != null) parts.push(`F ${f.fat}g`)
+    return parts.length ? parts.join(' Â· ') : 'No macro data'
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500 font-medium leading-relaxed">
+        Search real ingredients â€” macros per 100g from USDA database.
+      </p>
+
+      {foods.length > 0 && (
+        <ul className="space-y-2">
+          {foods.map((f) => (
+            <li
+              key={f.id}
+              className="flex items-start gap-2 bg-primary-50/50 border border-primary-100/60 rounded-2xl px-3 py-2.5"
+            >
+              <span className="text-lg shrink-0">ðŸ½ï¸</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{f.name}</p>
+                <p className="text-xs text-slate-400 font-medium">{macroString(f)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeFood(f.id)}
+                className="text-slate-400 hover:text-coral text-sm font-bold px-1 shrink-0"
+                aria-label="Remove"
+              >
+                Ã—
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="relative">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="e.g. chicken breast, brown rice, kaleâ€¦"
+          className="input-field text-sm pr-10"
+          autoComplete="off"
+        />
+        {searching && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        )}
+      </div>
+
+      {searchError && (
+        <p className="text-xs text-coral font-medium">{searchError}</p>
+      )}
+
+      {results.length > 0 && (
+        <ul className="max-h-52 overflow-y-auto rounded-2xl border border-surface-border bg-white shadow-card divide-y divide-slate-100">
+          {results.map((p) => (
+            <li key={p.offCode}>
+              <button
+                type="button"
+                onClick={() => addFood(foodToLogItem(p))}
+                className="w-full text-left px-3 py-2.5 hover:bg-primary-50/40 transition-colors"
+              >
+                <p className="text-sm font-semibold text-slate-800">{p.name}</p>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  {[
+                    p.calories != null ? `${p.calories} kcal` : null,
+                    p.protein != null ? `P ${p.protein}g` : null,
+                    p.carbs != null ? `C ${p.carbs}g` : null,
+                    p.fat != null ? `F ${p.fat}g` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' Â· ') || 'per 100g'}
+                </p>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={customName}
+          onChange={(e) => setCustomName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustom())}
+          placeholder="Or type a meal manuallyâ€¦"
+          className="input-field text-sm flex-1"
+        />
+        <button
+          type="button"
+          onClick={addCustom}
+          className="btn-secondary !py-2.5 !px-4 text-sm shrink-0"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  )
+}
+========== src\components\log\LogDetailsSummary.jsx ==========
+import { parseLogDetails } from '../../utils/logDetails'
+
+export default function LogDetailsSummary({ logDetails, compact = false }) {
+  const d = parseLogDetails(logDetails)
+
+  const lines = []
+
+  if (d.foods?.length) {
+    const names = d.foods.map((f) => f.name).slice(0, 3)
+    const extra = d.foods.length > 3 ? ` +${d.foods.length - 3}` : ''
+    lines.push({ icon: 'ðŸ¥—', text: `${names.join(', ')}${extra}` })
+  }
+
+  if (d.exercise?.name) {
+    lines.push({
+      icon: 'ðŸ‹ï¸',
+      text: [d.exercise.name, d.exercise.duration_min && `${d.exercise.duration_min} min`]
+        .filter(Boolean)
+        .join(' Â· '),
+    })
+  }
+
+  if (d.sleep?.bedtime || d.sleep?.wake_time) {
+    lines.push({
+      icon: 'ðŸ’¤',
+      text: [d.sleep.bedtime && `Bed ${d.sleep.bedtime}`, d.sleep.wake_time && `Up ${d.sleep.wake_time}`]
+        .filter(Boolean)
+        .join(' Â· '),
+    })
+  }
+
+  if (d.focus?.activity) lines.push({ icon: 'ðŸŽ¯', text: d.focus.activity })
+  if (d.reading?.title) {
+    lines.push({
+      icon: 'ðŸ“š',
+      text: [d.reading.title, d.reading.pages && `${d.reading.pages} pp`].filter(Boolean).join(' Â· '),
+    })
+  }
+  if (d.meditation?.style) lines.push({ icon: 'ðŸ§˜', text: d.meditation.style })
+  if (d.mood?.note) lines.push({ icon: 'ðŸ’­', text: d.mood.note })
+
+  if (!lines.length) return null
+
+  if (compact) {
+    return (
+      <p className="text-xs text-slate-500 mt-1 truncate">
+        {lines.map((l) => l.text).join(' Â· ')}
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+      <p className="section-title">Logged details</p>
+      {lines.map((l, i) => (
+        <p key={i} className="text-sm text-slate-600 flex gap-2">
+          <span>{l.icon}</span>
+          <span className="line-clamp-2">{l.text}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
+
+========== src\components\log\ServingStepper.jsx ==========
+export default function ServingStepper({ label, emoji, value, onChange, max = 10 }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-xl">{emoji}</span>
+        <span className="text-sm font-semibold text-slate-700">{label}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200"
+        >
+          âˆ’
+        </button>
+        <span className="w-8 text-center font-bold text-primary tabular-nums">{value}</span>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, value + 1))}
+          className="w-9 h-9 rounded-xl bg-primary/10 text-primary font-bold hover:bg-primary/20"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+========== src\components\log\TextDetailFields.jsx ==========
+export function TextField({ label, value, onChange, placeholder, multiline = false }) {
+  const className = multiline
+    ? 'input-field text-sm min-h-[72px] resize-none'
+    : 'input-field text-sm'
+
+  return (
+    <div>
+      {label && <label className="text-xs font-semibold text-slate-500 mb-1.5 block">{label}</label>}
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={className}
+          rows={3}
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={className}
+        />
+      )}
+    </div>
+  )
+}
+
+export function SelectField({ label, value, onChange, options }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-slate-500 mb-1.5 block">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="input-field text-sm appearance-none cursor-pointer"
+      >
+        <option value="">â€”</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+========== src\components\NavBar.jsx ==========
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+import { useTheme } from '../hooks/useTheme'
+import {
+  IconHome,
+  IconLog,
+  IconChart,
+  IconTrophy,
+  IconSparkles,
+  IconMoon,
+  IconSun,
+  IconSignOut,
+} from './ui/Icons'
+
+const tabs = [
+  { to: '/dashboard', label: 'Home', Icon: IconHome },
+  { to: '/log', label: 'Log', Icon: IconLog, fab: true },
+  { to: '/weekly', label: 'Week', Icon: IconChart },
+  { to: '/achievements', label: 'Awards', Icon: IconTrophy },
+]
+
+const hiddenPaths = ['/login', '/signup', '/onboarding']
+
+export default function NavBar() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { profile, reset } = useUserStore()
+  const { theme, toggleTheme } = useTheme()
+
+  if (hiddenPaths.includes(location.pathname)) {
+    return null
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    reset()
+    navigate('/login')
+  }
+
+  const ThemeIcon = theme === 'dark' ? IconSun : IconMoon
+  const initial = (profile?.username || 'F')[0].toUpperCase()
+
+  return (
+    <>
+      {/* Mobile â€” floating dock */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4 safe-bottom pointer-events-none">
+        <div className="pointer-events-auto max-w-md mx-auto">
+          <div className="flex items-end justify-between gap-1 px-2 py-2 rounded-[28px] bg-white/85 dark:bg-slate-950/85 backdrop-blur-2xl shadow-dock dark:shadow-none border border-white/80 dark:border-white/10">
+            {tabs.map((tab) => {
+              const { Icon } = tab
+
+              if (tab.fab) {
+                return (
+                  <NavLink
+                    key={tab.to}
+                    to={tab.to}
+                    className="relative -mt-7 flex flex-col items-center"
+                  >
+                    <span className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-700 dark:from-teal dark:to-primary text-white shadow-glow ring-4 ring-surface-muted dark:ring-[#080A12]">
+                      <Icon className="w-6 h-6" />
+                    </span>
+                    <span className="text-[10px] font-bold text-primary dark:text-teal mt-1.5">{tab.label}</span>
+                  </NavLink>
+                )
+              }
+
+              return (
+                <NavLink
+                  key={tab.to}
+                  to={tab.to}
+                  className={({ isActive }) =>
+                    [
+                      'flex flex-1 flex-col items-center gap-1 py-2 rounded-2xl transition-all duration-200',
+                      isActive
+                        ? 'text-primary dark:text-teal bg-primary-50 dark:bg-white/10'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200',
+                    ].join(' ')
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon className={isActive ? 'w-6 h-6' : 'w-5 h-5'} />
+                      <span className="text-[10px] font-semibold">{tab.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              )
+            })}
+          </div>
+        </div>
+      </nav>
+
+      {/* Desktop â€” glass sidebar */}
+      <aside className="hidden md:flex fixed left-4 top-4 bottom-4 z-50 w-[220px] flex-col">
+        <div className="flex flex-col h-full glass-card p-4 shadow-card">
+          <div className="flex items-center gap-3 px-3 py-4 mb-2">
+            <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary-700 text-white shadow-md shadow-primary/30">
+              <IconSparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white leading-tight">Qyven</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Level up daily</p>
+            </div>
+          </div>
+
+          <div className="mx-2 mb-3 rounded-2xl bg-slate-950 text-white dark:bg-white/10 border border-transparent dark:border-white/10 p-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center font-extrabold">
+                {initial}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold truncate">{profile?.username || 'Future builder'}</p>
+                <p className="text-[11px] text-white/60">Make today count</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col gap-1 mt-2">
+            {tabs.map((tab) => {
+              const { Icon } = tab
+              return (
+                <NavLink
+                  key={tab.to}
+                  to={tab.to}
+                  className={({ isActive }) =>
+                    [
+                      'flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition-all duration-200',
+                      tab.fab && !isActive
+                        ? 'bg-gradient-to-r from-primary/10 to-primary-50 dark:from-teal/15 dark:to-primary/10 text-primary dark:text-teal border border-primary/20 dark:border-teal/20'
+                        : isActive
+                          ? 'bg-primary dark:bg-teal text-white shadow-md shadow-primary/25 dark:shadow-teal/20'
+                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-slate-100',
+                    ].join(' ')
+                  }
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  {tab.label}
+                </NavLink>
+              )
+            })}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="btn-secondary !px-3 !py-2.5 !rounded-xl text-xs"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <ThemeIcon className="w-4 h-4" />
+              {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 dark:text-red-200 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition-colors"
+            >
+              <IconSignOut className="w-4 h-4" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="md:hidden fixed right-4 top-4 z-50 flex gap-2">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="h-11 w-11 rounded-2xl bg-white/85 dark:bg-slate-950/85 border border-white/80 dark:border-white/10 shadow-card dark:shadow-none backdrop-blur-xl flex items-center justify-center text-slate-700 dark:text-slate-100"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <ThemeIcon className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="h-11 w-11 rounded-2xl bg-red-50/90 dark:bg-red-500/10 border border-red-100 dark:border-red-400/20 shadow-card dark:shadow-none backdrop-blur-xl flex items-center justify-center text-red-600 dark:text-red-200"
+          title="Sign out"
+        >
+          <IconSignOut className="w-5 h-5" />
+        </button>
+      </div>
+    </>
+  )
+}
+
+========== src\components\ScoreRing.jsx ==========
+import { useEffect, useState } from 'react'
+
+export default function ScoreRing({ score, color, size = 60, strokeWidth = 6, showNumber = true }) {
+  const [animated, setAnimated] = useState(false)
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setAnimated(true))
+    return () => cancelAnimationFrame(t)
+  }, [score])
+
+  return (
+    <svg width={size} height={size} className="flex-shrink-0 drop-shadow-sm">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#E8EAEF"
+        strokeWidth={strokeWidth}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={animated ? offset : circumference}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
+      />
+      {showNumber && (
+        <text
+          x="50%"
+          y="50%"
+          dominantBaseline="central"
+          textAnchor="middle"
+          className="fill-slate-800 font-bold"
+          fontSize={size * 0.24}
+          style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+        >
+          {score}
+        </text>
+      )}
+    </svg>
+  )
+}
+
+========== src\components\ui\Card.jsx ==========
+export function Card({ children, className = '', hover = false }) {
+  return (
+    <div className={[hover ? 'glass-card-hover' : 'glass-card', 'p-5', className].join(' ')}>
+      {children}
+    </div>
+  )
+}
+
+export function CardHeader({ title, subtitle, action }) {
+  return (
+    <div className="flex items-start justify-between gap-3 mb-4">
+      <div>
+        {subtitle && <p className="section-title mb-1">{subtitle}</p>}
+        {title && <h2 className="text-lg font-bold text-slate-900">{title}</h2>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+========== src\components\ui\Icons.jsx ==========
+const iconClass = 'w-5 h-5'
+
+export function IconHome({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )
+}
+
+export function IconLog({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+  )
+}
+
+export function IconUser({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  )
+}
+
+export function IconTrophy({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+    </svg>
+  )
+}
+
+export function IconSparkles({ className = 'w-8 h-8' }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+    </svg>
+  )
+}
+
+export function IconChart({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )
+}
+
+export function IconFlame({ className = iconClass }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 23c-3.9 0-7-3.1-7-7 0-2.5 1.2-4.7 3-6.1-.3 2.1.5 4.1 2.2 5.4 0-3.5 2.5-6.5 6-7.5-1.1 2.5-.5 5.5 1.8 7.2C17.5 12.5 19 10.2 19 7c0 4.4 3.6 8 8 8h1c0 5.5-4.5 10-10 10z" transform="scale(0.85) translate(2,0)" />
+    </svg>
+  )
+}
+
+export function IconMoon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.8A8.5 8.5 0 1111.2 3a6.5 6.5 0 009.8 9.8z" />
+    </svg>
+  )
+}
+
+export function IconSun({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36-6.36-1.42 1.42M7.05 16.95l-1.41 1.41m12.72 0-1.42-1.41M7.05 7.05 5.64 5.64M12 8a4 4 0 100 8 4 4 0 000-8z" />
+    </svg>
+  )
+}
+
+export function IconSignOut({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.75A2.75 2.75 0 0013 3H6.75A2.75 2.75 0 004 5.75v12.5A2.75 2.75 0 006.75 21H13a2.75 2.75 0 002.75-2.75V15M10 12h10m0 0-3-3m3 3-3 3" />
+    </svg>
+  )
+}
+
+========== src\components\ui\Spinner.jsx ==========
+export default function Spinner({ className = 'w-10 h-10' }) {
+  return (
+    <div
+      className={`${className} border-[3px] border-primary/20 border-t-primary rounded-full animate-spin`}
+      role="status"
+      aria-label="Loading"
+    />
+  )
+}
+
+========== src\components\XPBar.jsx ==========
+import { getXPForLevel, getXPForNextLevel } from '../utils/scoring'
+
+export default function XPBar({ totalXP, level }) {
+  const currentLevelXP = getXPForLevel(level)
+  const nextLevelXP = getXPForNextLevel(level)
+  const progress = nextLevelXP > currentLevelXP
+    ? ((totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
+    : 100
+
+  return (
+    <div className="w-full">
+      <div className="flex justify-between items-baseline mb-2">
+        <span className="text-sm font-bold text-slate-800">
+          {totalXP.toLocaleString()} <span className="text-slate-400 font-semibold">XP</span>
+        </span>
+        <span className="pill bg-primary-50 text-primary-700 dark:bg-teal/10 dark:text-teal">Level {level}</span>
+      </div>
+      <div className="relative h-2.5 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary via-primary-400 to-primary-300 dark:from-teal dark:via-primary dark:to-amber transition-all duration-700 ease-out"
+          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+        />
+      </div>
+      <p className="text-[11px] text-slate-400 mt-1.5 text-right">
+        {(nextLevelXP - totalXP).toLocaleString()} XP to level {level + 1}
+      </p>
+    </div>
+  )
+}
+
+========== src\data\achievements.js ==========
+/** @typedef {{ totalLogs: number, longestStreak: number, currentStreak: number, perfectDays: number, waterGoalDays: number, sleepGoalDays: number, totalFocusMinutes: number, totalReadingMinutes: number, workoutDays: number, bestFitnessScore: number, bestFutureSelfScore: number, readingDays: number, level: number, totalXP: number, avgLongevity: number, fruitDays: number }} Stats */
+
+export const ACHIEVEMENTS = [
+  // Streaks
+  { key: 'first_log', category: 'streak', name: 'First Step', desc: 'Complete your first log', icon: 'ðŸš€', tier: 'bronze', xp: 100, check: (s) => s.totalLogs >= 1, progress: (s) => ({ current: Math.min(s.totalLogs, 1), target: 1 }) },
+  { key: 'streak_3', category: 'streak', name: 'Spark', desc: '3-day streak', icon: 'âœ¨', tier: 'bronze', xp: 75, check: (s) => s.longestStreak >= 3, progress: (s) => ({ current: s.longestStreak, target: 3 }) },
+  { key: 'streak_7', category: 'streak', name: 'First Flame', desc: '7-day streak', icon: 'ðŸ”¥', tier: 'bronze', xp: 100, check: (s) => s.longestStreak >= 7, progress: (s) => ({ current: s.longestStreak, target: 7 }) },
+  { key: 'streak_14', category: 'streak', name: 'Fortnight', desc: '14-day streak', icon: 'ðŸ“…', tier: 'silver', xp: 200, check: (s) => s.longestStreak >= 14, progress: (s) => ({ current: s.longestStreak, target: 14 }) },
+  { key: 'streak_30', category: 'streak', name: 'Iron Discipline', desc: '30-day streak', icon: 'ðŸ’ª', tier: 'silver', xp: 500, check: (s) => s.longestStreak >= 30, progress: (s) => ({ current: s.longestStreak, target: 30 }) },
+  { key: 'streak_100', category: 'streak', name: 'Century', desc: '100-day streak', icon: 'ðŸ†', tier: 'legendary', xp: 2000, check: (s) => s.longestStreak >= 100, progress: (s) => ({ current: s.longestStreak, target: 100 }) },
+
+  // Sleep
+  { key: 'sleep_7', category: 'sleep', name: 'Well Rested', desc: '7 nights with 7+ hours sleep', icon: 'ðŸ˜´', tier: 'bronze', xp: 150, check: (s) => s.sleepGoalDays >= 7, progress: (s) => ({ current: s.sleepGoalDays, target: 7 }) },
+  { key: 'sleep_30', category: 'sleep', name: 'Sleep Champion', desc: '30 nights with 7+ hours', icon: 'ðŸŒ™', tier: 'gold', xp: 400, check: (s) => s.sleepGoalDays >= 30, progress: (s) => ({ current: s.sleepGoalDays, target: 30 }) },
+
+  // Fitness
+  { key: 'workout_7', category: 'fitness', name: 'Active Week', desc: '7 workout days', icon: 'ðŸƒ', tier: 'bronze', xp: 150, check: (s) => s.workoutDays >= 7, progress: (s) => ({ current: s.workoutDays, target: 7 }) },
+  { key: 'workout_30', category: 'fitness', name: 'Athlete', desc: '30 workout days', icon: 'ðŸ‹ï¸', tier: 'silver', xp: 350, check: (s) => s.workoutDays >= 30, progress: (s) => ({ current: s.workoutDays, target: 30 }) },
+  { key: 'fitness_90', category: 'fitness', name: 'Elite Athlete', desc: 'Fitness score 90+', icon: 'ðŸŽ¯', tier: 'gold', xp: 300, check: (s) => s.bestFitnessScore >= 90, progress: (s) => ({ current: s.bestFitnessScore, target: 90 }) },
+
+  // Nutrition
+  { key: 'hydro_7', category: 'nutrition', name: 'Hydrated Week', desc: '7 days hitting water goal', icon: 'ðŸ’§', tier: 'bronze', xp: 100, check: (s) => s.waterGoalDays >= 7, progress: (s) => ({ current: s.waterGoalDays, target: 7 }) },
+  { key: 'hydro_30', category: 'nutrition', name: 'Hydro King', desc: '30 days water goal', icon: 'ðŸŒŠ', tier: 'silver', xp: 200, check: (s) => s.waterGoalDays >= 30, progress: (s) => ({ current: s.waterGoalDays, target: 30 }) },
+  { key: 'greens_30', category: 'nutrition', name: 'Plant Powered', desc: '30 days with 3+ veg servings', icon: 'ðŸ¥¬', tier: 'silver', xp: 250, check: (s) => s.vegGoalDays >= 30, progress: (s) => ({ current: s.vegGoalDays, target: 30 }) },
+
+  // Reading
+  { key: 'read_7', category: 'reading', name: 'Page Turner', desc: '7 days of reading', icon: 'ðŸ“–', tier: 'bronze', xp: 120, check: (s) => s.readingDays >= 7, progress: (s) => ({ current: s.readingDays, target: 7 }) },
+  { key: 'bookworm', category: 'reading', name: 'Bookworm', desc: '30 days reading logged', icon: 'ðŸ“š', tier: 'silver', xp: 300, check: (s) => s.readingDays >= 30, progress: (s) => ({ current: s.readingDays, target: 30 }) },
+
+  // Focus
+  { key: 'focus_10h', category: 'focus', name: 'Focused', desc: '10 hours focus logged', icon: 'ðŸ§ ', tier: 'bronze', xp: 150, check: (s) => s.totalFocusMinutes >= 600, progress: (s) => ({ current: Math.floor(s.totalFocusMinutes / 60), target: 10 }) },
+  { key: 'focus_100h', category: 'focus', name: 'Deep Thinker', desc: '100 hours focus', icon: 'ðŸ’¡', tier: 'gold', xp: 500, check: (s) => s.totalFocusMinutes >= 6000, progress: (s) => ({ current: Math.floor(s.totalFocusMinutes / 60), target: 100 }) },
+
+  // Longevity / FSS
+  { key: 'fss_70', category: 'longevity', name: 'Rising Star', desc: 'Future Self Score 70+', icon: 'â­', tier: 'silver', xp: 250, check: (s) => s.bestFutureSelfScore >= 70, progress: (s) => ({ current: s.bestFutureSelfScore, target: 70 }) },
+  { key: 'fss_80', category: 'longevity', name: 'Future Unlocked', desc: 'Future Self Score 80+', icon: 'ðŸ”®', tier: 'gold', xp: 400, check: (s) => s.bestFutureSelfScore >= 80, progress: (s) => ({ current: s.bestFutureSelfScore, target: 80 }) },
+  { key: 'perfect_week', category: 'longevity', name: 'Perfect Week', desc: '7 perfect days', icon: 'ðŸŒŸ', tier: 'silver', xp: 250, check: (s) => s.perfectDays >= 7, progress: (s) => ({ current: s.perfectDays, target: 7 }) },
+
+  // XP / Level
+  { key: 'level_5', category: 'xp', name: 'Builder', desc: 'Reach level 5', icon: 'ðŸ”¨', tier: 'bronze', xp: 150, check: (s) => s.level >= 5, progress: (s) => ({ current: s.level, target: 5 }) },
+  { key: 'level_10', category: 'xp', name: 'Disciplined', desc: 'Reach level 10', icon: 'âœ¨', tier: 'silver', xp: 300, check: (s) => s.level >= 10, progress: (s) => ({ current: s.level, target: 10 }) },
+  { key: 'level_20', category: 'xp', name: 'Elite', desc: 'Reach level 20', icon: 'ðŸ‘ï¸', tier: 'gold', xp: 600, check: (s) => s.level >= 20, progress: (s) => ({ current: s.level, target: 20 }) },
+  { key: 'xp_5000', category: 'xp', name: 'XP Collector', desc: 'Earn 5,000 total XP', icon: 'ðŸ’Ž', tier: 'gold', xp: 400, check: (s) => s.totalXP >= 5000, progress: (s) => ({ current: s.totalXP, target: 5000 }) },
+  { key: 'xp_25000', category: 'xp', name: 'XP Legend', desc: 'Earn 25,000 total XP', icon: 'ðŸ‘‘', tier: 'legendary', xp: 1500, check: (s) => s.totalXP >= 25000, progress: (s) => ({ current: s.totalXP, target: 25000 }) },
+]
+
+export const ACHIEVEMENT_CATEGORIES = [
+  'streak',
+  'sleep',
+  'fitness',
+  'nutrition',
+  'reading',
+  'focus',
+  'longevity',
+  'xp',
+]
+
+========== src\data\foods.js ==========
+// Curated food database with real macros per 100g
+// Sources: USDA Foundation Foods + standard nutrition references
+
+export const FOODS = [
+    // â”€â”€ FRUITS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'apple',           name: 'Apple',                 cal: 52,  p: 0.3,  c: 14,  f: 0.2,  cat: 'fruit_servings' },
+    { id: 'banana',          name: 'Banana',                cal: 89,  p: 1.1,  c: 23,  f: 0.3,  cat: 'fruit_servings' },
+    { id: 'orange',          name: 'Orange',                cal: 47,  p: 0.9,  c: 12,  f: 0.1,  cat: 'fruit_servings' },
+    { id: 'strawberry',      name: 'Strawberries',          cal: 32,  p: 0.7,  c: 8,   f: 0.3,  cat: 'fruit_servings' },
+    { id: 'blueberry',       name: 'Blueberries',           cal: 57,  p: 0.7,  c: 14,  f: 0.3,  cat: 'fruit_servings' },
+    { id: 'mango',           name: 'Mango',                 cal: 60,  p: 0.8,  c: 15,  f: 0.4,  cat: 'fruit_servings' },
+    { id: 'grapes',          name: 'Grapes',                cal: 69,  p: 0.7,  c: 18,  f: 0.2,  cat: 'fruit_servings' },
+    { id: 'watermelon',      name: 'Watermelon',            cal: 30,  p: 0.6,  c: 8,   f: 0.2,  cat: 'fruit_servings' },
+    { id: 'pineapple',       name: 'Pineapple',             cal: 50,  p: 0.5,  c: 13,  f: 0.1,  cat: 'fruit_servings' },
+    { id: 'peach',           name: 'Peach',                 cal: 39,  p: 0.9,  c: 10,  f: 0.3,  cat: 'fruit_servings' },
+    { id: 'pear',            name: 'Pear',                  cal: 57,  p: 0.4,  c: 15,  f: 0.1,  cat: 'fruit_servings' },
+    { id: 'cherry',          name: 'Cherries',              cal: 63,  p: 1.1,  c: 16,  f: 0.2,  cat: 'fruit_servings' },
+    { id: 'kiwi',            name: 'Kiwi',                  cal: 61,  p: 1.1,  c: 15,  f: 0.5,  cat: 'fruit_servings' },
+    { id: 'plum',            name: 'Plum',                  cal: 46,  p: 0.7,  c: 11,  f: 0.3,  cat: 'fruit_servings' },
+    { id: 'cantaloupe',      name: 'Cantaloupe',            cal: 34,  p: 0.8,  c: 8,   f: 0.2,  cat: 'fruit_servings' },
+    { id: 'raspberry',       name: 'Raspberries',           cal: 52,  p: 1.2,  c: 12,  f: 0.7,  cat: 'fruit_servings' },
+    { id: 'avocado',         name: 'Avocado',               cal: 160, p: 2.0,  c: 9,   f: 15,   cat: 'fruit_servings' },
+  
+    // â”€â”€ VEGETABLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'broccoli',        name: 'Broccoli',              cal: 34,  p: 2.8,  c: 7,   f: 0.4,  cat: 'vegetable_servings' },
+    { id: 'spinach',         name: 'Spinach',               cal: 23,  p: 2.9,  c: 4,   f: 0.4,  cat: 'vegetable_servings' },
+    { id: 'kale',            name: 'Kale',                  cal: 49,  p: 4.3,  c: 9,   f: 0.9,  cat: 'vegetable_servings' },
+    { id: 'carrot',          name: 'Carrots',               cal: 41,  p: 0.9,  c: 10,  f: 0.2,  cat: 'vegetable_servings' },
+    { id: 'tomato',          name: 'Tomato',                cal: 18,  p: 0.9,  c: 4,   f: 0.2,  cat: 'vegetable_servings' },
+    { id: 'cucumber',        name: 'Cucumber',              cal: 16,  p: 0.7,  c: 4,   f: 0.1,  cat: 'vegetable_servings' },
+    { id: 'lettuce',         name: 'Romaine Lettuce',       cal: 17,  p: 1.2,  c: 3,   f: 0.3,  cat: 'vegetable_servings' },
+    { id: 'bell_pepper',     name: 'Bell Pepper',           cal: 31,  p: 1.0,  c: 6,   f: 0.3,  cat: 'vegetable_servings' },
+    { id: 'onion',           name: 'Onion',                 cal: 40,  p: 1.1,  c: 9,   f: 0.1,  cat: 'vegetable_servings' },
+    { id: 'garlic',          name: 'Garlic',                cal: 149, p: 6.4,  c: 33,  f: 0.5,  cat: 'vegetable_servings' },
+    { id: 'sweet_potato',    name: 'Sweet Potato',          cal: 86,  p: 1.6,  c: 20,  f: 0.1,  cat: 'vegetable_servings' },
+    { id: 'cauliflower',     name: 'Cauliflower',           cal: 25,  p: 1.9,  c: 5,   f: 0.3,  cat: 'vegetable_servings' },
+    { id: 'celery',          name: 'Celery',                cal: 16,  p: 0.7,  c: 3,   f: 0.2,  cat: 'vegetable_servings' },
+    { id: 'zucchini',        name: 'Zucchini',              cal: 17,  p: 1.2,  c: 3,   f: 0.3,  cat: 'vegetable_servings' },
+    { id: 'asparagus',       name: 'Asparagus',             cal: 20,  p: 2.2,  c: 4,   f: 0.1,  cat: 'vegetable_servings' },
+    { id: 'cabbage',         name: 'Cabbage',               cal: 25,  p: 1.3,  c: 6,   f: 0.1,  cat: 'vegetable_servings' },
+    { id: 'mushroom',        name: 'Mushrooms',             cal: 22,  p: 3.1,  c: 3,   f: 0.3,  cat: 'vegetable_servings' },
+    { id: 'corn',            name: 'Corn',                  cal: 86,  p: 3.3,  c: 19,  f: 1.4,  cat: 'vegetable_servings' },
+    { id: 'green_peas',      name: 'Green Peas',            cal: 81,  p: 5.4,  c: 14,  f: 0.4,  cat: 'vegetable_servings' },
+    { id: 'edamame',         name: 'Edamame',               cal: 122, p: 11,   c: 10,  f: 5,    cat: 'vegetable_servings' },
+  
+    // â”€â”€ PROTEINS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'chicken_breast',  name: 'Chicken Breast',        cal: 165, p: 31,   c: 0,   f: 3.6,  cat: 'protein_servings' },
+    { id: 'chicken_thigh',   name: 'Chicken Thigh',         cal: 209, p: 26,   c: 0,   f: 11,   cat: 'protein_servings' },
+    { id: 'ground_beef',     name: 'Ground Beef (lean)',    cal: 215, p: 26,   c: 0,   f: 12,   cat: 'protein_servings' },
+    { id: 'sirloin_steak',   name: 'Sirloin Steak',         cal: 207, p: 26,   c: 0,   f: 11,   cat: 'protein_servings' },
+    { id: 'salmon',          name: 'Salmon',                cal: 208, p: 20,   c: 0,   f: 13,   cat: 'protein_servings' },
+    { id: 'tuna',            name: 'Tuna',                  cal: 116, p: 26,   c: 0,   f: 1,    cat: 'protein_servings' },
+    { id: 'shrimp',          name: 'Shrimp',                cal: 99,  p: 24,   c: 0,   f: 0.3,  cat: 'protein_servings' },
+    { id: 'cod',             name: 'Cod',                   cal: 82,  p: 18,   c: 0,   f: 0.7,  cat: 'protein_servings' },
+    { id: 'tilapia',         name: 'Tilapia',               cal: 96,  p: 20,   c: 0,   f: 1.7,  cat: 'protein_servings' },
+    { id: 'whole_egg',       name: 'Egg (whole)',           cal: 155, p: 13,   c: 1,   f: 11,   cat: 'protein_servings' },
+    { id: 'egg_white',       name: 'Egg White',             cal: 52,  p: 11,   c: 1,   f: 0.2,  cat: 'protein_servings' },
+    { id: 'turkey_breast',   name: 'Turkey Breast',         cal: 135, p: 30,   c: 0,   f: 1,    cat: 'protein_servings' },
+    { id: 'pork_loin',       name: 'Pork Loin',             cal: 182, p: 25,   c: 0,   f: 9,    cat: 'protein_servings' },
+    { id: 'lamb',            name: 'Lamb',                  cal: 258, p: 25,   c: 0,   f: 17,   cat: 'protein_servings' },
+    { id: 'tofu',            name: 'Tofu',                  cal: 76,  p: 8,    c: 2,   f: 4,    cat: 'protein_servings' },
+    { id: 'tempeh',          name: 'Tempeh',                cal: 193, p: 19,   c: 9,   f: 11,   cat: 'protein_servings' },
+    { id: 'greek_yogurt',    name: 'Greek Yogurt',          cal: 59,  p: 10,   c: 4,   f: 0.4,  cat: 'protein_servings' },
+    { id: 'cottage_cheese',  name: 'Cottage Cheese',        cal: 98,  p: 11,   c: 3,   f: 4,    cat: 'protein_servings' },
+    { id: 'black_beans',     name: 'Black Beans',           cal: 132, p: 9,    c: 24,  f: 0.5,  cat: 'protein_servings' },
+    { id: 'lentils',         name: 'Lentils',               cal: 116, p: 9,    c: 20,  f: 0.4,  cat: 'protein_servings' },
+    { id: 'chickpeas',       name: 'Chickpeas',             cal: 164, p: 9,    c: 27,  f: 2.6,  cat: 'protein_servings' },
+    { id: 'cheddar',         name: 'Cheddar Cheese',        cal: 403, p: 25,   c: 1,   f: 33,   cat: 'protein_servings' },
+    { id: 'whole_milk',      name: 'Whole Milk',            cal: 61,  p: 3.2,  c: 5,   f: 3.3,  cat: 'protein_servings' },
+    { id: 'sardines',        name: 'Sardines',              cal: 208, p: 25,   c: 0,   f: 11,   cat: 'protein_servings' },
+    { id: 'protein_shake',   name: 'Protein Shake',         cal: 120, p: 25,   c: 5,   f: 2,    cat: 'protein_servings' },
+  
+    // â”€â”€ GRAINS & CARBS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'white_rice',      name: 'White Rice',            cal: 130, p: 2.7,  c: 28,  f: 0.3,  cat: null },
+    { id: 'brown_rice',      name: 'Brown Rice',            cal: 112, p: 2.6,  c: 24,  f: 0.9,  cat: null },
+    { id: 'oats',            name: 'Oats',                  cal: 389, p: 17,   c: 66,  f: 7,    cat: null },
+    { id: 'pasta',           name: 'Pasta (cooked)',        cal: 158, p: 5.8,  c: 31,  f: 0.9,  cat: null },
+    { id: 'white_bread',     name: 'White Bread',           cal: 265, p: 9,    c: 49,  f: 3,    cat: null },
+    { id: 'whole_wheat_bread',name: 'Whole Wheat Bread',    cal: 247, p: 13,   c: 41,  f: 4,    cat: null },
+    { id: 'potato',          name: 'Potato',                cal: 77,  p: 2,    c: 17,  f: 0.1,  cat: null },
+    { id: 'quinoa',          name: 'Quinoa',                cal: 120, p: 4.4,  c: 22,  f: 1.9,  cat: null },
+    { id: 'tortilla',        name: 'Flour Tortilla',        cal: 312, p: 8,    c: 51,  f: 8,    cat: null },
+  
+    // â”€â”€ NUTS & FATS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'almonds',         name: 'Almonds',               cal: 579, p: 21,   c: 22,  f: 50,   cat: null },
+    { id: 'peanut_butter',   name: 'Peanut Butter',         cal: 588, p: 25,   c: 20,  f: 50,   cat: null },
+    { id: 'walnuts',         name: 'Walnuts',               cal: 654, p: 15,   c: 14,  f: 65,   cat: null },
+    { id: 'olive_oil',       name: 'Olive Oil',             cal: 884, p: 0,    c: 0,   f: 100,  cat: null },
+    { id: 'butter',          name: 'Butter',                cal: 717, p: 0.9,  c: 0.1, f: 81,   cat: null },
+    { id: 'cashews',         name: 'Cashews',               cal: 553, p: 18,   c: 30,  f: 44,   cat: null },
+  
+    // â”€â”€ DAIRY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'skim_milk',       name: 'Skim Milk',             cal: 34,  p: 3.4,  c: 5,   f: 0.1,  cat: null },
+    { id: 'plain_yogurt',    name: 'Yogurt (plain)',        cal: 61,  p: 3.5,  c: 5,   f: 3.3,  cat: null },
+    { id: 'mozzarella',      name: 'Mozzarella',            cal: 280, p: 28,   c: 2,   f: 17,   cat: null },
+    { id: 'cream_cheese',    name: 'Cream Cheese',          cal: 342, p: 6,    c: 4,   f: 34,   cat: null },
+  
+    // â”€â”€ PROCESSED / TREATS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'dark_chocolate',  name: 'Dark Chocolate',        cal: 546, p: 5,    c: 60,  f: 31,   cat: 'processed_servings' },
+    { id: 'milk_chocolate',  name: 'Milk Chocolate',        cal: 535, p: 8,    c: 60,  f: 30,   cat: 'processed_servings' },
+    { id: 'potato_chips',    name: 'Potato Chips',          cal: 536, p: 7,    c: 53,  f: 35,   cat: 'processed_servings' },
+    { id: 'choc_chip_cookie',name: 'Chocolate Chip Cookie', cal: 488, p: 5,    c: 64,  f: 24,   cat: 'processed_servings' },
+    { id: 'ice_cream',       name: 'Ice Cream (vanilla)',   cal: 207, p: 3.5,  c: 24,  f: 11,   cat: 'processed_servings' },
+    { id: 'glazed_donut',    name: 'Glazed Donut',          cal: 452, p: 5,    c: 51,  f: 25,   cat: 'processed_servings' },
+    { id: 'cheese_pizza',    name: 'Pizza (cheese)',        cal: 266, p: 11,   c: 33,  f: 10,   cat: 'processed_servings' },
+    { id: 'cheeseburger',    name: 'Cheeseburger',          cal: 295, p: 17,   c: 24,  f: 14,   cat: 'processed_servings' },
+    { id: 'french_fries',    name: 'French Fries',          cal: 312, p: 3.4,  c: 41,  f: 15,   cat: 'processed_servings' },
+    { id: 'cola_soda',       name: 'Cola Soda',             cal: 37,  p: 0,    c: 10,  f: 0,    cat: 'processed_servings' },
+    { id: 'candy_bar',       name: 'Candy Bar',             cal: 480, p: 5,    c: 64,  f: 22,   cat: 'processed_servings' },
+    { id: 'buttered_popcorn',name: 'Popcorn (buttered)',    cal: 535, p: 8,    c: 56,  f: 29,   cat: 'processed_servings' },
+    { id: 'pancakes',        name: 'Pancakes',              cal: 227, p: 6,    c: 28,  f: 10,   cat: 'processed_servings' },
+    { id: 'blueberry_muffin',name: 'Blueberry Muffin',      cal: 377, p: 5,    c: 55,  f: 14,   cat: 'processed_servings' },
+    { id: 'chocolate_cake',  name: 'Chocolate Cake',        cal: 371, p: 4,    c: 52,  f: 17,   cat: 'processed_servings' },
+    { id: 'brownie',         name: 'Brownie',               cal: 406, p: 4,    c: 55,  f: 20,   cat: 'processed_servings' },
+    { id: 'hot_dog',         name: 'Hot Dog',               cal: 290, p: 11,   c: 2,   f: 26,   cat: 'processed_servings' },
+    { id: 'nachos',          name: 'Nachos',                cal: 306, p: 7,    c: 34,  f: 16,   cat: 'processed_servings' },
+    { id: 'fried_chicken',   name: 'Fried Chicken',         cal: 320, p: 22,   c: 12,  f: 20,   cat: 'processed_servings' },
+  
+    // â”€â”€ DRINKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id: 'black_coffee',    name: 'Black Coffee',          cal: 2,   p: 0.3,  c: 0,   f: 0,    cat: null },
+    { id: 'orange_juice',    name: 'Orange Juice',          cal: 45,  p: 0.7,  c: 10,  f: 0.2,  cat: null },
+  ]
+  
+  export function searchLocalFoods(query) {
+    const q = query.toLowerCase().trim()
+    if (q.length < 2) return []
+  
+    const scored = FOODS
+      .map((food) => {
+        const name = food.name.toLowerCase()
+        const idWords = food.id.replace(/_/g, ' ')
+        let score = 99
+  
+        if (name === q || idWords === q) score = 0
+        else if (name.startsWith(q) || idWords.startsWith(q)) score = 1
+        else if (name.split(' ')[0] === q.split(' ')[0]) score = 2
+        else if (name.includes(q)) score = 3
+        else if (q.split(' ').some((w) => w.length > 2 && (name.includes(w) || idWords.includes(w)))) score = 4
+        else return null
+  
+        return { ...food, _score: score }
+      })
+      .filter(Boolean)
+      .sort((a, b) => a._score - b._score || a.name.length - b.name.length)
+  
+    return scored.slice(0, 6)
+  }
+========== src\data\quests.js ==========
+/** Daily quests â€” reset each calendar day; XP on log save */
+
+export const DAILY_QUESTS = [
+  {
+    id: 'water_2l',
+    name: 'Hydration',
+    desc: 'Drink 2L water',
+    icon: 'ðŸ’§',
+    xp: 15,
+    check: (log) => (log?.water_ml || 0) >= 2000,
+  },
+  {
+    id: 'sleep_8h',
+    name: 'Full rest',
+    desc: 'Sleep 8+ hours',
+    icon: 'ðŸ’¤',
+    xp: 20,
+    check: (log) => Number(log?.sleep_hours) >= 8,
+  },
+  {
+    id: 'read_10',
+    name: 'Reader',
+    desc: 'Read 10 minutes',
+    icon: 'ðŸ“š',
+    xp: 15,
+    check: (log) => (log?.reading_minutes || 0) >= 10,
+  },
+  {
+    id: 'workout_20',
+    name: 'Move',
+    desc: 'Workout 20+ min',
+    icon: 'ðŸ‹ï¸',
+    xp: 25,
+    check: (log) =>
+      (log?.workout_duration_min || 0) >= 20 ||
+      (log?.exercise_type && log.exercise_type !== 'rest'),
+  },
+  {
+    id: 'focus_30',
+    name: 'Deep work',
+    desc: 'Focus 30 minutes',
+    icon: 'ðŸŽ¯',
+    xp: 20,
+    check: (log) => (log?.focus_minutes || 0) >= 30,
+  },
+  {
+    id: 'veggies_3',
+    name: 'Greens',
+    desc: '3+ vegetable servings',
+    icon: 'ðŸ¥¬',
+    xp: 15,
+    check: (log) => (log?.vegetable_servings || 0) >= 3,
+  },
+]
+
+export function getCompletedQuestIds(log) {
+  const stored = log?.log_details?.quests_completed
+  if (Array.isArray(stored)) return stored
+  return []
+}
+
+export function evaluateQuests(log) {
+  return DAILY_QUESTS.map((q) => ({
+    ...q,
+    done: q.check(log),
+  }))
+}
+
+export function questXPForLog(log, previouslyCompleted = []) {
+  let xp = 0
+  const prev = new Set(previouslyCompleted)
+  for (const q of DAILY_QUESTS) {
+    if (q.check(log) && !prev.has(q.id)) xp += q.xp
+  }
+  return xp
+}
+
+export function newlyCompletedQuestIds(log, previouslyCompleted = []) {
+  const prev = new Set(previouslyCompleted)
+  return DAILY_QUESTS.filter((q) => q.check(log) && !prev.has(q.id)).map((q) => q.id)
+}
+
+========== src\hooks\useAuthInit.js ==========
+import { useEffect, useRef } from 'react'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+
+/**
+ * Single auth bootstrap. Defers onAuthStateChange async work to avoid
+ * deadlocks with getSession().
+ */
+export function useAuthInit() {
+  const { setUser, setAuthReady, loadUserData, reset } = useUserStore()
+  const initDone = useRef(false)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function initSession() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!mounted) return
+
+        if (session?.user) {
+          setUser(session.user)
+          await loadUserData(session.user.id)
+        } else {
+          reset()
+        }
+      } catch (err) {
+        console.error('Auth init failed:', err)
+        if (mounted) reset()
+      } finally {
+        if (mounted) {
+          initDone.current = true
+          setAuthReady(true)
+        }
+      }
+    }
+
+    initSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted || !initDone.current) return
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
+
+      setTimeout(async () => {
+        if (!mounted) return
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user)
+          await loadUserData(session.user.id, { silent: true })
+        } else if (event === 'SIGNED_OUT') {
+          reset()
+        }
+      }, 0)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [setUser, setAuthReady, loadUserData, reset])
+}
+
+========== src\hooks\useTheme.js ==========
+import { useEffect, useState } from 'react'
+
+const STORAGE_KEY = 'future-self-theme'
+
+function getInitialTheme() {
+  if (typeof window === 'undefined') return 'light'
+  const saved = window.localStorage.getItem(STORAGE_KEY)
+  if (saved === 'dark' || saved === 'light') return saved
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+export function useTheme() {
+  const [theme, setTheme] = useState(getInitialTheme)
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('dark', theme === 'dark')
+    root.style.colorScheme = theme
+    window.localStorage.setItem(STORAGE_KEY, theme)
+  }, [theme])
+
+  function toggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
+  return { theme, toggleTheme }
+}
+
+========== src\index.css ==========
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-surface-muted text-slate-900 antialiased font-sans;
+  }
+
+  .dark body {
+    @apply bg-[#080A12] text-slate-100;
+  }
+
+  input[type='range'] {
+    @apply w-full h-2 rounded-full appearance-none bg-slate-200/80 cursor-pointer;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 rounded-full bg-primary shadow-glow border-2 border-white;
+    margin-top: -6px;
+  }
+
+  input[type='range']::-moz-range-thumb {
+    @apply w-5 h-5 rounded-full bg-primary border-2 border-white shadow-md;
+  }
+}
+
+@layer components {
+  .app-bg {
+    @apply min-h-screen relative overflow-x-hidden;
+    background:
+      linear-gradient(135deg, rgba(127, 119, 221, 0.10), transparent 34%),
+      radial-gradient(ellipse 70% 45% at 85% -10%, rgba(29, 158, 117, 0.12), transparent),
+      radial-gradient(ellipse 55% 35% at 0% 100%, rgba(216, 90, 48, 0.08), transparent),
+      #F8F9FC;
+  }
+
+  .dark .app-bg {
+    background:
+      linear-gradient(135deg, rgba(45, 212, 191, 0.10), transparent 32%),
+      radial-gradient(ellipse 70% 45% at 88% -8%, rgba(127, 119, 221, 0.18), transparent),
+      radial-gradient(ellipse 58% 36% at 10% 105%, rgba(239, 159, 39, 0.08), transparent),
+      #080A12;
+  }
+
+  .glass-card {
+    @apply bg-white/90 backdrop-blur-xl border border-white/60 shadow-card rounded-2xl;
+  }
+
+  .dark .glass-card {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+      rgba(2, 6, 23, 0.72);
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300 hover:shadow-card-hover hover:border-primary-100/50;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-primary text-white font-semibold
+      rounded-2xl py-3.5 px-6 shadow-md shadow-primary/25
+      hover:bg-primary-600 active:scale-[0.98] transition-all duration-200
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .dark .btn-primary {
+    background: linear-gradient(135deg, #14b8a6, #7F77DD);
+    box-shadow: 0 14px 36px rgba(20, 184, 166, 0.18);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-white text-slate-700 font-semibold
+      rounded-2xl py-3.5 px-6 border border-surface-border shadow-sm
+      hover:bg-slate-50 active:scale-[0.98] transition-all duration-200;
+  }
+
+  .dark .btn-secondary {
+    @apply bg-white/5 text-slate-100 border-white/10 hover:bg-white/10 shadow-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 text-slate-600 font-medium
+      rounded-xl py-2 px-4 hover:bg-slate-100/80 transition-colors;
+  }
+
+  .dark .btn-ghost {
+    @apply text-slate-300 hover:bg-white/10 hover:text-white;
+  }
+
+  .input-field {
+    @apply w-full bg-slate-50/80 border border-surface-border rounded-2xl px-4 py-3.5
+      text-slate-900 placeholder:text-slate-400
+      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 focus:bg-white
+      transition-all duration-200;
+  }
+
+  .dark .input-field {
+    @apply bg-white/5 border-white/10 text-slate-100 focus:bg-white/10 focus:border-teal/50 focus:ring-teal/20;
+  }
+
+  .dark .input-field::placeholder {
+    color: #64748b;
+  }
+
+  .label-text {
+    @apply block text-sm font-semibold text-slate-700 mb-2;
+  }
+
+  .dark .label-text {
+    @apply text-slate-300;
+  }
+
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-wider text-slate-400;
+  }
+
+  .dark .section-title {
+    @apply text-teal/80;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .metric-tile {
+    @apply flex-1 rounded-2xl px-3 py-2 text-center border border-white/60 bg-white/70;
+  }
+
+  .dark .metric-tile {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .edge-card {
+    @apply glass-card p-4 overflow-hidden;
+  }
+
+  .dark .edge-card {
+    background:
+      linear-gradient(135deg, rgba(20, 184, 166, 0.11), transparent 38%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+      rgba(2, 6, 23, 0.78);
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .dark .app-bg .text-slate-900,
+  .dark .app-bg .text-slate-800 {
+    color: #f1f5f9;
+  }
+
+  .dark .app-bg .text-slate-700,
+  .dark .app-bg .text-slate-600 {
+    color: #cbd5e1;
+  }
+
+  .dark .app-bg .text-slate-500,
+  .dark .app-bg .text-slate-400 {
+    color: #94a3b8;
+  }
+
+  .dark .app-bg .bg-white,
+  .dark .app-bg .bg-white\/80,
+  .dark .app-bg .bg-white\/85,
+  .dark .app-bg .bg-white\/90 {
+    background-color: rgba(2, 6, 23, 0.8);
+  }
+
+  .dark .app-bg .bg-slate-50,
+  .dark .app-bg .bg-slate-50\/80,
+  .dark .app-bg .bg-slate-100,
+  .dark .app-bg .bg-slate-100\/70 {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .app-bg .border-surface-border,
+  .dark .app-bg .border-slate-200\/50 {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .app-bg .bg-primary-50,
+  .dark .app-bg .bg-primary-50\/30,
+  .dark .app-bg .bg-primary\/10 {
+    background-color: rgba(29, 158, 117, 0.1);
+  }
+
+  .dark .app-bg .text-primary,
+  .dark .app-bg .text-primary-700 {
+    color: #1D9E75;
+  }
+}
+
+========== src\main.jsx ==========
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+)
+
+========== src\pages\Achievements.jsx ==========
+import { useEffect, useState } from 'react'
+import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES } from '../data/achievements'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+import { fetchAchievementStats } from '../utils/achievementStats'
+import Spinner from '../components/ui/Spinner'
+
+const TIER_STYLES = {
+  bronze: 'bg-gradient-to-r from-amber-100 to-orange-50 text-amber-800 border-amber-200/60',
+  silver: 'bg-gradient-to-r from-slate-100 to-slate-50 text-slate-700 border-slate-200/60',
+  gold: 'bg-gradient-to-r from-yellow-100 to-amber-50 text-yellow-800 border-yellow-200/60',
+  legendary: 'bg-gradient-to-r from-primary-100 to-purple-50 text-primary-800 border-primary-200/60',
+}
+
+const CATEGORY_LABELS = {
+  streak: 'Streaks',
+  sleep: 'Sleep',
+  fitness: 'Fitness',
+  nutrition: 'Nutrition',
+  reading: 'Reading',
+  focus: 'Focus',
+  longevity: 'Longevity',
+  xp: 'XP & levels',
+}
+
+export default function Achievements() {
+  const { user, earnedAchievements } = useUserStore()
+  const [earnedDetails, setEarnedDetails] = useState({})
+  const [stats, setStats] = useState(null)
+  const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user) return
+
+    async function load() {
+      const [{ data }, s] = await Promise.all([
+        supabase.from('achievements').select('achievement_key, earned_at').eq('user_id', user.id),
+        fetchAchievementStats(user.id, useUserStore.getState().profile),
+      ])
+
+      const map = {}
+      ;(data || []).forEach((a) => {
+        map[a.achievement_key] = a.earned_at
+      })
+      setEarnedDetails(map)
+      setStats(s)
+      setLoading(false)
+    }
+
+    load()
+  }, [user, earnedAchievements])
+
+  if (loading || !stats) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner />
+      </div>
+    )
+  }
+
+  const earnedCount = ACHIEVEMENTS.filter(
+    (a) => earnedAchievements.includes(a.key) || earnedDetails[a.key]
+  ).length
+
+  const filtered =
+    filter === 'all' ? ACHIEVEMENTS : ACHIEVEMENTS.filter((a) => a.category === filter)
+
+  return (
+    <div className="animate-slide-up pb-6">
+      <header className="mb-4">
+        <p className="section-title">Trophies</p>
+        <h1 className="text-2xl font-extrabold text-slate-900">Achievements</h1>
+        <p className="text-sm text-slate-500 font-medium mt-1">
+          {earnedCount} / {ACHIEVEMENTS.length} unlocked
+        </p>
+        <div className="h-2 bg-slate-100 rounded-full mt-3 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-primary to-primary-400 rounded-full"
+            style={{ width: `${(earnedCount / ACHIEVEMENTS.length) * 100}%` }}
+          />
+        </div>
+      </header>
+
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <button
+          type="button"
+          onClick={() => setFilter('all')}
+          className={`shrink-0 pill text-xs ${filter === 'all' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
+        >
+          All
+        </button>
+        {ACHIEVEMENT_CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setFilter(cat)}
+            className={`shrink-0 pill text-xs ${filter === cat ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
+          >
+            {CATEGORY_LABELS[cat]}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {filtered.map((ach) => {
+          const earned = earnedAchievements.includes(ach.key) || earnedDetails[ach.key]
+          const earnedAt = earnedDetails[ach.key]
+          const prog = ach.progress ? ach.progress(stats) : null
+          const pct = prog ? Math.min(100, Math.round((prog.current / prog.target) * 100)) : 0
+
+          return (
+            <div
+              key={ach.key}
+              className={[
+                'rounded-3xl p-4 transition-all',
+                earned ? 'glass-card ring-2 ring-primary/30' : 'bg-slate-100/70 border border-slate-200/50',
+              ].join(' ')}
+            >
+              <div className="flex gap-3">
+                <span className={`text-3xl ${!earned && 'grayscale opacity-60'}`}>{ach.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">{ach.name}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{ach.desc}</p>
+                  <span className={`inline-block mt-2 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${TIER_STYLES[ach.tier]}`}>
+                    {ach.tier} Â· +{ach.xp} XP
+                  </span>
+                </div>
+                {!earned && <span className="text-sm opacity-50">ðŸ”’</span>}
+              </div>
+              {!earned && prog && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                    <span>Progress</span>
+                    <span className="tabular-nums">
+                      {prog.current} / {prog.target}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary/60 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )}
+              {earned && earnedAt && (
+                <p className="text-[10px] text-teal font-semibold mt-2">
+                  Earned {new Date(earnedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+========== src\pages\Dashboard.jsx ==========
+import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useUserStore } from '../store/useUserStore'
+import XPBar from '../components/XPBar'
+import Spinner from '../components/ui/Spinner'
+import { IconFlame } from '../components/ui/Icons'
+import FutureProjectionCard from '../components/home/FutureProjectionCard'
+import DailyQuests from '../components/home/DailyQuests'
+import ScoreBreakdown from '../components/home/ScoreBreakdown'
+import ScoreCard from '../components/home/ScoreCard'
+import EmptyHome from '../components/home/EmptyHome'
+import { evaluateQuests } from '../data/quests'
+import { getLevelName } from '../utils/scoring'
+
+function getSecondsUntilMidnight() {
+  const now = new Date()
+  const midnight = new Date()
+  midnight.setHours(24, 0, 0, 0)
+  return Math.floor((midnight - now) / 1000)
+}
+
+function formatCountdown(seconds) {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function getDailyEdge(log, questsDone, questCount) {
+  if (!log?.future_self_score && log?.future_self_score !== 0) {
+    return {
+      label: 'Ready state',
+      title: 'Your next version starts with one log.',
+      detail: 'Lock in the basics today and the app will turn them into a clear score.',
+    }
+  }
+
+  const scores = [
+    { label: 'Fitness', value: log.fitness_score ?? 0 },
+    { label: 'Nutrition', value: log.nutrition_score ?? 0 },
+    { label: 'Energy', value: log.energy_score ?? 0 },
+    { label: 'Focus', value: log.focus_score ?? 0 },
+    { label: 'Longevity', value: log.longevity_score ?? 0 },
+  ]
+  const best = scores.sort((a, b) => b.value - a.value)[0]
+  const questText = questCount ? `${questsDone}/${questCount} quests complete` : 'Quests ready'
+
+  if ((log.future_self_score ?? 0) >= 75) {
+    return {
+      label: 'High signal day',
+      title: `${best.label} is carrying your future self.`,
+      detail: `${questText}. Keep this rhythm and your projection starts to climb.`,
+    }
+  }
+
+  if (questsDone >= Math.ceil(questCount / 2)) {
+    return {
+      label: 'Momentum building',
+      title: `${best.label} is your strongest lever today.`,
+      detail: `${questText}. One more small win can move the whole day up.`,
+    }
+  }
+
+  return {
+    label: 'Next best move',
+    title: `Use ${best.label.toLowerCase()} as your anchor.`,
+    detail: `${questText}. Pick the easiest quest and turn the day around.`,
+  }
+}
+
+function MidnightCountdown() {
+  const [seconds, setSeconds] = useState(getSecondsUntilMidnight)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSeconds(getSecondsUntilMidnight())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <div className="glass-card p-3 flex items-center justify-between">
+      <div>
+        <p className="text-[10px] font-bold text-slate-400 uppercase">Next log unlocks in</p>
+        <p className="text-xl font-extrabold tabular-nums text-primary">{formatCountdown(seconds)}</p>
+      </div>
+      <span className="text-2xl">ðŸ•›</span>
+    </div>
+  )
+}
+
+export default function Dashboard() {
+  const { profile, todayLog, recentScores } = useUserStore()
+  const [showScoreCard, setShowScoreCard] = useState(false)
+
+  if (!profile) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner />
+      </div>
+    )
+  }
+
+  const isNewUser = recentScores.length === 0
+  if (isNewUser) return <EmptyHome />
+
+  const level = profile.level
+  const levelName = getLevelName(level)
+  const initial = (profile.username || '?')[0].toUpperCase()
+  const log = todayLog || {}
+  const currentFSS = log.future_self_score ?? recentScores[0] ?? 0
+  const quests = evaluateQuests(todayLog)
+  const habitsDone = quests.filter((q) => q.done).length
+  const dailyEdge = getDailyEdge(todayLog, habitsDone, quests.length)
+
+  return (
+    <div className="space-y-3 animate-slide-up max-w-lg mx-auto">
+      {/* Score card modal */}
+      {showScoreCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setShowScoreCard(false)}
+        >
+          <div
+            className="w-full max-w-sm animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-extrabold text-white text-lg">Your score card</p>
+              <button
+                type="button"
+                onClick={() => setShowScoreCard(false)}
+                className="text-white/60 hover:text-white text-2xl font-bold leading-none"
+              >
+                Ã—
+              </button>
+            </div>
+            <ScoreCard
+              profile={profile}
+              log={log}
+              streak={profile.current_streak}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Hero card */}
+      <div className="glass-card p-4 bg-gradient-to-br from-primary/10 via-white to-white dark:from-teal/10 dark:via-slate-950/40 dark:to-primary/10">
+        <div className="flex items-start justify-between gap-3">
+          <Link to="/profile" className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-700 dark:from-teal dark:to-primary text-white flex items-center justify-center text-lg font-bold shadow-md">
+              {initial}
+            </div>
+            <div className="min-w-0">
+              <p className="font-extrabold text-slate-900 truncate">{profile.username}</p>
+              <p className="text-xs font-bold text-primary">
+                Lv.{level} Â· {levelName}
+              </p>
+            </div>
+          </Link>
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/80 border border-surface-border shadow-sm">
+            <IconFlame className="w-5 h-5 text-coral" />
+            <span className="text-lg font-extrabold tabular-nums">{profile.current_streak}</span>
+          </div>
+        </div>
+        <div className="mt-3">
+          <XPBar totalXP={profile.total_xp} level={level} />
+        </div>
+        <div className="flex gap-2 mt-3">
+          <div className="metric-tile bg-primary/10">
+            <p className="text-[10px] font-bold text-slate-500 uppercase">Future Self</p>
+            <p className="text-2xl font-extrabold text-primary tabular-nums">{currentFSS}</p>
+          </div>
+          <div className="metric-tile">
+            <p className="text-[10px] font-bold text-slate-500 uppercase">Quests</p>
+            <p className="text-2xl font-extrabold text-slate-800 tabular-nums">
+              {habitsDone}/{quests.length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="edge-card">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="section-title mb-1">{dailyEdge.label}</p>
+            <p className="font-extrabold text-slate-900 leading-snug">{dailyEdge.title}</p>
+          </div>
+          <span className="pill bg-teal/10 text-teal text-[10px] shrink-0">Live</span>
+        </div>
+        <p className="text-sm text-slate-500 font-medium mt-2 leading-relaxed">{dailyEdge.detail}</p>
+      </div>
+
+      {!todayLog ? (
+        <Link to="/log" className="btn-primary w-full text-center shadow-glow py-4">
+          Log today to earn XP â†’
+        </Link>
+      ) : (
+        <>
+          <div className="flex items-center justify-center gap-2 py-2 rounded-2xl bg-teal/10 border border-teal/20 text-sm font-semibold text-teal">
+            âœ“ Logged today
+            <Link to="/log" className="text-primary underline ml-1">
+              Edit
+            </Link>
+          </div>
+          <MidnightCountdown />
+
+          {/* Share score card button â€” only shows after logging */}
+          <button
+            type="button"
+            onClick={() => setShowScoreCard(true)}
+            className="w-full glass-card p-3 flex items-center justify-between hover:shadow-card-hover transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">ðŸ†</span>
+              <div className="text-left">
+                <p className="font-bold text-slate-900 text-sm">Share your score</p>
+                <p className="text-xs text-slate-500 font-medium">Show your Qyven card today</p>
+              </div>
+            </div>
+            <span className="text-primary font-bold text-sm">â†‘ Share</span>
+          </button>
+        </>
+      )}
+
+      <FutureProjectionCard recentScores={recentScores} currentScore={currentFSS} />
+
+      {todayLog && (
+        <ScoreBreakdown scores={{ ...log, mood: log.mood }} streakDays={profile.current_streak} />
+      )}
+
+      <DailyQuests todayLog={todayLog} />
+
+      <Link
+        to="/weekly"
+        className="glass-card p-4 flex items-center justify-between hover:shadow-card-hover transition-shadow block"
+      >
+        <div>
+          <p className="section-title">This week</p>
+          <p className="font-bold text-slate-900">View weekly review â†’</p>
+        </div>
+        <span className="text-2xl">ðŸ“Š</span>
+      </Link>
+    </div>
+  )
+}
+========== src\pages\Log.jsx ==========
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import confetti from 'canvas-confetti'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+import DetailToggle from '../components/log/DetailToggle'
+import FoodDetailSection from '../components/log/FoodDetailSection'
+import ServingStepper from '../components/log/ServingStepper'
+import { TextField, SelectField } from '../components/log/TextDetailFields'
+import {
+  buildAllScores,
+  calcXP,
+  getLevelFromXP,
+  isPerfectDay,
+  calcNutritionFromServings,
+  calcFitnessFromWorkout,
+  calcFoodQualityScore,
+  calcFoodLongevityScore,
+  calcMacroSummary,
+} from '../utils/scoring'
+import { checkAndAwardAchievements } from '../utils/achievementStats'
+import { emptyLogDetails, parseLogDetails } from '../utils/logDetails'
+import { localDateISO } from '../utils/date'
+import {
+  getCompletedQuestIds,
+  newlyCompletedQuestIds,
+  questXPForLog,
+} from '../data/quests'
+
+const EXERCISE_TYPES = ['gym', 'run', 'sport', 'yoga', 'rest']
+const MOOD_EMOJIS = ['ðŸ˜ž', 'ðŸ˜Ÿ', 'ðŸ˜', 'ðŸ™‚', 'ðŸ˜Š', 'ðŸ˜„', 'ðŸ˜', 'ðŸ¤©', 'ðŸ¥³', 'ðŸ”¥']
+const MEDITATION_STYLES = [
+  { value: 'breathwork', label: 'Breathwork' },
+  { value: 'guided', label: 'Guided' },
+  { value: 'silent', label: 'Silent' },
+  { value: 'yoga', label: 'Yoga / stretch' },
+  { value: 'other', label: 'Other' },
+]
+
+const defaultForm = {
+  fruit_servings: 0,
+  vegetable_servings: 0,
+  protein_servings: 0,
+  processed_servings: 0,
+  exercise_type: 'rest',
+  workout_duration_min: 0,
+  sleep_hours: 7,
+  sleep_quality: 5,
+  water_ml: 1500,
+  focus_minutes: 0,
+  reading_minutes: 0,
+  meditation_minutes: 0,
+  mood: 5,
+}
+
+function computeStreak(profile, today, isUpdateSameDay) {
+  if (isUpdateSameDay) {
+    return {
+      current_streak: profile.current_streak,
+      longest_streak: profile.longest_streak,
+      last_log_date: profile.last_log_date || today,
+    }
+  }
+  const last = profile.last_log_date
+  let streak = 1
+  if (last) {
+    const lastDate = new Date(`${last}T12:00:00`)
+    const todayDate = new Date(`${today}T12:00:00`)
+    const diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24))
+    if (diffDays === 1) streak = (profile.current_streak || 0) + 1
+    else if (diffDays === 0) streak = profile.current_streak || 1
+    else streak = 1
+  }
+  return {
+    current_streak: streak,
+    longest_streak: Math.max(profile.longest_streak || 0, streak),
+    last_log_date: today,
+  }
+}
+
+export default function Log() {
+  const navigate = useNavigate()
+  const { user, profile, todayLog, earnedAchievements, loadUserData, setTodayLog, setProfile } =
+    useUserStore()
+
+  const [form, setForm] = useState(defaultForm)
+  const [details, setDetails] = useState(emptyLogDetails)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(null)
+
+  const isUpdate = Boolean(todayLog)
+
+  useEffect(() => {
+    if (!todayLog) return
+    setForm({
+      fruit_servings: todayLog.fruit_servings ?? 0,
+      vegetable_servings: todayLog.vegetable_servings ?? 0,
+      protein_servings: todayLog.protein_servings ?? 0,
+      processed_servings: todayLog.processed_servings ?? 0,
+      exercise_type: todayLog.exercise_type ?? 'rest',
+      workout_duration_min: todayLog.workout_duration_min ?? 0,
+      sleep_hours: Number(todayLog.sleep_hours) || 7,
+      sleep_quality: todayLog.sleep_quality ?? 5,
+      water_ml: todayLog.water_ml ?? 1500,
+      focus_minutes: todayLog.focus_minutes ?? 0,
+      reading_minutes: todayLog.reading_minutes ?? 0,
+      meditation_minutes: todayLog.meditation_minutes ?? 0,
+      mood: todayLog.mood ?? 5,
+    })
+    setDetails(parseLogDetails(todayLog.log_details))
+  }, [todayLog])
+
+  const previewFoods = details.foods || []
+  const previewLog = useMemo(() => ({ ...form, sleep_hours: Number(form.sleep_hours) }), [form])
+  const previewScores = useMemo(
+    () => buildAllScores(previewLog, profile?.current_streak || 0, previewFoods),
+    [previewLog, profile?.current_streak, previewFoods]
+  )
+  const nutritionPreview = calcNutritionFromServings(previewLog, previewFoods)
+  const fitnessPreview = calcFitnessFromWorkout(previewLog)
+
+  // Food analysis â€” only computed when real foods are logged
+  const foodQuality = calcFoodQualityScore(previewFoods)
+  const foodLongevity = calcFoodLongevityScore(previewFoods)
+  const macros = calcMacroSummary(previewFoods)
+
+  function updateField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function patchDetails(section, patch) {
+    setDetails((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }))
+  }
+
+  const glasses = Math.min(8, Math.floor(form.water_ml / 250))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!user || !profile) return
+
+    setError('')
+    setLoading(true)
+
+    const today = localDateISO()
+    const isUpdateSameDay = profile.last_log_date === today
+    const streakForCalc = isUpdateSameDay
+      ? profile.current_streak
+      : computeStreak(profile, today, false).current_streak
+
+    const logPayload = { ...form, sleep_hours: Number(form.sleep_hours) }
+    const foods = details.foods || []
+    const scores = buildAllScores(logPayload, streakForCalc, foods)
+    const is_perfect_day = isPerfectDay(logPayload)
+
+    const prevQuests = getCompletedQuestIds(todayLog)
+    const newQuestIds = newlyCompletedQuestIds(logPayload, prevQuests)
+    const allQuestIds = [...new Set([...prevQuests, ...newQuestIds])]
+    const questXP = questXPForLog(logPayload, prevQuests)
+
+    const mergedDetails = { ...details, quests_completed: allQuestIds }
+    const xp_earned = calcXP({ ...logPayload, is_perfect_day }, streakForCalc, questXP)
+
+    const row = {
+      user_id: user.id,
+      log_date: today,
+      fruit_servings: form.fruit_servings,
+      vegetable_servings: form.vegetable_servings,
+      protein_servings: form.protein_servings,
+      processed_servings: form.processed_servings,
+      meal_quality: scores.nutrition_score,
+      exercise_intensity: scores.fitness_score,
+      exercise_type: form.exercise_type,
+      workout_duration_min: form.workout_duration_min,
+      sleep_hours: Number(form.sleep_hours),
+      sleep_quality: form.sleep_quality,
+      water_ml: form.water_ml,
+      focus_minutes: form.focus_minutes,
+      reading_minutes: form.reading_minutes,
+      meditation_minutes: form.meditation_minutes,
+      mood: form.mood,
+      log_details: mergedDetails,
+      ...scores,
+      xp_earned,
+      is_perfect_day,
+    }
+
+    const { error: logError } = await supabase.from('daily_logs').upsert(row, {
+      onConflict: 'user_id,log_date',
+    })
+
+    if (logError) {
+      setLoading(false)
+      setError(logError.message)
+      return
+    }
+
+    const streakUpdate = computeStreak(profile, today, isUpdateSameDay)
+    const previousXP = todayLog?.xp_earned || 0
+    let newTotalXP = profile.total_xp - previousXP + xp_earned
+
+    const { bonusXP } = await checkAndAwardAchievements(
+      user.id,
+      { ...profile, ...streakUpdate, level: getLevelFromXP(newTotalXP) },
+      earnedAchievements
+    )
+
+    newTotalXP += bonusXP
+    const newLevel = getLevelFromXP(newTotalXP)
+
+    await supabase
+      .from('users_profile')
+      .update({ total_xp: newTotalXP, level: newLevel, ...streakUpdate })
+      .eq('id', user.id)
+
+    setProfile({ ...profile, total_xp: newTotalXP, level: newLevel, ...streakUpdate })
+    setTodayLog({ ...row, id: todayLog?.id })
+    await loadUserData(user.id)
+
+    setLoading(false)
+    setSuccess(xp_earned + bonusXP)
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
+    setTimeout(() => navigate('/dashboard'), 2000)
+  }
+
+  if (success !== null) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up">
+        <div className="glass-card p-10 text-center">
+          <p className="text-4xl mb-2">ðŸ”’</p>
+          <p className="text-2xl font-extrabold text-slate-900">Locked in!</p>
+          <p className="text-xl font-bold text-primary mt-2">+{success} XP</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-lg mx-auto pb-8 animate-slide-up">
+      <header className="mb-4">
+        <p className="section-title mb-1">Daily check-in</p>
+        <h1 className="text-2xl font-extrabold text-slate-900">
+          {isUpdate ? "Update today's log" : 'Log today'}
+        </h1>
+        <p className="text-xs text-slate-500 mt-1">Scores auto-calculate from your inputs</p>
+      </header>
+
+      <div className="glass-card p-3 mb-4 flex justify-between text-center text-xs">
+        {[
+          { l: 'Nutrition', v: nutritionPreview },
+          { l: 'Fitness', v: fitnessPreview },
+          { l: 'Future Self', v: previewScores.future_self_score },
+        ].map((s) => (
+          <div key={s.l}>
+            <p className="text-slate-400 font-bold uppercase">{s.l}</p>
+            <p className="text-lg font-extrabold text-primary tabular-nums">{s.v}</p>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 font-medium">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* â”€â”€ NUTRITION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Nutrition â€” today&apos;s servings</label>
+          <ServingStepper label="Fruit" emoji="ðŸŽ" value={form.fruit_servings} onChange={(v) => updateField('fruit_servings', v)} />
+          <ServingStepper label="Vegetables" emoji="ðŸ¥¬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
+          <ServingStepper label="Protein" emoji="ðŸ¥©" value={form.protein_servings} onChange={(v) => updateField('protein_servings', v)} />
+          <ServingStepper label="Processed" emoji="ðŸŸ" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
+
+          <DetailToggle label="Search specific foods" badge={details.foods.length}>
+            <FoodDetailSection
+              foods={details.foods}
+              onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+              onServingDetected={(key) =>
+                setForm((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }))
+              }
+              onServingRemoved={(key) =>
+                setForm((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) - 1) }))
+              }
+            />
+
+            {/* Food analysis panel â€” only shows when foods are added */}
+            {foodQuality !== null && (
+              <div className="mt-3 p-3 rounded-2xl bg-primary-50/60 border border-primary-100/60 space-y-2">
+                <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Food analysis</p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/70 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Food Quality</p>
+                    <p className="text-xl font-extrabold text-primary tabular-nums">{foodQuality}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {foodQuality >= 75 ? 'Excellent ðŸŒ¿' : foodQuality >= 55 ? 'Pretty solid ðŸ‘' : foodQuality >= 35 ? 'Room to improve' : 'High processed load'}
+                    </p>
+                  </div>
+                  <div className="bg-white/70 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Longevity</p>
+                    <p className="text-xl font-extrabold text-teal tabular-nums">{foodLongevity}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {foodLongevity >= 75 ? 'Anti-inflammatory ðŸ”¬' : foodLongevity >= 55 ? 'Good base' : foodLongevity >= 35 ? 'Add whole foods' : 'Low whole food ratio'}
+                    </p>
+                  </div>
+                </div>
+
+                {macros && (
+                  <div className="grid grid-cols-4 gap-1 text-center">
+                    {[
+                      { label: 'kcal', value: macros.calories },
+                      { label: 'protein', value: `${macros.protein}g` },
+                      { label: 'carbs', value: `${macros.carbs}g` },
+                      { label: 'fat', value: `${macros.fat}g` },
+                    ].map((m) => (
+                      <div key={m.label} className="bg-white/70 rounded-xl py-1.5">
+                        <p className="text-sm font-extrabold text-slate-800 tabular-nums">{m.value}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Macros estimated at 150g per food Â· affects your nutrition & longevity scores
+                </p>
+              </div>
+            )}
+          </DetailToggle>
+        </div>
+
+        {/* â”€â”€ WORKOUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Workout</label>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {EXERCISE_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => updateField('exercise_type', type)}
+                className={[
+                  'px-3 py-1.5 rounded-full text-sm font-medium capitalize',
+                  form.exercise_type === type ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600',
+                ].join(' ')}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+          <label className="text-xs font-semibold text-slate-500">Duration (minutes)</label>
+          <input
+            type="number"
+            min={0}
+            max={300}
+            value={form.workout_duration_min}
+            onChange={(e) => updateField('workout_duration_min', Number(e.target.value))}
+            className="input-field mt-1"
+          />
+          <p className="text-xs text-primary font-bold mt-2">Fitness score: {fitnessPreview}</p>
+          <DetailToggle label="Workout notes" badge={details.exercise.name || details.exercise.notes ? 1 : 0}>
+            <TextField label="Activity" value={details.exercise.name} onChange={(v) => patchDetails('exercise', { name: v })} placeholder="Upper body, 5kâ€¦" />
+            <TextField label="Notes" value={details.exercise.notes} onChange={(v) => patchDetails('exercise', { notes: v })} multiline />
+          </DetailToggle>
+        </div>
+
+        {/* â”€â”€ SLEEP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-text">Hours slept</label>
+              <input type="number" step={0.5} min={0} max={14} value={form.sleep_hours} onChange={(e) => updateField('sleep_hours', e.target.value)} className="input-field" />
+            </div>
+            <div>
+              <label className="label-text">Sleep quality</label>
+              <input type="range" min={1} max={10} value={form.sleep_quality} onChange={(e) => updateField('sleep_quality', Number(e.target.value))} className="w-full mt-3" />
+              <p className="text-sm font-bold text-primary tabular-nums">{form.sleep_quality}/10</p>
+            </div>
+          </div>
+          <p className="text-xs text-primary font-bold mt-2">Energy score: {previewScores.energy_score}</p>
+        </div>
+
+        {/* â”€â”€ WATER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Water</label>
+          <input type="range" min={0} max={4000} step={100} value={form.water_ml} onChange={(e) => updateField('water_ml', Number(e.target.value))} className="w-full" />
+          <div className="flex flex-wrap gap-2 mt-2">
+            {[500, 1000, 1500, 2000, 2500, 3000].map((ml) => (
+              <button key={ml} type="button" onClick={() => updateField('water_ml', ml)} className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.water_ml === ml ? 'bg-primary text-white' : 'bg-slate-100'}`}>
+                {ml / 1000}L
+              </button>
+            ))}
+          </div>
+          <p className="text-sm mt-2">{'ðŸ¥›'.repeat(glasses) || 'â€”'} Â· {form.water_ml} ml</p>
+        </div>
+
+        {/* â”€â”€ FOCUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Focus (min)</label>
+          <input type="number" min={0} value={form.focus_minutes} onChange={(e) => updateField('focus_minutes', Number(e.target.value))} className="input-field" />
+          <DetailToggle label="What you worked on" badge={details.focus.activity ? 1 : 0}>
+            <TextField value={details.focus.activity} onChange={(v) => patchDetails('focus', { activity: v })} placeholder="Project, study topicâ€¦" />
+          </DetailToggle>
+        </div>
+
+        {/* â”€â”€ READING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Reading (min)</label>
+          <input type="number" min={0} value={form.reading_minutes} onChange={(e) => updateField('reading_minutes', Number(e.target.value))} className="input-field" />
+          <DetailToggle label="Book / article" badge={details.reading.title ? 1 : 0}>
+            <TextField label="Title" value={details.reading.title} onChange={(v) => patchDetails('reading', { title: v })} />
+          </DetailToggle>
+        </div>
+
+        {/* â”€â”€ MEDITATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Meditation (min)</label>
+          <input type="number" min={0} value={form.meditation_minutes} onChange={(e) => updateField('meditation_minutes', Number(e.target.value))} className="input-field" />
+          <DetailToggle label="Style" badge={details.meditation.style ? 1 : 0}>
+            <SelectField label="Type" value={details.meditation.style} onChange={(v) => patchDetails('meditation', { style: v })} options={MEDITATION_STYLES} />
+          </DetailToggle>
+        </div>
+
+        {/* â”€â”€ MOOD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="glass-card p-5">
+          <label className="label-text">Mood</label>
+          <div className="flex flex-wrap gap-1.5 justify-between">
+            {MOOD_EMOJIS.map((emoji, i) => (
+              <button key={i + 1} type="button" onClick={() => updateField('mood', i + 1)} className={`text-xl w-9 h-9 rounded-xl flex items-center justify-center ${form.mood === i + 1 ? 'bg-primary-50 ring-2 ring-primary' : 'opacity-50'}`}>
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <DetailToggle label="Reflection" badge={details.mood.note ? 1 : 0}>
+            <TextField value={details.mood.note} onChange={(v) => patchDetails('mood', { note: v })} multiline placeholder="How today feltâ€¦" />
+          </DetailToggle>
+        </div>
+
+        <button type="submit" disabled={loading} className="btn-primary w-full text-lg py-4 shadow-glow">
+          {loading ? 'Savingâ€¦' : 'Lock in today ðŸ”’'}
+        </button>
+      </form>
+    </div>
+  )
+}
+========== src\pages\Login.jsx ==========
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../services/supabase'
+import { IconSparkles } from '../components/ui/Icons'
+
+function normalizeEmail(value) {
+  return value.trim().toLowerCase()
+}
+
+export default function Login() {
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: normalizeEmail(email),
+      password,
+    })
+    setLoading(false)
+
+    if (authError) {
+      setError(authError.message)
+      return
+    }
+
+    navigate('/dashboard')
+  }
+
+  return (
+    <div className="app-bg min-h-screen flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md animate-slide-up">
+        <div className="glass-card p-8 md:p-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-primary to-primary-700 text-white shadow-glow mb-4">
+              <IconSparkles />
+            </div>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Qyven</h1>
+            <p className="text-slate-500 text-sm mt-2 font-medium">Sign in to continue your journey</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 font-medium">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="label-text">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value.trimStart())}
+                onBlur={(e) => setEmail(normalizeEmail(e.target.value))}
+                className="input-field"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="label-text">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              />
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? 'Signing inâ€¦' : 'Sign in'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-slate-500 mt-8">
+            No account?{' '}
+            <Link to="/signup" className="text-primary font-bold hover:text-primary-700 transition-colors">
+              Create one
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+========== src\pages\Onboarding.jsx ==========
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+
+const PATHS = [
+  { id: 'athlete', label: 'Athlete', icon: 'ðŸ‹ï¸', desc: 'Strength & performance' },
+  { id: 'scholar', label: 'Scholar', icon: 'ðŸ“š', desc: 'Mind & knowledge' },
+  { id: 'balanced', label: 'Balanced', icon: 'âš–ï¸', desc: 'Holistic growth' },
+  { id: 'builder', label: 'Builder', icon: 'ðŸ”¨', desc: 'Habits & systems' },
+]
+
+const GOALS = [
+  'Get fitter',
+  'Sleep better',
+  'Eat healthier',
+  'Build focus',
+  'Read more',
+  'Reduce stress',
+]
+
+export default function Onboarding() {
+  const navigate = useNavigate()
+  const { user, profile, setProfile } = useUserStore()
+  const [step, setStep] = useState(1)
+  const [username, setUsername] = useState(
+    profile?.username || user?.user_metadata?.username || ''
+  )
+  const [avatarClass, setAvatarClass] = useState(profile?.avatar_class || 'balanced')
+  const [goals, setGoals] = useState([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const progress = (step / 3) * 100
+
+  function toggleGoal(goal) {
+    setGoals((prev) => {
+      if (prev.includes(goal)) return prev.filter((g) => g !== goal)
+      if (prev.length >= 3) return prev
+      return [...prev, goal]
+    })
+  }
+
+  async function finish() {
+    if (!user) return
+    setError('')
+    setLoading(true)
+
+    const { data: savedProfile, error: profileError } = await supabase
+      .from('users_profile')
+      .upsert({ id: user.id, username, avatar_class: avatarClass }, { onConflict: 'id' })
+      .select()
+      .single()
+
+    if (profileError) {
+      setLoading(false)
+      setError(profileError.message)
+      return
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.updateUser({
+      data: { onboarding_complete: true, goals },
+    })
+
+    if (authError) {
+      setLoading(false)
+      setError(authError.message)
+      return
+    }
+
+    const { setUser, loadUserData } = useUserStore.getState()
+    if (authData?.user) setUser(authData.user)
+    setProfile(savedProfile)
+    await loadUserData(user.id, { silent: true })
+    setLoading(false)
+    navigate('/dashboard')
+  }
+
+  return (
+    <div className="app-bg min-h-screen px-4 py-10">
+      <div className="max-w-lg mx-auto animate-slide-up">
+        <div className="mb-8">
+          <p className="section-title mb-1">Welcome to Qyven</p>
+          <p className="text-xs text-slate-400 font-medium mb-3">Step {step} of 3</p>
+          <div className="h-2 bg-slate-200/80 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-primary-400 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 font-medium">
+            {error}
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="glass-card p-6 md:p-8">
+            <h2 className="text-xl font-extrabold text-slate-900 mb-2">What should we call you?</h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">
+              This is how you&apos;ll appear on your dashboard.
+            </p>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="input-field mb-6"
+            />
+            <button
+              type="button"
+              onClick={() => username.trim() && setStep(2)}
+              disabled={!username.trim()}
+              className="btn-primary w-full"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 mb-2">Choose your path</h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">Pick the archetype that fits you best.</p>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {PATHS.map((path) => (
+                <button
+                  key={path.id}
+                  type="button"
+                  onClick={() => setAvatarClass(path.id)}
+                  className={[
+                    'glass-card p-4 text-left transition-all',
+                    avatarClass === path.id
+                      ? 'ring-2 ring-primary shadow-card-hover scale-[1.02]'
+                      : 'hover:shadow-card-hover opacity-90',
+                  ].join(' ')}
+                >
+                  <span className="text-3xl">{path.icon}</span>
+                  <p className="font-bold text-slate-900 mt-2">{path.label}</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">{path.desc}</p>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1">
+                Back
+              </button>
+              <button type="button" onClick={() => setStep(3)} className="btn-primary flex-1">
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 mb-2">What are you working toward?</h2>
+            <p className="text-slate-500 text-sm mb-6 font-medium">Select up to 3 goals.</p>
+            <div className="space-y-2 mb-6">
+              {GOALS.map((goal) => (
+                <label
+                  key={goal}
+                  className={[
+                    'flex items-center gap-3 glass-card px-4 py-3.5 cursor-pointer transition-all',
+                    goals.includes(goal) ? 'ring-2 ring-primary bg-primary-50/30' : '',
+                  ].join(' ')}
+                >
+                  <input
+                    type="checkbox"
+                    checked={goals.includes(goal)}
+                    onChange={() => toggleGoal(goal)}
+                    className="accent-primary w-5 h-5 rounded"
+                  />
+                  <span className="text-slate-800 font-semibold text-sm">{goal}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setStep(2)} className="btn-secondary flex-1">
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={finish}
+                disabled={loading}
+                className="btn-primary flex-1 shadow-glow"
+              >
+                {loading ? 'Savingâ€¦' : 'Start your Qyven journey'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+========== src\pages\Profile.jsx ==========
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+import XPBar from '../components/XPBar'
+import { Card } from '../components/ui/Card'
+import Spinner from '../components/ui/Spinner'
+import { getLevelName } from '../utils/scoring'
+
+const LINES = [
+  { key: 'fitness_score', name: 'Fitness', color: '#D85A30' },
+  { key: 'nutrition_score', name: 'Nutrition', color: '#1D9E75' },
+  { key: 'energy_score', name: 'Energy', color: '#EF9F27' },
+  { key: 'focus_score', name: 'Focus', color: '#7F77DD' },
+  { key: 'longevity_score', name: 'Longevity', color: '#1D9E75' },
+  { key: 'future_self_score', name: 'Future Self', color: '#7F77DD' },
+]
+
+export default function Profile() {
+  const navigate = useNavigate()
+  const { user, profile, reset } = useUserStore()
+  const [chartData, setChartData] = useState([])
+  const [stats, setStats] = useState({
+    totalLogs: 0,
+    perfectDays: 0,
+    longestStreak: 0,
+    bestFSS: 0,
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user) return
+
+    async function load() {
+      const { data, error } = await supabase
+        .from('daily_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('log_date', { ascending: true })
+        .limit(30)
+
+      if (!error && data) {
+        setChartData(
+          data.map((d) => ({
+            date: d.log_date.slice(5),
+            fitness_score: d.fitness_score,
+            nutrition_score: d.nutrition_score,
+            energy_score: d.energy_score,
+            focus_score: d.focus_score,
+            longevity_score: d.longevity_score,
+            future_self_score: d.future_self_score,
+          }))
+        )
+        setStats({
+          totalLogs: data.length,
+          perfectDays: data.filter((d) => d.is_perfect_day).length,
+          longestStreak: profile?.longest_streak ?? 0,
+          bestFSS: data.reduce((m, d) => Math.max(m, d.future_self_score || 0), 0),
+        })
+      }
+      setLoading(false)
+    }
+
+    load()
+  }, [user, profile?.longest_streak])
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    reset()
+    navigate('/login')
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner />
+      </div>
+    )
+  }
+
+  const initial = (profile.username || '?')[0].toUpperCase()
+  const levelName = getLevelName(profile.level)
+
+  return (
+    <div className="space-y-5 animate-slide-up pb-8">
+      <div className="flex flex-col items-center text-center py-4">
+        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-primary-700 text-white flex items-center justify-center text-4xl font-extrabold shadow-glow">
+          {initial}
+        </div>
+        <h1 className="text-2xl font-extrabold text-slate-900 mt-5">{profile.username}</h1>
+        <p className="pill bg-primary-50 text-primary-700 mt-2">
+          Level {profile.level} Â· {levelName}
+        </p>
+        <Link to="/weekly" className="text-sm font-semibold text-primary mt-3 hover:underline">
+          Weekly review â†’
+        </Link>
+      </div>
+
+      <Card>
+        <XPBar totalXP={profile.total_xp} level={profile.level} />
+      </Card>
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Total logs', value: stats.totalLogs },
+          { label: 'Perfect days', value: stats.perfectDays },
+          { label: 'Best streak', value: stats.longestStreak },
+          { label: 'Best score', value: stats.bestFSS },
+        ].map((s) => (
+          <div key={s.label} className="glass-card p-4 text-center">
+            <p className="text-2xl font-extrabold bg-gradient-to-br from-primary to-primary-600 bg-clip-text text-transparent">
+              {s.value}
+            </p>
+            <p className="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wide">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <Card className="!p-4">
+        <p className="section-title mb-4">Score history Â· 30 days</p>
+        {loading ? (
+          <div className="h-64 flex items-center justify-center">
+            <Spinner className="w-8 h-8" />
+          </div>
+        ) : chartData.length === 0 ? (
+          <p className="text-slate-500 text-sm text-center py-12 font-medium">No logs yet â€” start logging!</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E8EAEF" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '16px',
+                  border: '1px solid #E8EAEF',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '12px' }} />
+              {LINES.map((line) => (
+                <Line
+                  key={line.key}
+                  type="monotone"
+                  dataKey={line.key}
+                  name={line.name}
+                  stroke={line.color}
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </Card>
+
+      <button type="button" onClick={handleSignOut} className="btn-secondary w-full">
+        Sign out
+      </button>
+    </div>
+  )
+}
+
+========== src\pages\Signup.jsx ==========
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../services/supabase'
+
+function normalizeEmail(value) {
+  return value.trim().toLowerCase()
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+function friendlyAuthError(message) {
+  if (message?.toLowerCase().includes('email') && message?.toLowerCase().includes('invalid')) {
+    return 'That email looks valid here, but the auth server rejected it. Try retyping it without spaces, or use another email address.'
+  }
+  return message || 'Could not create your account. Try again.'
+}
+
+export default function Signup() {
+  const navigate = useNavigate()
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+
+    const cleanUsername = username.trim()
+    const cleanEmail = normalizeEmail(email)
+
+    if (!cleanUsername) {
+      setError('Choose a username to continue.')
+      return
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setError('Enter a valid email address, like james@gmail.com.')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+
+    setLoading(true)
+
+    const { error: authError } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: { data: { username: cleanUsername } },
+    })
+
+    setLoading(false)
+
+    if (authError) {
+      setError(friendlyAuthError(authError.message))
+      return
+    }
+
+    navigate('/onboarding')
+  }
+
+  return (
+    <div className="app-bg min-h-screen flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md animate-slide-up">
+        <div className="glass-card p-8 md:p-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-teal to-primary text-white text-3xl shadow-glow mb-4">
+              ðŸš€
+            </div>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Join Qyven</h1>
+            <p className="text-slate-500 text-sm mt-2 font-medium">Start building your best self</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 font-medium">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="label-text">Username</label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input-field"
+                placeholder="yourname"
+              />
+            </div>
+
+            <div>
+              <label className="label-text">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value.trimStart())}
+                onBlur={(e) => setEmail(normalizeEmail(e.target.value))}
+                className="input-field"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="label-text">Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              />
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-primary w-full">
+              {loading ? 'Creating accountâ€¦' : 'Create account'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-slate-500 mt-8">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary font-bold hover:text-primary-700 transition-colors">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+========== src\pages\WeeklyReview.jsx ==========
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { supabase } from '../services/supabase'
+import { useUserStore } from '../store/useUserStore'
+import Spinner from '../components/ui/Spinner'
+import EmptyHome from '../components/home/EmptyHome'
+import { localWeekStartISO } from '../utils/date'
+
+export default function WeeklyReview() {
+  const { user, profile } = useUserStore()
+  const [loading, setLoading] = useState(true)
+  const [weekLogs, setWeekLogs] = useState([])
+
+  useEffect(() => {
+    if (!user) return
+    const start = localWeekStartISO()
+
+    supabase
+      .from('daily_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .gte('log_date', start)
+      .order('log_date', { ascending: true })
+      .then(({ data }) => {
+        setWeekLogs(data || [])
+        setLoading(false)
+      })
+  }, [user])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner />
+      </div>
+    )
+  }
+
+  if (!weekLogs.length) {
+    return (
+      <div>
+        <header className="mb-6">
+          <p className="section-title">Insights</p>
+          <h1 className="text-2xl font-extrabold text-slate-900">Weekly review</h1>
+        </header>
+        <EmptyHome />
+      </div>
+    )
+  }
+
+  const avg = (key) =>
+    Math.round(weekLogs.reduce((s, l) => s + (l[key] || 0), 0) / weekLogs.length)
+
+  const categories = [
+    { key: 'fitness_score', label: 'Fitness' },
+    { key: 'nutrition_score', label: 'Nutrition' },
+    { key: 'energy_score', label: 'Energy' },
+    { key: 'focus_score', label: 'Focus' },
+    { key: 'longevity_score', label: 'Longevity' },
+    { key: 'future_self_score', label: 'Future Self' },
+  ]
+
+  const ranked = categories
+    .map((c) => ({ ...c, avg: avg(c.key) }))
+    .sort((a, b) => b.avg - a.avg)
+
+  const best = ranked[0]
+  const worst = ranked[ranked.length - 1]
+  const xpEarned = weekLogs.reduce((s, l) => s + (l.xp_earned || 0), 0)
+  const habitRate = Math.round(
+    (weekLogs.filter((l) => l.future_self_score >= 50).length / 7) * 100
+  )
+  const streakNow = profile?.current_streak ?? 0
+  const streakDelta = weekLogs.length >= 2 ? (streakNow > 0 ? '+' : '') + streakNow : 'â€”'
+
+  return (
+    <div className="space-y-4 animate-slide-up pb-6">
+      <header>
+        <p className="section-title">Insights</p>
+        <h1 className="text-2xl font-extrabold text-slate-900">Weekly review</h1>
+        <p className="text-sm text-slate-500 font-medium mt-1">
+          {weekLogs.length} day{weekLogs.length !== 1 ? 's' : ''} logged this week
+        </p>
+      </header>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-4">
+          <p className="text-xs font-bold text-slate-400 uppercase">XP earned</p>
+          <p className="text-2xl font-extrabold text-primary mt-1">{xpEarned}</p>
+        </div>
+        <div className="glass-card p-4">
+          <p className="text-xs font-bold text-slate-400 uppercase">Habit rate</p>
+          <p className="text-2xl font-extrabold text-teal mt-1">{habitRate}%</p>
+        </div>
+        <div className="glass-card p-4 col-span-2">
+          <p className="text-xs font-bold text-slate-400 uppercase">Avg Future Self</p>
+          <p className="text-3xl font-extrabold text-primary mt-1">{avg('future_self_score')}</p>
+        </div>
+      </div>
+
+      <div className="glass-card p-4">
+        <p className="section-title mb-3">Category averages</p>
+        <ul className="space-y-2">
+          {ranked.map((c) => (
+            <li key={c.key} className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500 w-20">{c.label}</span>
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-primary/70 rounded-full" style={{ width: `${c.avg}%` }} />
+              </div>
+              <span className="text-sm font-bold tabular-nums w-8 text-right">{c.avg}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-4 border-teal/20 bg-teal/5">
+          <p className="text-[10px] font-bold text-teal uppercase">Best</p>
+          <p className="font-extrabold text-slate-900 mt-1">{best.label}</p>
+          <p className="text-2xl font-bold text-teal">{best.avg}</p>
+        </div>
+        <div className="glass-card p-4 border-coral/20 bg-coral/5">
+          <p className="text-[10px] font-bold text-coral uppercase">Grow next</p>
+          <p className="font-extrabold text-slate-900 mt-1">{worst.label}</p>
+          <p className="text-2xl font-bold text-coral">{worst.avg}</p>
+        </div>
+      </div>
+
+      <div className="glass-card p-4">
+        <p className="section-title mb-2">Streak</p>
+        <p className="text-lg font-bold text-slate-800">
+          Current streak: <span className="text-primary">{streakNow} days</span>
+        </p>
+        <p className="text-xs text-slate-500 mt-1">Keep logging daily to maintain momentum.</p>
+      </div>
+
+      <Link to="/log" className="btn-primary w-full block text-center">
+        Log today
+      </Link>
+    </div>
+  )
+}
+
+========== src\services\openFoodFacts.js ==========
+import { searchLocalFoods } from '../data/foods'
+
+const CATEGORY_KEYWORDS = {
+  fruit_servings: ['apple', 'banana', 'orange', 'berry', 'mango', 'grape', 'peach', 'pear', 'melon', 'pineapple', 'strawberry', 'blueberry', 'blueberries', 'kiwi', 'watermelon', 'fruit', 'cherry', 'plum', 'raspberry', 'avocado', 'cantaloupe'],
+  vegetable_servings: ['broccoli', 'spinach', 'kale', 'carrot', 'salad', 'lettuce', 'tomato', 'cucumber', 'pepper', 'onion', 'celery', 'zucchini', 'asparagus', 'vegetable', 'veggie', 'cabbage', 'cauliflower', 'mushroom', 'corn', 'peas', 'edamame', 'garlic', 'sweet potato'],
+  protein_servings: ['chicken', 'beef', 'fish', 'salmon', 'tuna', 'egg', 'tofu', 'turkey', 'steak', 'shrimp', 'protein', 'yogurt', 'cheese', 'milk', 'lamb', 'pork', 'lentil', 'bean', 'cod', 'tilapia', 'sardine', 'tempeh', 'chickpea', 'cottage'],
+  processed_servings: ['chips', 'candy', 'soda', 'cookie', 'cake', 'pizza', 'burger', 'fries', 'donut', 'chocolate', 'ice cream', 'nugget', 'hot dog', 'popcorn', 'muffin', 'brownie', 'nachos', 'pancake', 'fried'],
+}
+
+export function detectServingKey(name) {
+  const lower = name.toLowerCase()
+  for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some((k) => lower.includes(k))) return key
+  }
+  return null
+}
+
+export async function searchFoods(query, _signal) {
+  return searchLocalFoods(query).map((f) => ({
+    offCode: f.id,
+    name: f.name,
+    brand: '',
+    calories: f.cal,
+    protein: f.p,
+    carbs: f.c,
+    fat: f.f,
+    category: f.cat || '',
+  }))
+}
+
+export function foodToLogItem(product) {
+  return {
+    id: crypto.randomUUID(),
+    name: product.name,
+    brand: '',
+    calories: product.calories,
+    protein: product.protein,
+    carbs: product.carbs,
+    fat: product.fat,
+    serving: '100g',
+    offCode: product.offCode,
+    servingKey: detectServingKey(product.name),
+  }
+}
+========== src\services\supabase.js ==========
+import { createClient } from '@supabase/supabase-js'
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+========== src\store\useUserStore.js ==========
+import { create } from 'zustand'
+import { supabase } from '../services/supabase'
+import { localDateISO } from '../utils/date'
+
+async function fetchOrCreateProfile(userId, user) {
+  const { data: existing } = await supabase
+    .from('users_profile')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (existing) return existing
+
+  const username =
+    user?.user_metadata?.username ||
+    user?.email?.split('@')[0] ||
+    'User'
+
+  const { data: created, error } = await supabase
+    .from('users_profile')
+    .insert({ id: userId, username })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Could not create profile:', error.message)
+    return null
+  }
+
+  return created
+}
+
+export function needsOnboarding(user, profile) {
+  if (!user) return false
+  const metaDone = user.user_metadata?.onboarding_complete === true
+  return !profile || !metaDone
+}
+
+export const useUserStore = create((set, get) => ({
+  user: null,
+  profile: null,
+  todayLog: null,
+  recentScores: [],
+  recentLogs: [],
+  earnedAchievements: [],
+  authReady: false,
+  dataLoading: false,
+
+  setUser: (user) => set({ user }),
+  setProfile: (profile) => set({ profile }),
+  setTodayLog: (todayLog) => set({ todayLog }),
+  setRecentScores: (recentScores) => set({ recentScores }),
+  setRecentLogs: (recentLogs) => set({ recentLogs }),
+  setEarnedAchievements: (earnedAchievements) => set({ earnedAchievements }),
+  setAuthReady: (authReady) => set({ authReady }),
+
+  loadUserData: async (userId, { silent = false } = {}) => {
+    if (!userId) return
+    if (!silent) set({ dataLoading: true })
+
+    const today = localDateISO()
+    const user = get().user
+
+    try {
+      const profile = await fetchOrCreateProfile(userId, user)
+
+      const [todayLogRes, logsRes, achievementsRes] = await Promise.all([
+        supabase
+          .from('daily_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('log_date', today)
+          .maybeSingle(),
+        supabase
+          .from('daily_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('log_date', { ascending: false })
+          .limit(30),
+        supabase.from('achievements').select('achievement_key').eq('user_id', userId),
+      ])
+
+      const todayLog = todayLogRes.error ? null : todayLogRes.data
+      const recentLogs = logsRes.data || []
+      const recentScores = recentLogs.map((r) => r.future_self_score)
+      const earnedAchievements = (achievementsRes.data || []).map((a) => a.achievement_key)
+
+      set({
+        profile,
+        todayLog,
+        recentLogs,
+        recentScores,
+        earnedAchievements,
+        dataLoading: false,
+      })
+    } catch (err) {
+      console.error('loadUserData failed:', err)
+      set({ dataLoading: false })
+    }
+  },
+
+  reset: () =>
+    set({
+      user: null,
+      profile: null,
+      todayLog: null,
+      recentScores: [],
+      recentLogs: [],
+      earnedAchievements: [],
+      dataLoading: false,
+    }),
+}))
+
+========== src\utils\achievementStats.js ==========
+import { ACHIEVEMENTS } from '../data/achievements'
+import { supabase } from '../services/supabase'
+import { getLevelFromXP } from './scoring'
+
+export async function fetchAchievementStats(userId, profile) {
+  const { data: logs, error } = await supabase
+    .from('daily_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('log_date', { ascending: false })
+
+  if (error) throw error
+
+  const allLogs = logs || []
+  const totalXP = profile?.total_xp ?? 0
+
+  return {
+    totalLogs: allLogs.length,
+    longestStreak: profile?.longest_streak ?? 0,
+    currentStreak: profile?.current_streak ?? 0,
+    perfectDays: allLogs.filter((l) => l.is_perfect_day).length,
+    waterGoalDays: allLogs.filter((l) => (l.water_ml || 0) >= 2500).length,
+    sleepGoalDays: allLogs.filter((l) => Number(l.sleep_hours) >= 7).length,
+    vegGoalDays: allLogs.filter((l) => (l.vegetable_servings || 0) >= 3).length,
+    totalFocusMinutes: allLogs.reduce((sum, l) => sum + (l.focus_minutes || 0), 0),
+    totalReadingMinutes: allLogs.reduce((sum, l) => sum + (l.reading_minutes || 0), 0),
+    workoutDays: allLogs.filter(
+      (l) => (l.workout_duration_min || 0) >= 15 || (l.exercise_type && l.exercise_type !== 'rest')
+    ).length,
+    bestFitnessScore: allLogs.reduce((max, l) => Math.max(max, l.fitness_score || 0), 0),
+    bestFutureSelfScore: allLogs.reduce((max, l) => Math.max(max, l.future_self_score || 0), 0),
+    readingDays: allLogs.filter((l) => (l.reading_minutes || 0) > 0).length,
+    level: profile?.level ?? getLevelFromXP(totalXP),
+    totalXP,
+    avgLongevity: allLogs.length
+      ? Math.round(allLogs.reduce((s, l) => s + (l.longevity_score || 0), 0) / allLogs.length)
+      : 0,
+  }
+}
+
+export async function checkAndAwardAchievements(userId, profile, earnedKeys) {
+  const stats = await fetchAchievementStats(userId, profile)
+  const newlyEarned = []
+  let bonusXP = 0
+
+  for (const ach of ACHIEVEMENTS) {
+    if (earnedKeys.includes(ach.key)) continue
+    if (!ach.check(stats)) continue
+
+    const { error } = await supabase.from('achievements').insert({
+      user_id: userId,
+      achievement_key: ach.key,
+      tier: ach.tier,
+      xp_awarded: ach.xp,
+    })
+
+    if (!error) {
+      newlyEarned.push(ach.key)
+      bonusXP += ach.xp
+    }
+  }
+
+  return { newlyEarned, bonusXP, stats }
+}
+
+========== src\utils\date.js ==========
+export function localDateISO(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function localWeekStartISO(date = new Date()) {
+  const d = new Date(date)
+  const day = d.getDay()
+  const offset = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + offset)
+  return localDateISO(d)
+}
+
+========== src\utils\logDetails.js ==========
+/** @typedef {{ id: string, name: string, brand?: string, calories?: number|null, serving?: string, offCode?: string }} FoodItem */
+/** @typedef {{ foods: FoodItem[], exercise: object, sleep: object, water: object, focus: object, reading: object, meditation: object, mood: object }} LogDetails */
+
+export function emptyLogDetails() {
+  return {
+    foods: [],
+    exercise: { name: '', duration_min: '', notes: '' },
+    sleep: { bedtime: '', wake_time: '', notes: '' },
+    water: { notes: '' },
+    focus: { activity: '' },
+    reading: { title: '', pages: '' },
+    meditation: { style: '' },
+    mood: { note: '' },
+  }
+}
+
+export function parseLogDetails(raw) {
+  const base = emptyLogDetails()
+  if (!raw || typeof raw !== 'object') return base
+
+  return {
+    foods: Array.isArray(raw.foods) ? raw.foods : [],
+    exercise: { ...base.exercise, ...(raw.exercise || {}) },
+    sleep: { ...base.sleep, ...(raw.sleep || {}) },
+    water: { ...base.water, ...(raw.water || {}) },
+    focus: { ...base.focus, ...(raw.focus || {}) },
+    reading: { ...base.reading, ...(raw.reading || {}) },
+    meditation: { ...base.meditation, ...(raw.meditation || {}) },
+    mood: { ...base.mood, ...(raw.mood || {}) },
+  }
+}
+
+export function countDetails(details) {
+  let n = 0
+  if (details.foods?.length) n += details.foods.length
+  if (details.exercise?.name || details.exercise?.notes) n += 1
+  if (details.sleep?.bedtime || details.sleep?.wake_time || details.sleep?.notes) n += 1
+  if (details.water?.notes) n += 1
+  if (details.focus?.activity) n += 1
+  if (details.reading?.title) n += 1
+  if (details.meditation?.style) n += 1
+  if (details.mood?.note) n += 1
+  return n
+}
+
+export function hasDetailContent(raw) {
+  return countDetails(parseLogDetails(raw)) > 0
+}
+
+========== src\utils\projection.js ==========
+/** Future projection from last ~30 days of logs â€” simple habit-based model */
+
+function avg(arr) {
+  if (!arr.length) return 0
+  return arr.reduce((a, b) => a + b, 0) / arr.length
+}
+
+export function computeFutureProjection(logs, currentScore = 0) {
+  const current = currentScore || 0
+
+  if (!logs?.length) {
+    return {
+      current,
+      month6: current,
+      year1: current,
+      momentum: 0,
+      drivers: [],
+    }
+  }
+
+  const last30 = logs.slice(0, 30)
+  const last7 = last30.slice(0, 7)
+  const prev7 = last30.slice(7, 14)
+
+  const sleepConsistency =
+    last30.filter((l) => Number(l.sleep_hours) >= 7).length / last30.length
+  const workoutFrequency =
+    last30.filter(
+      (l) =>
+        (l.workout_duration_min || 0) >= 20 ||
+        (l.exercise_type && l.exercise_type !== 'rest')
+    ).length / last30.length
+  const nutritionAvg = avg(last30.map((l) => l.nutrition_score || 0)) / 100
+  const focusAvg = avg(last30.map((l) => l.focus_score || 0)) / 100
+  const waterAvg = avg(last30.map((l) => Math.min((l.water_ml || 0) / 2500, 1)))
+
+  const habitStrength =
+    sleepConsistency * 0.25 +
+    workoutFrequency * 0.25 +
+    nutritionAvg * 0.2 +
+    focusAvg * 0.15 +
+    waterAvg * 0.15
+
+  const fss7 = avg(last7.map((l) => l.future_self_score || 0))
+  const fssPrev7 = prev7.length ? avg(prev7.map((l) => l.future_self_score || 0)) : fss7
+  const momentum = (fss7 - fssPrev7) / 7
+
+  const lift6 = habitStrength * 10 + momentum * 120
+  const lift12 = habitStrength * 18 + momentum * 200
+
+  const month6 = Math.round(Math.min(99, Math.max(current - 3, current + lift6)))
+  const year1 = Math.round(Math.min(99, Math.max(current - 5, current + lift12)))
+
+  const drivers = [
+    { label: 'Sleep consistency', value: Math.round(sleepConsistency * 100), trend: sleepConsistency >= 0.6 ? 'up' : 'flat' },
+    { label: 'Workout frequency', value: Math.round(workoutFrequency * 100), trend: workoutFrequency >= 0.4 ? 'up' : 'flat' },
+    { label: 'Nutrition avg', value: Math.round(nutritionAvg * 100), trend: nutritionAvg >= 0.55 ? 'up' : 'flat' },
+    { label: 'Focus avg', value: Math.round(focusAvg * 100), trend: focusAvg >= 0.5 ? 'up' : 'flat' },
+    { label: 'Hydration', value: Math.round(waterAvg * 100), trend: waterAvg >= 0.7 ? 'up' : 'flat' },
+  ]
+
+  return {
+    current: Math.round(current),
+    month6,
+    year1,
+    momentum: Math.round(momentum * 10) / 10,
+    drivers,
+  }
+}
+
+========== src\utils\scoring.js ==========
+/** @param {object} log */
+
+function legacyNutrition(log) {
+  return Math.min(100, Math.round((log.meal_quality || 0) * 0.6 + ((log.water_ml || 0) / 3000) * 40))
+}
+
+function legacyFitness(log) {
+  return Math.min(100, Math.round((log.exercise_intensity || 0) * 0.7 + (log.sleep_quality || 5) * 3))
+}
+
+// â”€â”€â”€ FOOD QUALITY SCORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Computed from actual logged foods (macros per 100g)
+// Returns 0-100 based on protein density, calorie quality, and food categories
+
+export function calcFoodQualityScore(foods = []) {
+  if (!foods || foods.length === 0) return null
+
+  const realFoods = foods.filter((f) => f.calories != null || f.protein != null)
+  if (realFoods.length === 0) return null
+
+  let totalScore = 0
+  let totalWeight = 0
+
+  for (const food of realFoods) {
+    const cal = food.calories ?? 150
+    const protein = food.protein ?? 0
+    const carbs = food.carbs ?? 0
+    const fat = food.fat ?? 0
+    const key = food.servingKey || ''
+
+    // Protein density: protein per 100 kcal (ideal is 8g+)
+    const proteinDensity = cal > 0 ? (protein / cal) * 100 : 0
+    const proteinScore = Math.min(proteinDensity / 8, 1) * 30
+
+    // Calorie density penalty: very high cal foods (>500 kcal) lose points
+    const calDensityScore = Math.max(0, (1 - Math.max(0, cal - 300) / 600)) * 20
+
+    // Category bonus
+    let categoryBonus = 0
+    if (key === 'fruit_servings') categoryBonus = 20
+    else if (key === 'vegetable_servings') categoryBonus = 25
+    else if (key === 'protein_servings') categoryBonus = 20
+    else if (key === 'processed_servings') categoryBonus = -15
+
+    // Macro balance: reward foods where protein > fat and carbs are moderate
+    const macroTotal = protein + carbs + fat
+    const macroBalance = macroTotal > 0
+      ? Math.max(0, 1 - Math.abs(protein / macroTotal - 0.25) * 2) * 15
+      : 0
+
+    const foodScore = Math.max(0, proteinScore + calDensityScore + categoryBonus + macroBalance)
+    totalScore += foodScore
+    totalWeight += 1
+  }
+
+  return Math.min(100, Math.max(0, Math.round(totalScore / totalWeight)))
+}
+
+// â”€â”€â”€ FOOD LONGEVITY SCORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Based on anti-inflammatory foods, whole foods ratio, and processed food penalty
+
+export function calcFoodLongevityScore(foods = []) {
+  if (!foods || foods.length === 0) return null
+
+  const realFoods = foods.filter((f) => f.calories != null || f.protein != null)
+  if (realFoods.length === 0) return null
+
+  let wholeCount = 0
+  let processedCount = 0
+  let antiInflammatoryCount = 0
+
+  const ANTI_INFLAMMATORY = [
+    'salmon', 'sardine', 'tuna', 'blueberr', 'strawberr', 'raspberry',
+    'spinach', 'kale', 'broccoli', 'avocado', 'walnut', 'olive',
+    'turmeric', 'ginger', 'green tea', 'almond', 'quinoa', 'lentil',
+    'chickpea', 'black bean', 'sweet potato', 'tomato', 'cherry',
+  ]
+
+  for (const food of realFoods) {
+    const name = (food.name || '').toLowerCase()
+    const key = food.servingKey || ''
+
+    if (key === 'processed_servings') processedCount++
+    else wholeCount++
+
+    if (ANTI_INFLAMMATORY.some((k) => name.includes(k))) antiInflammatoryCount++
+  }
+
+  const total = realFoods.length
+  const wholeFoodRatio = wholeCount / total
+  const processedPenalty = Math.min(processedCount * 15, 45)
+  const antiInflamBonus = Math.min(antiInflammatoryCount * 12, 36)
+
+  const base = wholeFoodRatio * 64 + antiInflamBonus - processedPenalty
+  return Math.min(100, Math.max(0, Math.round(base)))
+}
+
+// â”€â”€â”€ MACRO SUMMARY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Returns total estimated macros from logged foods
+
+export function calcMacroSummary(foods = []) {
+  if (!foods || foods.length === 0) return null
+
+  const realFoods = foods.filter((f) => f.calories != null)
+  if (realFoods.length === 0) return null
+
+  // Assume average 150g serving per food item
+  const SERVING_G = 150
+
+  const totals = realFoods.reduce(
+    (acc, f) => {
+      const factor = SERVING_G / 100
+      return {
+        calories: acc.calories + Math.round((f.calories ?? 0) * factor),
+        protein: acc.protein + Math.round((f.protein ?? 0) * factor),
+        carbs: acc.carbs + Math.round((f.carbs ?? 0) * factor),
+        fat: acc.fat + Math.round((f.fat ?? 0) * factor),
+      }
+    },
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  )
+
+  return totals
+}
+
+// â”€â”€â”€ NUTRITION SCORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+export function calcNutritionFromServings(log, foods = []) {
+  const fruit = log.fruit_servings ?? 0
+  const veg = log.vegetable_servings ?? 0
+  const protein = log.protein_servings ?? 0
+  const processed = log.processed_servings ?? 0
+
+  if (fruit + veg + protein + processed === 0 && (log.meal_quality || 0) > 0) {
+    return legacyNutrition(log)
+  }
+
+  // Base score from servings
+  let baseScore =
+    (Math.min(fruit, 3) / 3) * 25 +
+    (Math.min(veg, 4) / 4) * 30 +
+    (Math.min(protein, 3) / 3) * 30 +
+    Math.min((log.water_ml || 0) / 2500, 1) * 15 -
+    Math.min(processed, 5) * 8
+
+  baseScore = Math.min(100, Math.max(0, Math.round(baseScore)))
+
+  // If real foods were logged, blend in the food quality score
+  const foodQuality = calcFoodQualityScore(foods)
+  if (foodQuality !== null) {
+    // 60% base servings score, 40% actual food quality
+    return Math.min(100, Math.round(baseScore * 0.6 + foodQuality * 0.4))
+  }
+
+  return baseScore
+}
+
+const WORKOUT_TYPE_FACTOR = { gym: 1, run: 1.1, sport: 1.05, yoga: 0.85, rest: 0.25 }
+
+export function calcFitnessFromWorkout(log) {
+  const duration = log.workout_duration_min ?? 0
+  const type = log.exercise_type || 'rest'
+
+  if (duration === 0 && type === 'rest' && !(log.exercise_intensity > 0)) return 0
+  if (duration === 0 && (log.exercise_intensity || 0) > 0) return legacyFitness(log)
+
+  const factor = WORKOUT_TYPE_FACTOR[type] ?? 0.5
+  const durationScore = Math.min(duration / 45, 1) * 75 * factor
+  return Math.min(100, Math.round(durationScore + (log.sleep_quality || 5) * 1.5))
+}
+
+export function calcEnergyFromSleep(log) {
+  const hours = Number(log.sleep_hours) || 0
+  const quality = log.sleep_quality || 5
+  const mood = log.mood || 5
+  const water = Math.min((log.water_ml || 0) / 3000, 1) * 15
+  return Math.min(100, Math.round((hours / 8) * 50 + quality * 4 + mood * 2 + water))
+}
+
+export function calcFocusScore(log) {
+  return Math.min(
+    100,
+    Math.round(
+      ((log.focus_minutes || 0) / 90) * 60 +
+        ((log.reading_minutes || 0) / 30) * 25 +
+        ((log.meditation_minutes || 0) / 10) * 15
+    )
+  )
+}
+
+export function calcLongevityScore(log, fitnessScore, nutritionScore, foods = []) {
+  const base = Math.min(
+    100,
+    Math.round(
+      (Number(log.sleep_hours || 0) / 8) * 30 +
+        fitnessScore * 0.25 +
+        nutritionScore * 0.25 +
+        Math.min((log.water_ml || 0) / 3000, 1) * 20
+    )
+  )
+
+  // If real foods logged, blend in food longevity score
+  const foodLongevity = calcFoodLongevityScore(foods)
+  if (foodLongevity !== null) {
+    return Math.min(100, Math.round(base * 0.65 + foodLongevity * 0.35))
+  }
+
+  return base
+}
+
+export function calcFutureSelfScore(scores, streakDays) {
+  const consistency = 0.7 + (Math.min(streakDays, 100) / 100) * 0.3
+  const weighted =
+    scores.fitness * 0.25 +
+    scores.nutrition * 0.2 +
+    scores.energy * 0.2 +
+    scores.focus * 0.15 +
+    scores.longevity * 0.15 +
+    scores.mood * 0.05
+  return Math.min(100, Math.round(weighted * consistency))
+}
+
+export function buildAllScores(log, streakDays = 0, foods = []) {
+  const fitness = calcFitnessFromWorkout(log)
+  const nutrition = calcNutritionFromServings(log, foods)
+  const energy = calcEnergyFromSleep(log)
+  const focus = calcFocusScore(log)
+  const longevity = calcLongevityScore(log, fitness, nutrition, foods)
+  const mood = (log.mood || 5) * 10
+  const future_self_score = calcFutureSelfScore(
+    { fitness, nutrition, energy, focus, longevity, mood },
+    streakDays
+  )
+
+  return {
+    fitness_score: fitness,
+    nutrition_score: nutrition,
+    energy_score: energy,
+    focus_score: focus,
+    longevity_score: longevity,
+    future_self_score,
+    mood_score: mood,
+  }
+}
+
+export function getScoreBreakdown(scores, streakDays) {
+  const consistency = 0.7 + (Math.min(streakDays, 100) / 100) * 0.3
+  const weights = {
+    fitness: 0.25,
+    nutrition: 0.2,
+    energy: 0.2,
+    focus: 0.15,
+    longevity: 0.15,
+    mood: 0.05,
+  }
+  const items = [
+    { key: 'fitness', label: 'Fitness', weight: weights.fitness, value: scores.fitness },
+    { key: 'nutrition', label: 'Nutrition', weight: weights.nutrition, value: scores.nutrition },
+    { key: 'energy', label: 'Energy', weight: weights.energy, value: scores.energy },
+    { key: 'focus', label: 'Focus', weight: weights.focus, value: scores.focus },
+    { key: 'longevity', label: 'Longevity', weight: weights.longevity, value: scores.longevity },
+    { key: 'mood', label: 'Mood', weight: weights.mood, value: scores.mood },
+  ]
+
+  return items.map((item) => ({
+    ...item,
+    points: Math.round(item.value * item.weight * consistency),
+    percent: Math.round(item.weight * consistency * 100),
+  }))
+}
+
+export function calcXP(log, streakDays, questXP = 0) {
+  let base = 0
+  const fitness = calcFitnessFromWorkout(log)
+  const nutrition = calcNutritionFromServings(log)
+
+  if (fitness >= 50 || (log.workout_duration_min || 0) >= 20) base += 25
+  if (nutrition >= 50) base += 15
+  if (Number(log.sleep_hours) >= 7.5) base += 20
+  if ((log.water_ml || 0) >= 2500) base += 10
+  if ((log.focus_minutes || 0) >= 60) base += 20
+  if ((log.reading_minutes || 0) >= 20) base += 15
+  if ((log.meditation_minutes || 0) >= 10) base += 10
+  if (log.is_perfect_day) base += 50
+
+  const streakBonus = Math.floor(streakDays / 7) * 5
+  return base + streakBonus + questXP
+}
+
+export function isPerfectDay(log) {
+  const scores = buildAllScores(log, 0)
+  return (
+    scores.nutrition_score >= 55 &&
+    scores.fitness_score >= 50 &&
+    Number(log.sleep_hours) >= 7 &&
+    (log.mood || 0) >= 7 &&
+    (log.water_ml || 0) >= 2000
+  )
+}
+
+export function getLevelFromXP(totalXP) {
+  for (let n = 1; n <= 99; n++) {
+    if (totalXP < Math.floor(100 * Math.pow(n, 1.8))) return n
+  }
+  return 99
+}
+
+export function getLevelName(level) {
+  if (level <= 4) return 'Initiate'
+  if (level <= 9) return 'Builder'
+  if (level <= 19) return 'Disciplined'
+  if (level <= 34) return 'Elite'
+  if (level <= 49) return 'Master'
+  return 'Future Legend'
+}
+
+export function getXPForLevel(level) {
+  if (level <= 1) return 0
+  return Math.floor(100 * Math.pow(level - 1, 1.8))
+}
+
+export function getXPForNextLevel(level) {
+  return Math.floor(100 * Math.pow(level, 1.8))
+}
+
+/** @deprecated use computeFutureProjection */
+export function calcProjection(recentScores, daysAhead) {
+  if (!recentScores || recentScores.length < 3) return null
+  let ema = recentScores[0]
+  const alpha = 0.1
+  for (const score of recentScores) ema = alpha * score + (1 - alpha) * ema
+  const last7 = recentScores.slice(0, 7)
+  const prev7 = recentScores.slice(7, 14)
+  const avg7 = last7.reduce((a, b) => a + b, 0) / last7.length
+  const avgPrev = prev7.length ? prev7.reduce((a, b) => a + b, 0) / prev7.length : avg7
+  const momentum = (avg7 - avgPrev) / 7
+  const decay = Math.max(0, (ema - 70) / 100)
+  const projected = ema + momentum * daysAhead * (1 - decay)
+  return Math.round(Math.min(99, Math.max(ema - 5, projected)))
+}
+========== index.html ==========
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#7F77DD" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Qyven" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+    <title>Qyven</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+========== vite.config.js ==========
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
+      manifest: {
+        name: 'Qyven',
+        short_name: 'Qyven',
+        description: 'Build your future self â€” track habits, score your day, project your future.',
+        theme_color: '#7F77DD',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: 'icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
+            },
+          },
+        ],
+      },
+    }),
+  ],
+})
