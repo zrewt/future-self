@@ -7,128 +7,238 @@ function legacyFitness(log) {
 }
 
 // ── FOOD TIER SYSTEM ───────────────────────────────────────────────────────────
-// 5 tiers based on nutritional research consensus. Fast O(n) lookup.
-// Tier 1 = 90pts base (superfoods / Blue Zone staples)
-// Tier 2 = 78pts (excellent whole foods)
-// Tier 3 = 62pts (good whole foods / lean proteins)
-// Tier 4 = 40pts (neutral / minimally processed)
-// Tier 5 = 10pts (ultra-processed / junk)
+// Tiers align with NOVA processing groups, Blue Zone staples, Mediterranean /
+// DASH patterns, and WHO guidance on processed meat & ultra-processed foods.
+// Scoring is additive — healthy foods always raise your score; only UPF drags down.
 
 const TIER_1_SUPERFOODS = new Set([
-  // Fatty fish (omega-3, longevity champion)
-  'salmon','sardine','mackerel','tuna',
-  // Dark leafy greens
-  'kale','spinach','swiss chard','collard',
-  // Berries (antioxidants, telomere research)
+  // Fatty fish — omega-3, PREDIMED / cardiovascular evidence
+  'salmon','sardine','mackerel','herring','anchov',
+  // Dark leafy greens — micronutrient density
+  'kale','spinach','swiss chard','collard','watercress','arugula',
+  // Berries — polyphenols, cognitive / cardiometabolic research
   'blueberr','strawberr','raspberry','blackberr','acai',
-  // Longevity nuts
-  'walnut',
-  // Cruciferous
-  'broccoli',
-  // Legumes (Blue Zone staple #1)
+  // Nuts — Blue Zone staple
+  'walnut','almond',
+  // Cruciferous — sulforaphane, strong whole-food evidence
+  'broccoli','brussels','cabbage','cauliflower',
+  // Legumes — Blue Zone #1 protein source
   'lentil','chickpea','black bean','kidney bean','navy bean','edamame',
   // Alliums
   'garlic',
-  // Specific superfoods
+  // Other high-evidence whole foods
   'avocado','olive','turmeric','ginger','quinoa','sweet potato',
-  'mushroom','tomato','pomegranate','cherry',
+  'pomegranate','cherry',
 ])
 
 const TIER_2_EXCELLENT = new Set([
-  // All other vegetables
-  'broccoli','cauliflower','cabbage','brussels','asparagus','zucchini',
-  'cucumber','celery','carrot','bell pepper','pepper','onion','leek',
-  'beet','artichoke','lettuce','romaine','arugula','watercress',
-  'green pea','corn','squash','eggplant',
-  // Other fruits
+  // Vegetables
+  'asparagus','zucchini','cucumber','celery','carrot','bell pepper',
+  'onion','leek','beet','artichoke','lettuce','romaine',
+  'green pea','corn','squash','eggplant','mushroom','tomato',
+  // Fruits
   'apple','orange','mango','pineapple','kiwi','peach','pear','plum',
   'grape','watermelon','cantaloupe','apricot','fig','date','banana',
-  // Nuts and seeds
-  'almond','cashew','pistachio','pecan','hazelnut','brazil nut',
+  // Nuts & seeds
+  'cashew','pistachio','pecan','hazelnut','brazil nut',
   'chia','flaxseed','hemp seed','pumpkin seed','sunflower seed',
-  // Other fish / seafood
-  'cod','tilapia','shrimp','crab','lobster','oyster','clam','scallop',
-  // Whole grains
+  // Seafood & lean poultry — DASH / Mediterranean protein sources
+  'cod','tilapia','shrimp','crab','lobster','oyster','clam','scallop','tuna',
+  'chicken breast','chicken thigh','turkey breast','turkey',
+  // Whole grains & fermented foods
   'oat','brown rice','whole wheat','whole grain','barley','farro',
   'buckwheat','millet','rye',
-  // Fermented / probiotic
   'greek yogurt','kefir','kimchi','sauerkraut','miso','tempeh','tofu',
-  // Other legumes
   'pea','pinto bean','white bean','fava bean','soy',
+  // Eggs & lean dairy — nutrient-dense, minimally processed
+  'egg','egg white','cottage cheese','mozzarella',
+])
+
+// Quality tier 2, but longevity tier 3 — fine protein, weak Blue Zone / anti-inflammatory signal
+const LONGEVITY_ANIMAL_PROTEIN = new Set([
+  'egg','egg white','chicken breast','chicken thigh','turkey breast','turkey',
+  'cod','tilapia','shrimp','crab','lobster','oyster','clam','scallop','tuna',
+  'sirloin','tenderloin','pork loin','ground beef','cottage cheese','mozzarella',
+  'greek yogurt','yogurt','milk','whey','protein shake','protein powder',
 ])
 
 const TIER_3_GOOD = new Set([
-  // Lean poultry
-  'chicken breast','chicken thigh','turkey breast','turkey',
-  // Lean red meat
-  'sirloin','tenderloin','pork loin',
-  // Eggs
-  'egg',
+  // Lean red meat — fine in moderation (Mediterranean pattern)
+  'sirloin','tenderloin','pork loin','ground beef',
   // Dairy
-  'cottage cheese','greek yogurt','yogurt','milk','mozzarella',
-  // Refined grains (not whole)
+  'yogurt','milk',
+  // Refined grains & starchy sides
   'white rice','pasta','bread','tortilla','potato',
-  // Other protein
+  // Supplements / shakes
   'protein shake','protein powder','whey',
 ])
 
-const TIER_4_NEUTRAL = new Set([
-  // Higher fat dairy
+const TIER_4_LIMIT = new Set([
+  // Higher-fat dairy & red meat — limit per WHO / AHA guidance
   'cheddar','cheese','cream cheese','butter','sour cream',
-  // Processed meats (light)
-  'ground beef','beef','lamb','pork','ham','bacon',
-  // Refined snacks (mild)
-  'popcorn','cracker','pretzels',
-  // Sugary drinks
+  'beef','steak','lamb','pork','ham','bacon',
+  'popcorn','cracker','pretzel',
   'orange juice','juice',
-  // Other
   'white bread','pancake','waffle',
 ])
 
-// Everything in processed_servings category + these keywords = Tier 5
 const TIER_5_KEYWORDS = [
   'chips','soda','cola','cookie','cake','pizza','burger','fries',
-  'donut','candy','chocolate','ice cream','hot dog','nachos',
+  'donut','candy','chocolate bar','ice cream','hot dog','nachos',
   'fried chicken','muffin','brownie','nugget','taco bell',
-  'fast food','energy drink','pop tart',
+  'fast food','energy drink','pop tart','twinkie','doritos',
 ]
 
-// Superfood bonus — these foods get an extra longevity boost on top of their tier
 const SUPERFOOD_BONUS_KEYWORDS = [
   'salmon','sardine','mackerel','blueberr','walnut','kale','spinach',
   'broccoli','lentil','chickpea','black bean','garlic','turmeric',
   'ginger','avocado','olive','quinoa','sweet potato','tomato',
-  'strawberr','raspberry','green tea','dark chocolate',
+  'strawberr','raspberry',
 ]
+
+// Additive points per logged item (not averaged — adding healthy food never lowers score)
+const TIER_QUALITY_GAIN   = { 1: 34, 2: 24, 3: 16, 4: 5,  5: 0 }
+const TIER_UPF_PENALTY    = { 1: 0,  2: 0,  3: 0,  4: 0,  5: 38 }
+
+const MEAL_QUALITY_BASE     = 42
+const SUPERFOOD_BONUS       = 8
+const BALANCED_MEAL_BONUS   = 8   // produce + protein on same day (Healthy Eating Plate)
+const VARIETY_BONUS_PER     = 4   // per unique tier-1/2 food, max 12
+
+// Longevity uses its own tiers — plant-forward, Blue Zone weighted; 90+ needs diverse plants
+const LONGEVITY_TIER_GAIN     = { 1: 22, 2: 14, 3: 14, 4: 2,  5: 0 }
+const LONGEVITY_SUPER_BONUS   = 6
+const LONGEVITY_BASE          = 45
+const LONGEVITY_VARIETY_PER   = 5   // per unique plant food (tier 1–2), max 15
+const LONGEVITY_PLANT_BONUS   = { 2: 6, 3: 12, 4: 18 } // 2+, 3+, 4+ plant foods
+const LONGEVITY_SINGLE_CAP    = { 1: 82, 2: 72, 3: 62, 4: 48, 5: 12 }
 
 function classifyFood(food) {
   const name = (food.name || '').toLowerCase()
   const key  = food.servingKey || ''
 
-  // Ultra-processed category always Tier 5
+  if (name.includes('eggplant')) return 2
+
   if (key === 'processed_servings') return 5
   if (TIER_5_KEYWORDS.some((kw) => name.includes(kw))) return 5
 
-  // Check tiers in order
   for (const kw of TIER_1_SUPERFOODS) { if (name.includes(kw)) return 1 }
   for (const kw of TIER_2_EXCELLENT)  { if (name.includes(kw)) return 2 }
   for (const kw of TIER_3_GOOD)       { if (name.includes(kw)) return 3 }
-  for (const kw of TIER_4_NEUTRAL)    { if (name.includes(kw)) return 4 }
+  for (const kw of TIER_4_LIMIT)      { if (name.includes(kw)) return 4 }
 
-  // Category fallbacks for unrecognised foods
   if (key === 'vegetable_servings') return 2
   if (key === 'fruit_servings')     return 2
-  if (key === 'protein_servings')   return 3
+  if (key === 'protein_servings')   return 2
 
-  return 4 // unknown = neutral
+  return 3
 }
-
-const TIER_QUALITY_SCORE = { 1: 92, 2: 78, 3: 62, 4: 38, 5: 8 }
-const TIER_LONGEVITY_SCORE = { 1: 95, 2: 80, 3: 58, 4: 32, 5: 5 }
 
 function isSuperfood(name) {
   const n = (name || '').toLowerCase()
   return SUPERFOOD_BONUS_KEYWORDS.some((kw) => n.includes(kw))
+}
+
+function isAnimalProteinName(name) {
+  const n = (name || '').toLowerCase()
+  if (n.includes('eggplant')) return false
+
+  for (const kw of LONGEVITY_ANIMAL_PROTEIN) {
+    if (kw === 'egg' || kw === 'egg white') {
+      if (n.includes('egg white')) return true
+      if (/\begg\b/.test(n)) return true
+      continue
+    }
+    if (n.includes(kw)) return true
+  }
+  return false
+}
+
+function isPlantFood(food) {
+  const key = food.servingKey
+  if (key === 'vegetable_servings' || key === 'fruit_servings') return true
+  if (isAnimalProteinName(food.name)) return false
+  return classifyLongevityTier(food) <= 2
+}
+
+function classifyLongevityTier(food) {
+  const name = (food.name || '').toLowerCase()
+  const key  = food.servingKey || ''
+
+  if (name.includes('eggplant')) return 2
+
+  if (key === 'processed_servings') return 5
+  if (TIER_5_KEYWORDS.some((kw) => name.includes(kw))) return 5
+
+  for (const kw of TIER_1_SUPERFOODS) { if (name.includes(kw)) return 1 }
+  for (const kw of TIER_2_EXCELLENT) {
+    if (name.includes(kw) && !isAnimalProteinName(name)) return 2
+  }
+  if (isAnimalProteinName(name)) return 3
+  if (classifyFood(food) === 3) return 3
+  if (classifyFood(food) === 4) return 4
+
+  if (key === 'vegetable_servings' || key === 'fruit_servings') return 2
+  if (key === 'protein_servings') return 3
+
+  return 3
+}
+
+function effectiveQty(qty) {
+  const q = qty ?? 1
+  if (q <= 1) return 1
+  return 1 + (q - 1) * 0.55
+}
+
+function hasProduce(foods) {
+  return foods.some((f) => {
+    const key = f.servingKey
+    if (key === 'vegetable_servings' || key === 'fruit_servings') return true
+    const tier = classifyFood(f)
+    return tier <= 2 && key !== 'protein_servings'
+  })
+}
+
+function hasProteinSource(foods) {
+  return foods.some((f) => {
+    if (f.servingKey === 'protein_servings') return true
+    const tier = classifyFood(f)
+    return tier <= 3 && !['vegetable_servings', 'fruit_servings'].includes(f.servingKey)
+  })
+}
+
+function scoreFoods(foods, { base, tierGain, upfPenalty, superBonus, balancedBonus }) {
+  let score = base
+  let penalty = 0
+  const seenNames = new Set()
+
+  for (const food of foods) {
+    const tier = classifyFood(food)
+    const qty  = effectiveQty(food.qty)
+    const nameKey = (food.name || '').toLowerCase().trim()
+    const repeatFactor = seenNames.has(nameKey) ? 0.65 : 1
+    seenNames.add(nameKey)
+
+    if (tier === 5) {
+      penalty += upfPenalty * qty
+      continue
+    }
+
+    score += tierGain[tier] * qty * repeatFactor
+    if (superBonus && isSuperfood(food.name) && tier <= 2) {
+      score += superBonus * Math.min(qty, 1.5)
+    }
+  }
+
+  const goodFoods = foods.filter((f) => classifyFood(f) <= 2)
+  const uniqueGood = new Set(goodFoods.map((f) => (f.name || '').toLowerCase().trim()))
+  score += Math.min(12, uniqueGood.size * VARIETY_BONUS_PER)
+
+  if (balancedBonus && hasProduce(foods) && hasProteinSource(foods)) {
+    score += balancedBonus
+  }
+
+  return Math.min(100, Math.max(0, Math.round(score - penalty)))
 }
 
 // ── MACRO HELPERS ──────────────────────────────────────────────────────────────
@@ -143,73 +253,74 @@ function getServingMacros(food) {
 }
 
 // ── FOOD QUALITY SCORE (0–100) ─────────────────────────────────────────────────
-// Weighted average of tier scores across all foods
-// Superfoods get +6 bonus, UPF drag the average down hard
+// Additive model: each whole food adds points; ultra-processed subtracts.
+// Adding chicken breast or broccoli always increases (or holds) your score.
 export function calcFoodQualityScore(foods) {
   if (!foods?.length) return null
   const real = foods.filter((f) => f.name)
   if (!real.length) return null
 
-  let total = 0, weight = 0
-
-  for (const food of real) {
-    const qty   = food.qty ?? 1
-    const tier  = classifyFood(food)
-    let score   = TIER_QUALITY_SCORE[tier]
-
-    // Superfood bonus
-    if (isSuperfood(food.name)) score = Math.min(100, score + 6)
-
-    // Variety bonus — meal with 4+ different tier-1/2 foods gets +3
-    total  += score * qty
-    weight += qty
-  }
-
-  // Variety bonus: 4+ distinct good foods (tier 1 or 2) adds 4 pts to the whole meal
-  const goodFoods = real.filter((f) => classifyFood(f) <= 2)
-  const uniqueGoodNames = new Set(goodFoods.map((f) => f.name?.toLowerCase().trim()))
-  const varietyBonus = uniqueGoodNames.size >= 4 ? 4 : uniqueGoodNames.size >= 2 ? 2 : 0
-
-  const base = weight > 0 ? Math.round(total / weight) : 0
-  return Math.min(100, Math.max(0, base + varietyBonus))
+  return scoreFoods(real, {
+    base: MEAL_QUALITY_BASE,
+    tierGain: TIER_QUALITY_GAIN,
+    upfPenalty: TIER_UPF_PENALTY[5],
+    superBonus: SUPERFOOD_BONUS,
+    balancedBonus: BALANCED_MEAL_BONUS,
+  })
 }
 
 // ── FOOD LONGEVITY SCORE (0–100) ───────────────────────────────────────────────
-// Based on: tier longevity scores + superfood density + UPF penalty
-// Chicken breast (tier 3) gets 58 — good, not great, which is accurate
-// Salmon + broccoli + blueberries gets 90+ — which the research supports
+// Plant-forward & Blue Zone weighted. One egg ≈ low-60s; 90+ needs diverse plants.
 export function calcFoodLongevityScore(foods) {
   if (!foods?.length) return null
   const real = foods.filter((f) => f.name)
   if (!real.length) return null
 
-  let total = 0, weight = 0
-  let superfoodQty = 0, totalQty = 0, tier5Qty = 0
+  let score = LONGEVITY_BASE
+  let penalty = 0
+  const seenPlants = new Set()
 
   for (const food of real) {
-    const qty  = food.qty ?? 1
-    const tier = classifyFood(food)
-    let score  = TIER_LONGEVITY_SCORE[tier]
+    const tier = classifyLongevityTier(food)
+    const qty  = effectiveQty(food.qty)
 
-    total  += score * qty
-    weight += qty
-    totalQty += qty
+    if (tier === 5) {
+      penalty += (TIER_UPF_PENALTY[5] + 6) * qty
+      continue
+    }
 
-    if (isSuperfood(food.name)) superfoodQty += qty
-    if (tier === 5) tier5Qty += qty
+    score += LONGEVITY_TIER_GAIN[tier] * qty
+    if (isSuperfood(food.name) && tier === 1) {
+      score += LONGEVITY_SUPER_BONUS * Math.min(qty, 1.5)
+    }
+
+    if (isPlantFood(food)) {
+      seenPlants.add((food.name || '').toLowerCase().trim())
+    }
   }
 
-  const base = weight > 0 ? Math.round(total / weight) : 0
+  const plantCount = seenPlants.size
+  score += Math.min(15, plantCount * LONGEVITY_VARIETY_PER)
+  if (plantCount >= 4) score += LONGEVITY_PLANT_BONUS[4]
+  else if (plantCount >= 3) score += LONGEVITY_PLANT_BONUS[3]
+  else if (plantCount >= 2) score += LONGEVITY_PLANT_BONUS[2]
 
-  // Superfood density bonus (up to +8)
-  const sfRatio     = totalQty > 0 ? superfoodQty / totalQty : 0
-  const sfBonus     = Math.round(sfRatio * 8)
+  // Animal protein alongside plants — small bonus only with 2+ plant foods
+  const hasAnimal = real.some((f) => isAnimalProteinName(f.name) || f.servingKey === 'protein_servings')
+  if (hasAnimal && plantCount >= 2) score += 4
 
-  // UPF penalty (each UPF item hurts more as proportion grows)
-  const upfRatio    = totalQty > 0 ? tier5Qty / totalQty : 0
-  const upfPenalty  = Math.round(upfRatio * 15)
+  score -= penalty
 
-  return Math.min(100, Math.max(0, base + sfBonus - upfPenalty))
+  if (real.length === 1) {
+    const onlyTier = classifyLongevityTier(real[0])
+    score = Math.min(score, LONGEVITY_SINGLE_CAP[onlyTier] ?? 64)
+  } else if (plantCount < 2) {
+    score = Math.min(score, 78)
+  } else if (plantCount < 3) {
+    score = Math.min(score, 88)
+  }
+
+  return Math.min(100, Math.max(0, Math.round(score)))
 }
 
 // ── MACRO SUMMARY ──────────────────────────────────────────────────────────────
@@ -233,7 +344,7 @@ export function calcMacroSummary(foods) {
 }
 
 // ── NUTRITION SCORE ────────────────────────────────────────────────────────────
-export function calcNutritionFromServings(log, foods = []) {
+function calcServingNutrition(log) {
   const fruit     = log.fruit_servings     ?? 0
   const veg       = log.vegetable_servings ?? 0
   const protein   = log.protein_servings   ?? 0
@@ -243,17 +354,24 @@ export function calcNutritionFromServings(log, foods = []) {
     return legacyNutrition(log)
   }
 
-  let base =
+  return Math.min(100, Math.max(0, Math.round(
     (Math.min(fruit,     3) / 3) * 25 +
     (Math.min(veg,       4) / 4) * 30 +
     (Math.min(protein,   3) / 3) * 30 +
     Math.min((log.water_ml || 0) / 2500, 1) * 15 -
     Math.min(processed, 5) * 8
+  )))
+}
 
-  base = Math.min(100, Math.max(0, Math.round(base)))
-
+export function calcNutritionFromServings(log, foods = []) {
+  const servingScore = calcServingNutrition(log)
   const fq = calcFoodQualityScore(foods)
-  return fq != null ? Math.min(100, Math.round(base * 0.5 + fq * 0.5)) : base
+
+  if (fq == null) return servingScore
+
+  // Food log is primary when present; never let a healthy add-on drag below serving progress
+  const blended = Math.round(servingScore * 0.25 + fq * 0.75)
+  return Math.min(100, Math.max(servingScore, blended))
 }
 
 // ── FITNESS ────────────────────────────────────────────────────────────────────
