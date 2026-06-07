@@ -6,9 +6,6 @@ import Spinner from '../components/ui/Spinner'
 import EmptyHome from '../components/home/EmptyHome'
 import { localWeekStartISO } from '../utils/date'
 
-// ── INSIGHT ENGINE ────────────────────────────────────────────────────────────
-// Pure logic — no AI, just your real data turned into sentences
-
 function generateInsights(logs, profile) {
   if (!logs.length) return []
 
@@ -31,7 +28,7 @@ function generateInsights(logs, profile) {
     insights.push({
       icon: '💪',
       tone: 'positive',
-      text: `You trained ${workoutDays} out of 7 days this week — that's elite consistency. ${avgWorkoutMins > 0 ? `Averaging ${avgWorkoutMins} min per session.` : ''}`,
+      text: `You trained ${workoutDays} out of 7 days this week — that's elite consistency.${avgWorkoutMins > 0 ? ` Averaging ${avgWorkoutMins} min per session.` : ''}`,
     })
   } else if (workoutDays >= 3) {
     insights.push({
@@ -84,9 +81,7 @@ function generateInsights(logs, profile) {
   const avgFruit = avg('fruit_servings')
   const avgProtein = avg('protein_servings')
   const avgProcessed = avg('processed_servings')
-  const avgWater = Math.round(total('water_ml') / logs.length)
 
-  // Weekend vs weekday nutrition drop
   const weekendLogs = logs.filter((l) => {
     const d = new Date(l.log_date).getDay()
     return d === 0 || d === 6
@@ -125,7 +120,7 @@ function generateInsights(logs, profile) {
     insights.push({
       icon: '🥗',
       tone: 'positive',
-      text: `Solid nutrition week — ${avgVeg} veg, ${avgFruit} fruit, ${avgProtein} protein servings on average. ${avgProcessed <= 1 ? 'Low processed food too — excellent.' : ''}`,
+      text: `Solid nutrition week — ${avgVeg} veg, ${avgFruit} fruit, ${avgProtein} protein servings on average.${avgProcessed <= 1 ? ' Low processed food too — excellent.' : ''}`,
     })
   }
 
@@ -138,7 +133,7 @@ function generateInsights(logs, profile) {
     insights.push({
       icon: '🧠',
       tone: 'positive',
-      text: `${Math.round(totalFocus / 60)}h of deep work logged this week. ${totalReading > 0 ? `Plus ${totalReading} min reading.` : ''} Your focus score averaged ${avgFocusScore} — top tier.`,
+      text: `${Math.round(totalFocus / 60)}h of deep work logged this week.${totalReading > 0 ? ` Plus ${totalReading} min reading.` : ''} Your focus score averaged ${avgFocusScore} — top tier.`,
     })
   } else if (totalFocus >= 120) {
     insights.push({
@@ -155,7 +150,9 @@ function generateInsights(logs, profile) {
   }
 
   // ── Hydration ─────────────────────────────────────────────────────────────
+  const avgWater = Math.round(total('water_ml') / logs.length)
   const goodWaterDays = logs.filter((l) => (l.water_ml || 0) >= 2500).length
+
   if (avgWater < 1800) {
     insights.push({
       icon: '💧',
@@ -170,10 +167,8 @@ function generateInsights(logs, profile) {
     })
   }
 
-  // ── Trend vs last week ────────────────────────────────────────────────────
-  const avgFSS = avg('future_self_score')
+  // ── Streak ────────────────────────────────────────────────────────────────
   const streak = profile?.current_streak ?? 0
-
   if (streak >= 7) {
     insights.push({
       icon: '🔥',
@@ -192,39 +187,100 @@ function generateInsights(logs, profile) {
     })
   }
 
-  // ── One-line summary projection ───────────────────────────────────────────
-  const weakestCategory = [
-    { key: 'fitness_score', label: 'fitness', fix: 'add one workout' },
-    { key: 'nutrition_score', label: 'nutrition', fix: 'add 2 veg servings' },
-    { key: 'energy_score', label: 'sleep', fix: 'sleep 30 min longer' },
-    { key: 'focus_score', label: 'focus', fix: 'log 45 min of deep work' },
+  // ── Smarter projection — only shows a real weak pillar ────────────────────
+  // Build a scored picture of each pillar with context-aware fixes
+  const pillars = [
+    {
+      key:       'fitness_score',
+      label:     'fitness',
+      avg:       avg('fitness_score'),
+      goodThreshold: 65,
+      fix:       workoutDays < 5
+        ? `add ${5 - workoutDays} more workout session${5 - workoutDays > 1 ? 's' : ''}`
+        : 'increase workout duration to 45+ min',
+      gainPer10: 4.5, // how many FSS pts a 10pt pillar improvement adds (weight * 10)
+    },
+    {
+      key:       'nutrition_score',
+      label:     'nutrition',
+      avg:       avg('nutrition_score'),
+      goodThreshold: 65,
+      fix:       avgVeg < 4
+        ? `add ${4 - avgVeg} more veg serving${4 - avgVeg > 1 ? 's' : ''} daily`
+        : avgProcessed >= 2
+        ? 'cut processed food to 1 serving/day'
+        : 'keep logging specific foods for a better score',
+      gainPer10: 4.0,
+    },
+    {
+      key:       'energy_score',
+      label:     'sleep & energy',
+      avg:       avg('energy_score'),
+      goodThreshold: 65,
+      fix:       avgSleep < 7.5
+        ? `sleep ${Math.round((7.5 - avgSleep) * 2) / 2}h more per night`
+        : 'improve sleep quality with no screens before bed',
+      gainPer10: 4.0,
+    },
+    {
+      key:       'focus_score',
+      label:     'focus',
+      avg:       avgFocusScore,
+      goodThreshold: 65,
+      fix:       totalFocus < 300
+        ? `log ${Math.ceil((300 - totalFocus) / 7)} more min of deep work daily`
+        : 'add 10 min of daily meditation to compound focus',
+      gainPer10: 3.0,
+    },
+    {
+      key:       'longevity_score',
+      label:     'longevity',
+      avg:       avg('longevity_score'),
+      goodThreshold: 65,
+      fix:       'add anti-inflammatory foods like salmon, walnuts, or blueberries',
+      gainPer10: 3.0,
+    },
   ]
-    .map((c) => ({ ...c, avg: avg(c.key) }))
-    .sort((a, b) => a.avg - b.avg)[0]
 
-  const projectedGain = Math.round((100 - weakestCategory.avg) * 0.08)
+  // Find the genuinely weakest pillar — lowest avg that is also below its threshold
+  // If all pillars are above threshold, pick the one with most room to grow
+  const belowThreshold = pillars.filter((p) => p.avg < p.goodThreshold)
+  const candidate = belowThreshold.length > 0
+    ? belowThreshold.sort((a, b) => a.avg - b.avg)[0]          // worst below-threshold
+    : pillars.sort((a, b) => a.avg - b.avg)[0]                  // all good — pick lowest
 
-  insights.push({
-    icon: '📈',
-    tone: 'projection',
-    text: `Your weakest pillar is ${weakestCategory.label} (avg ${weakestCategory.avg}). If you ${weakestCategory.fix} daily, your Future Self Score could rise by ~${projectedGain} pts over the next 30 days.`,
-  })
+  // Only show projection if there's a meaningful gap
+  const gap = 100 - candidate.avg
+  if (gap >= 10) {
+    // Realistic 30-day gain: if user closes 30% of the gap in 30 days
+    const realisticImprovement = Math.round(gap * 0.30)
+    const fssDelta = Math.round(realisticImprovement * candidate.gainPer10 / 10)
+    const projectedFSS = Math.min(99, avg('future_self_score') + fssDelta)
+
+    // Only show if the projection is meaningfully different (at least +3)
+    if (fssDelta >= 3) {
+      insights.push({
+        icon: '📈',
+        tone: 'projection',
+        text: `Your weakest pillar is ${candidate.label} (avg ${candidate.avg}). If you ${candidate.fix}, your Future Self Score could reach ~${projectedFSS} within 30 days.`,
+      })
+    }
+  }
 
   return insights
 }
 
-// ── TONE STYLES ───────────────────────────────────────────────────────────────
 const TONE_STYLES = {
-  positive: 'bg-teal/5 border-teal/20',
-  neutral: 'bg-slate-50 border-slate-200/60 dark:bg-white/5 dark:border-white/10',
-  improve: 'bg-amber-50/60 border-amber-200/40 dark:bg-amber/5 dark:border-amber/20',
+  positive:   'bg-teal/5 border-teal/20',
+  neutral:    'bg-slate-50 border-slate-200/60 dark:bg-white/5 dark:border-white/10',
+  improve:    'bg-amber-50/60 border-amber-200/40 dark:bg-amber/5 dark:border-amber/20',
   projection: 'bg-primary/5 border-primary/20',
 }
 
 const TONE_LABEL = {
-  positive: { text: 'Win', color: 'text-teal bg-teal/10' },
-  neutral: { text: 'Note', color: 'text-slate-500 bg-slate-100 dark:bg-white/10' },
-  improve: { text: 'Opportunity', color: 'text-amber-700 bg-amber-100/80 dark:text-amber dark:bg-amber/10' },
+  positive:   { text: 'Win',        color: 'text-teal bg-teal/10' },
+  neutral:    { text: 'Note',       color: 'text-slate-500 bg-slate-100 dark:bg-white/10' },
+  improve:    { text: 'Opportunity',color: 'text-amber-700 bg-amber-100/80 dark:text-amber dark:bg-amber/10' },
   projection: { text: 'Projection', color: 'text-primary bg-primary/10' },
 }
 
@@ -250,11 +306,7 @@ export default function WeeklyReview() {
   }, [user])
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-24">
-        <Spinner />
-      </div>
-    )
+    return <div className="flex justify-center py-24"><Spinner /></div>
   }
 
   if (!weekLogs.length) {
@@ -273,26 +325,22 @@ export default function WeeklyReview() {
     Math.round(weekLogs.reduce((s, l) => s + (l[key] || 0), 0) / weekLogs.length)
 
   const categories = [
-    { key: 'fitness_score', label: 'Fitness' },
-    { key: 'nutrition_score', label: 'Nutrition' },
-    { key: 'energy_score', label: 'Energy' },
-    { key: 'focus_score', label: 'Focus' },
-    { key: 'longevity_score', label: 'Longevity' },
-    { key: 'future_self_score', label: 'Future Self' },
+    { key: 'fitness_score',    label: 'Fitness'     },
+    { key: 'nutrition_score',  label: 'Nutrition'   },
+    { key: 'energy_score',     label: 'Energy'      },
+    { key: 'focus_score',      label: 'Focus'       },
+    { key: 'longevity_score',  label: 'Longevity'   },
+    { key: 'future_self_score',label: 'Future Self' },
   ]
 
-  const ranked = categories
-    .map((c) => ({ ...c, avg: avg(c.key) }))
-    .sort((a, b) => b.avg - a.avg)
-
-  const best = ranked[0]
-  const worst = ranked[ranked.length - 1]
+  const ranked   = categories.map((c) => ({ ...c, avg: avg(c.key) })).sort((a, b) => b.avg - a.avg)
+  const best     = ranked[0]
+  const worst    = ranked[ranked.length - 1]
   const xpEarned = weekLogs.reduce((s, l) => s + (l.xp_earned || 0), 0)
   const perfectDays = weekLogs.filter((l) => l.is_perfect_day).length
-  const streakNow = profile?.current_streak ?? 0
-  const avgFSS = avg('future_self_score')
-
-  const insights = generateInsights(weekLogs, profile)
+  const streakNow   = profile?.current_streak ?? 0
+  const avgFSS      = avg('future_self_score')
+  const insights    = generateInsights(weekLogs, profile)
 
   return (
     <div className="space-y-4 animate-slide-up pb-6 max-w-lg mx-auto">
@@ -304,7 +352,6 @@ export default function WeeklyReview() {
         </p>
       </header>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card p-4">
           <p className="text-xs font-bold text-slate-400 uppercase">Avg Future Self</p>
@@ -324,7 +371,6 @@ export default function WeeklyReview() {
         </div>
       </div>
 
-      {/* Category bars */}
       <div className="glass-card p-4">
         <p className="section-title mb-3">Category averages</p>
         <ul className="space-y-2">
@@ -336,11 +382,7 @@ export default function WeeklyReview() {
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${c.avg}%`,
-                    background: c.avg >= 70
-                      ? '#1D9E75'
-                      : c.avg >= 50
-                      ? '#7F77DD'
-                      : '#EF9F27',
+                    background: c.avg >= 70 ? '#1D9E75' : c.avg >= 50 ? '#7F77DD' : '#EF9F27',
                   }}
                 />
               </div>
@@ -350,7 +392,6 @@ export default function WeeklyReview() {
         </ul>
       </div>
 
-      {/* Best / worst */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card p-4 border-teal/20 bg-teal/5">
           <p className="text-[10px] font-bold text-teal uppercase">Strongest</p>
@@ -364,21 +405,15 @@ export default function WeeklyReview() {
         </div>
       </div>
 
-      {/* ── AI-style insights — pure logic ────────────────────────────────── */}
       <div>
         <p className="section-title mb-3">This week's breakdown</p>
         <div className="space-y-3">
           {insights.map((insight, i) => (
-            <div
-              key={i}
-              className={`glass-card p-4 border ${TONE_STYLES[insight.tone]}`}
-            >
+            <div key={i} className={`glass-card p-4 border ${TONE_STYLES[insight.tone]}`}>
               <div className="flex items-start gap-3">
                 <span className="text-xl shrink-0 mt-0.5">{insight.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <span
-                    className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full mb-1.5 ${TONE_LABEL[insight.tone].color}`}
-                  >
+                  <span className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full mb-1.5 ${TONE_LABEL[insight.tone].color}`}>
                     {TONE_LABEL[insight.tone].text}
                   </span>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
