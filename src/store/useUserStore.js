@@ -43,6 +43,7 @@ export const useUserStore = create((set, get) => ({
   recentScores: [],
   recentLogs: [],
   earnedAchievements: [],
+  savedMeals: [],
   authReady: false,
   dataLoading: false,
 
@@ -53,6 +54,61 @@ export const useUserStore = create((set, get) => ({
   setRecentLogs: (recentLogs) => set({ recentLogs }),
   setEarnedAchievements: (earnedAchievements) => set({ earnedAchievements }),
   setAuthReady: (authReady) => set({ authReady }),
+  setSavedMeals: (savedMeals) => set({ savedMeals }),
+
+  // Optimistic add — instant UI, syncs to Supabase in background
+  addSavedMeal: async (name, foods) => {
+    const user = get().user
+    if (!user) return
+
+    const optimistic = {
+      id: crypto.randomUUID(),
+      name,
+      foods,
+      created_at: new Date().toISOString(),
+      _saving: true,
+    }
+
+    // Add instantly to store
+    set((s) => ({ savedMeals: [optimistic, ...s.savedMeals] }))
+
+    // Sync to Supabase
+    const { data, error } = await supabase
+      .from('saved_meals')
+      .insert({ user_id: user.id, name, foods })
+      .select()
+      .single()
+
+    if (!error && data) {
+      // Replace optimistic with real record
+      set((s) => ({
+        savedMeals: s.savedMeals.map((m) => m.id === optimistic.id ? data : m),
+      }))
+    } else {
+      // Rollback on failure
+      set((s) => ({
+        savedMeals: s.savedMeals.filter((m) => m.id !== optimistic.id),
+      }))
+    }
+  },
+
+  // Optimistic delete
+  deleteSavedMeal: async (mealId) => {
+    const prev = get().savedMeals
+
+    // Remove instantly
+    set((s) => ({ savedMeals: s.savedMeals.filter((m) => m.id !== mealId) }))
+
+    const { error } = await supabase
+      .from('saved_meals')
+      .delete()
+      .eq('id', mealId)
+
+    if (error) {
+      // Rollback
+      set({ savedMeals: prev })
+    }
+  },
 
   loadUserData: async (userId, { silent = false } = {}) => {
     if (!userId) return
@@ -64,7 +120,7 @@ export const useUserStore = create((set, get) => ({
     try {
       const profile = await fetchOrCreateProfile(userId, user)
 
-      const [todayLogRes, logsRes, achievementsRes] = await Promise.all([
+      const [todayLogRes, logsRes, achievementsRes, mealsRes] = await Promise.all([
         supabase
           .from('daily_logs')
           .select('*')
@@ -77,13 +133,23 @@ export const useUserStore = create((set, get) => ({
           .eq('user_id', userId)
           .order('log_date', { ascending: false })
           .limit(30),
-        supabase.from('achievements').select('achievement_key').eq('user_id', userId),
+        supabase
+          .from('achievements')
+          .select('achievement_key')
+          .eq('user_id', userId),
+        supabase
+          .from('saved_meals')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(50),
       ])
 
-      const todayLog = todayLogRes.error ? null : todayLogRes.data
-      const recentLogs = logsRes.data || []
-      const recentScores = recentLogs.map((r) => r.future_self_score)
+      const todayLog          = todayLogRes.error ? null : todayLogRes.data
+      const recentLogs        = logsRes.data || []
+      const recentScores      = recentLogs.map((r) => r.future_self_score)
       const earnedAchievements = (achievementsRes.data || []).map((a) => a.achievement_key)
+      const savedMeals        = mealsRes.data || []
 
       set({
         profile,
@@ -91,6 +157,7 @@ export const useUserStore = create((set, get) => ({
         recentLogs,
         recentScores,
         earnedAchievements,
+        savedMeals,
         dataLoading: false,
       })
     } catch (err) {
@@ -107,6 +174,7 @@ export const useUserStore = create((set, get) => ({
       recentScores: [],
       recentLogs: [],
       earnedAchievements: [],
+      savedMeals: [],
       dataLoading: false,
     }),
 }))

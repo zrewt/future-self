@@ -1,29 +1,16 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { searchFoods, foodToLogItem, detectServingKey } from '../../services/openFoodFacts'
-
-const SAVED_MEALS_KEY = 'qyven_saved_meals'
-
-function loadSavedMeals() {
-  try {
-    return JSON.parse(localStorage.getItem(SAVED_MEALS_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-function saveMealsToStorage(meals) {
-  localStorage.setItem(SAVED_MEALS_KEY, JSON.stringify(meals))
-}
+import { useUserStore } from '../../store/useUserStore'
 
 function macroString(f) {
-  const qty = f.qty ?? 1
-  const g = f.servingG ?? 150
+  const qty    = f.qty ?? 1
+  const g      = f.servingG ?? 150
   const factor = (g / 100) * qty
-  const cal  = f.calories != null ? Math.round(f.calories * factor) : null
-  const prot = f.protein  != null ? Math.round(f.protein  * factor * 10) / 10 : null
-  const carb = f.carbs    != null ? Math.round(f.carbs    * factor * 10) / 10 : null
-  const fat  = f.fat      != null ? Math.round(f.fat      * factor * 10) / 10 : null
-  const parts = []
+  const cal    = f.calories != null ? Math.round(f.calories * factor) : null
+  const prot   = f.protein  != null ? Math.round(f.protein  * factor * 10) / 10 : null
+  const carb   = f.carbs    != null ? Math.round(f.carbs    * factor * 10) / 10 : null
+  const fat    = f.fat      != null ? Math.round(f.fat      * factor * 10) / 10 : null
+  const parts  = []
   if (cal  != null) parts.push(`${cal} kcal`)
   if (prot != null) parts.push(`P ${prot}g`)
   if (carb != null) parts.push(`C ${carb}g`)
@@ -32,16 +19,16 @@ function macroString(f) {
 }
 
 export default function FoodDetailSection({ foods, onChange, onServingDetected, onServingRemoved }) {
-  const [query, setQuery]             = useState('')
-  const [results, setResults]         = useState([])
-  const [searching, setSearching]     = useState(false)
+  const { savedMeals, addSavedMeal, deleteSavedMeal } = useUserStore()
+
+  const [query,       setQuery]       = useState('')
+  const [results,     setResults]     = useState([])
+  const [searching,   setSearching]   = useState(false)
   const [searchError, setSearchError] = useState('')
-  const [customName, setCustomName]   = useState('')
-  const [savedMeals, setSavedMeals]   = useState(loadSavedMeals)
-  const [showSaved, setShowSaved]     = useState(false)
-  const [savingMeal, setSavingMeal]   = useState(false)
+  const [customName,  setCustomName]  = useState('')
+  const [tab,         setTab]         = useState('search')
+  const [savingMeal,  setSavingMeal]  = useState(false)
   const [newMealName, setNewMealName] = useState('')
-  const [tab, setTab]                 = useState('search') // 'search' | 'saved'
 
   useEffect(() => {
     if (query.trim().length < 2) {
@@ -93,7 +80,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
     const name = customName.trim()
     if (!name) return
     const key = detectServingKey(name)
-    const item = {
+    addFood({
       id: crypto.randomUUID(),
       name,
       brand: '',
@@ -106,19 +93,14 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
       serving: '1 serving',
       servingKey: key,
       qty: 1,
-    }
-    onChange([...foods, item])
-    if (key && onServingDetected) onServingDetected(key)
+    })
     setCustomName('')
   }
 
-  function handleSaveMeal() {
+  async function handleSaveMeal() {
     const name = newMealName.trim()
     if (!name || !foods.length) return
-    const meal = { id: crypto.randomUUID(), name, foods: [...foods], savedAt: new Date().toISOString() }
-    const updated = [meal, ...savedMeals]
-    setSavedMeals(updated)
-    saveMealsToStorage(updated)
+    await addSavedMeal(name, foods) // optimistic — instant
     setNewMealName('')
     setSavingMeal(false)
   }
@@ -132,28 +114,25 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
     setTab('search')
   }
 
-  function deleteMeal(mealId) {
-    const updated = savedMeals.filter((m) => m.id !== mealId)
-    setSavedMeals(updated)
-    saveMealsToStorage(updated)
-  }
-
   return (
     <div className="space-y-3">
       {/* Tab switcher */}
       <div className="flex gap-2">
-        {['search', 'saved'].map((t) => (
+        {[
+          { key: 'search', label: '🔍 Search' },
+          { key: 'saved',  label: `🍱 Saved${savedMeals.length ? ` (${savedMeals.length})` : ''}` },
+        ].map((t) => (
           <button
-            key={t}
+            key={t.key}
             type="button"
-            onClick={() => setTab(t)}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold capitalize transition-all ${
-              tab === t
+            onClick={() => setTab(t.key)}
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+              tab === t.key
                 ? 'bg-primary text-white'
                 : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400'
             }`}
           >
-            {t === 'search' ? '🔍 Search foods' : `🍱 Saved meals ${savedMeals.length ? `(${savedMeals.length})` : ''}`}
+            {t.label}
           </button>
         ))}
       </div>
@@ -161,11 +140,11 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
       {/* ── SEARCH TAB ── */}
       {tab === 'search' && (
         <>
-          <p className="text-xs text-slate-500 font-medium leading-relaxed">
+          <p className="text-xs text-slate-500 font-medium">
             Macros shown per average serving size.
           </p>
 
-          {/* Added foods list */}
+          {/* Added foods */}
           {foods.length > 0 && (
             <ul className="space-y-2">
               {foods.map((f) => (
@@ -185,9 +164,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       type="button"
                       onClick={() => removeFood(f.id)}
                       className="text-slate-400 hover:text-red-400 text-sm font-bold px-1 shrink-0"
-                    >
-                      ×
-                    </button>
+                    >×</button>
                   </div>
                   {/* Qty stepper */}
                   <div className="flex items-center gap-2 mt-2 ml-7">
@@ -197,7 +174,9 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       onClick={() => updateQty(f.id, (f.qty ?? 1) - 0.5)}
                       className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 text-xs font-bold"
                     >−</button>
-                    <span className="text-sm font-bold text-primary tabular-nums w-6 text-center">{f.qty ?? 1}</span>
+                    <span className="text-sm font-bold text-primary tabular-nums w-6 text-center">
+                      {f.qty ?? 1}
+                    </span>
                     <button
                       type="button"
                       onClick={() => updateQty(f.id, (f.qty ?? 1) + 0.5)}
@@ -210,7 +189,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
             </ul>
           )}
 
-          {/* Save current as meal */}
+          {/* Save as meal */}
           {foods.length >= 2 && (
             <div>
               {!savingMeal ? (
@@ -228,12 +207,16 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                     value={newMealName}
                     onChange={(e) => setNewMealName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSaveMeal())}
-                    placeholder="Meal name e.g. Lunch bowl…"
+                    placeholder="e.g. Lunch bowl, Post-workout…"
                     className="input-field text-sm flex-1"
                     autoFocus
                   />
-                  <button type="button" onClick={handleSaveMeal} className="btn-primary !py-2 !px-3 text-xs shrink-0">Save</button>
-                  <button type="button" onClick={() => setSavingMeal(false)} className="btn-secondary !py-2 !px-3 text-xs shrink-0">✕</button>
+                  <button type="button" onClick={handleSaveMeal} className="btn-primary !py-2 !px-3 text-xs shrink-0">
+                    Save
+                  </button>
+                  <button type="button" onClick={() => setSavingMeal(false)} className="btn-secondary !py-2 !px-3 text-xs shrink-0">
+                    ✕
+                  </button>
                 </div>
               )}
             </div>
@@ -267,10 +250,11 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                   >
                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
                     <p className="text-xs text-slate-400 font-medium mt-0.5">
-                      {p.unit} · {p.calories != null ? `${p.calories} kcal` : ''}
-                      {p.protein != null ? ` · P ${p.protein}g` : ''}
-                      {p.carbs   != null ? ` · C ${p.carbs}g`   : ''}
-                      {p.fat     != null ? ` · F ${p.fat}g`     : ''}
+                      {p.unit}
+                      {p.calories != null ? ` · ${p.calories} kcal` : ''}
+                      {p.protein  != null ? ` · P ${p.protein}g`    : ''}
+                      {p.carbs    != null ? ` · C ${p.carbs}g`      : ''}
+                      {p.fat      != null ? ` · F ${p.fat}g`        : ''}
                     </p>
                   </button>
                 </li>
@@ -306,35 +290,44 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
             </div>
           ) : (
             savedMeals.map((meal) => {
-              const totalCal = meal.foods.reduce((s, f) => {
+              const totalCal = (meal.foods || []).reduce((s, f) => {
                 const qty = f.qty ?? 1
-                const g = f.servingG ?? 150
+                const g   = f.servingG ?? 150
                 return s + Math.round((f.calories ?? 0) * (g / 100) * qty)
               }, 0)
               return (
-                <div key={meal.id} className="glass-card p-3">
+                <div
+                  key={meal.id}
+                  className={`glass-card p-3 transition-opacity ${meal._saving ? 'opacity-60' : ''}`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm">{meal.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{meal.name}</p>
+                        {meal._saving && (
+                          <span className="text-[10px] text-slate-400">Saving…</span>
+                        )}
+                      </div>
                       <p className="text-[10px] text-slate-400 mt-0.5">
-                        {meal.foods.length} items · ~{totalCal} kcal
+                        {(meal.foods || []).length} items · ~{totalCal} kcal
                       </p>
-                      <p className="text-xs text-slate-500 mt-1 truncate">
-                        {meal.foods.map((f) => f.name).join(', ')}
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">
+                        {(meal.foods || []).map((f) => f.name).join(', ')}
                       </p>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={() => loadMeal(meal)}
+                        disabled={meal._saving}
                         className="btn-primary !py-1.5 !px-3 text-xs"
                       >
                         Add
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteMeal(meal.id)}
-                        className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 text-xs font-bold flex items-center justify-center"
+                        onClick={() => deleteSavedMeal(meal.id)}
+                        className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 text-xs font-bold flex items-center justify-center hover:bg-red-100"
                       >
                         ×
                       </button>
