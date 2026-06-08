@@ -6,221 +6,23 @@ function legacyFitness(log) {
   return Math.min(100, Math.round((log.exercise_intensity || 0) * 0.7 + (log.sleep_quality || 5) * 3))
 }
 
-// ── FOOD TIER SYSTEM ───────────────────────────────────────────────────────────
-// IMPORTANT: Check Tier 1 → 2 → 3 → 4 → 5 in that order.
-// More specific keywords first so 'chicken breast' never matches 'fried chicken'.
+// ── FOOD SCORING (health & longevity — not calorie counting) ─────────────────
+export {
+  calcFoodQualityScore,
+  calcFoodQualityBreakdown,
+  calcFoodLongevityScore,
+  calcFoodLongevityBreakdown,
+  calcMealMacroTotals,
+} from './foodScoring'
 
-const TIER_1 = [
-  // Fatty fish
-  'salmon', 'sardine', 'mackerel', 'herring',
-  // Dark leafy greens
-  'kale', 'spinach', 'swiss chard', 'collard green',
-  // Berries
-  'blueberri', 'blueberry', 'strawberri', 'strawberry',
-  'raspberry', 'blackberri', 'blackberry', 'acai',
-  // Longevity nuts
-  'walnut',
-  // Cruciferous
-  'broccoli', 'brussels sprout',
-  // Legumes
-  'lentil', 'chickpea', 'black bean', 'kidney bean', 'navy bean', 'edamame',
-  // Alliums
-  'garlic',
-  // Superfoods
-  'avocado', 'olive oil', 'turmeric', 'ginger', 'quinoa', 'sweet potato',
-  'mushroom', 'tomato', 'pomegranate', 'tuna',
-]
-
-const TIER_2 = [
-  // Vegetables
-  'cauliflower', 'cabbage', 'asparagus', 'zucchini', 'cucumber', 'celery',
-  'carrot', 'bell pepper', 'onion', 'leek', 'beet', 'artichoke',
-  'lettuce', 'romaine', 'arugula', 'green pea', 'corn', 'squash', 'eggplant',
-  // Fruits
-  'apple', 'orange', 'mango', 'pineapple', 'kiwi', 'peach', 'pear', 'plum',
-  'grape', 'watermelon', 'cantaloupe', 'banana', 'fig', 'date', 'cherry',
-  // Nuts and seeds
-  'almond', 'cashew', 'pistachio', 'pecan', 'brazil nut',
-  'chia seed', 'flaxseed', 'pumpkin seed', 'sunflower seed',
-  // Seafood
-  'cod', 'tilapia', 'shrimp', 'crab', 'oyster', 'scallop',
-  // Whole grains
-  'oat', 'brown rice', 'whole wheat', 'barley', 'farro', 'buckwheat',
-  // Fermented / probiotic
-  'greek yogurt', 'kefir', 'tempeh', 'tofu',
-  // Legumes
-  'pinto bean', 'white bean', 'fava bean',
-]
-
-const TIER_3 = [
-  // Lean poultry — specific first so 'fried chicken' doesn't match here
-  'chicken breast', 'chicken thigh', 'turkey breast', 'turkey',
-  // Lean meats
-  'sirloin steak', 'pork loin', 'lean beef',
-  // Eggs
-  'egg white', 'whole egg', 'large egg',
-  // Dairy
-  'cottage cheese', 'yogurt', 'whole milk', 'skim milk', 'mozzarella',
-  // Grains
-  'white rice', 'pasta', 'whole wheat bread', 'flour tortilla', 'potato',
-  'protein shake', 'protein powder', 'whey',
-]
-
-const TIER_4 = [
-  // Higher fat dairy
-  'cheddar cheese', 'cream cheese', 'butter', 'sour cream',
-  // Processed meats
-  'ground beef', 'lamb', 'pork chop', 'ham', 'bacon', 'sausage',
-  // Refined
-  'white bread', 'pancake', 'waffle', 'bagel',
-  'orange juice', 'sports drink',
-  'cracker', 'pretzel',
-]
-
-const TIER_5 = [
-  // Ultra-processed — specific multi-word first
-  'potato chips', 'french fries', 'fried chicken', 'hot dog',
-  'milk chocolate', 'dark chocolate',
-  'ice cream', 'energy drink', 'pop tart', 'buttered popcorn',
-  'chocolate cake', 'chocolate chip cookie',
-  'glazed donut', 'blueberry muffin',
-  // Then single words
-  'chips', 'soda', 'cola', 'cookie', 'cake', 'pizza', 'burger',
-  'donut', 'candy', 'nachos', 'muffin', 'brownie',
-]
-
-const SUPERFOODS = [
-  'salmon', 'sardine', 'mackerel', 'blueberri', 'blueberry',
-  'walnut', 'kale', 'spinach', 'broccoli', 'lentil', 'chickpea',
-  'black bean', 'garlic', 'turmeric', 'ginger', 'avocado', 'olive oil',
-  'quinoa', 'sweet potato', 'tomato', 'strawberri', 'strawberry',
-  'raspberry', 'edamame', 'tempeh', 'brussels sprout',
-]
-
-// Longest-match wins — more specific keyword beats a shorter one
-function findTier(name, tierArr) {
-  let matched = false
-  let bestLen = 0
-  for (const kw of tierArr) {
-    if (name.includes(kw) && kw.length > bestLen) {
-      matched = true
-      bestLen = kw.length
-    }
-  }
-  return matched
-}
-
-function classifyFood(food) {
-  const name = (food.name || '').toLowerCase()
-  const key  = food.servingKey || ''
-
-  // Category shortcut for processed
-  if (key === 'processed_servings') return 5
-
-  // Check in order 1 → 2 → 3 → 4 → 5
-  // This means 'chicken breast' hits Tier 3 BEFORE Tier 5 ever sees 'chicken'
-  if (findTier(name, TIER_1)) return 1
-  if (findTier(name, TIER_2)) return 2
-  if (findTier(name, TIER_3)) return 3
-  if (findTier(name, TIER_4)) return 4
-  if (findTier(name, TIER_5)) return 5
-
-  // Category fallbacks for unknown foods
-  if (key === 'vegetable_servings') return 2
-  if (key === 'fruit_servings')     return 2
-  if (key === 'protein_servings')   return 3
-
-  return 4
-}
-
-function isSuperfood(name) {
-  const n = (name || '').toLowerCase()
-  return SUPERFOODS.some((kw) => n.includes(kw))
-}
-
-const TIER_QUALITY   = { 1: 90, 2: 76, 3: 62, 4: 38, 5: 8 }
-const TIER_LONGEVITY = { 1: 92, 2: 76, 3: 58, 4: 30, 5: 5 }
-
-// ── SERVING MACROS ─────────────────────────────────────────────────────────────
-function getServingMacros(food) {
-  const factor = ((food.servingG ?? 150) / 100) * (food.qty ?? 1)
-  return {
-    cal:  (food.calories ?? 0) * factor,
-    pro:  (food.protein  ?? 0) * factor,
-    carb: (food.carbs    ?? 0) * factor,
-    fat:  (food.fat      ?? 0) * factor,
-  }
-}
-
-// ── FOOD QUALITY SCORE ─────────────────────────────────────────────────────────
-export function calcFoodQualityScore(foods) {
-  if (!foods?.length) return null
-  const real = foods.filter((f) => f.name)
-  if (!real.length) return null
-
-  let total = 0, weight = 0
-
-  for (const food of real) {
-    const qty  = food.qty ?? 1
-    const tier = classifyFood(food)
-    let score  = TIER_QUALITY[tier]
-    if (isSuperfood(food.name)) score = Math.min(100, score + 5)
-    total  += score * qty
-    weight += qty
-  }
-
-  const goodNames = new Set(
-    real
-      .filter((f) => classifyFood(f) <= 2)
-      .map((f) => (f.name || '').toLowerCase().slice(0, 10))
-  )
-  const varietyBonus = goodNames.size >= 5 ? 5 : goodNames.size >= 3 ? 3 : 0
-
-  return Math.min(100, Math.max(0, Math.round(total / weight) + varietyBonus))
-}
-
-// ── FOOD LONGEVITY SCORE ───────────────────────────────────────────────────────
-export function calcFoodLongevityScore(foods) {
-  if (!foods?.length) return null
-  const real = foods.filter((f) => f.name)
-  if (!real.length) return null
-
-  let total = 0, weight = 0, sfQty = 0, upfQty = 0
-
-  for (const food of real) {
-    const qty  = food.qty ?? 1
-    const tier = classifyFood(food)
-    total  += TIER_LONGEVITY[tier] * qty
-    weight += qty
-    if (isSuperfood(food.name)) sfQty  += qty
-    if (tier === 5)             upfQty += qty
-  }
-
-  const base    = Math.round(total / weight)
-  const sfBonus = Math.round(Math.min(sfQty / weight, 1) * 6)
-  const upfHit  = Math.round((upfQty / weight) * 10)
-
-  return Math.min(100, Math.max(0, base + sfBonus - upfHit))
-}
+import { calcFoodQualityScore, calcFoodLongevityScore, calcMealMacroTotals } from './foodScoring'
 
 // ── MACRO SUMMARY ──────────────────────────────────────────────────────────────
 export function calcMacroSummary(foods) {
-  if (!foods?.length) return null
-  const real = foods.filter((f) => f.calories != null)
-  if (!real.length) return null
-
-  return real.reduce(
-    (acc, f) => {
-      const m = getServingMacros(f)
-      return {
-        calories: acc.calories + Math.round(m.cal),
-        protein:  Math.round((acc.protein + m.pro)  * 10) / 10,
-        carbs:    Math.round((acc.carbs   + m.carb) * 10) / 10,
-        fat:      Math.round((acc.fat     + m.fat)  * 10) / 10,
-      }
-    },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  )
+  const totals = calcMealMacroTotals(foods)
+  if (!totals) return null
+  const { calories, protein, carbs, fat } = totals
+  return { calories, protein, carbs, fat }
 }
 
 // ── NUTRITION SCORE ────────────────────────────────────────────────────────────
@@ -244,7 +46,9 @@ export function calcNutritionFromServings(log, foods = []) {
   base = Math.min(100, Math.max(0, Math.round(base)))
 
   const fq = calcFoodQualityScore(foods)
-  return fq != null ? Math.min(100, Math.round(base * 0.5 + fq * 0.5)) : base
+  if (fq == null) return base
+  const blended = Math.round(base * 0.25 + fq * 0.75)
+  return Math.min(100, Math.max(base, blended))
 }
 
 // ── FITNESS ────────────────────────────────────────────────────────────────────
@@ -261,13 +65,34 @@ export function calcFitnessFromWorkout(log) {
   ))
 }
 
-// ── ENERGY ─────────────────────────────────────────────────────────────────────
+// ── ENERGY (legacy composite — kept for charts / DB) ───────────────────────────
 export function calcEnergyFromSleep(log) {
   return Math.min(100, Math.round(
     (Number(log.sleep_hours || 0) / 8) * 50 +
     (log.sleep_quality || 5) * 4 +
     (log.mood || 5) * 2 +
     Math.min((log.water_ml || 0) / 3000, 1) * 15
+  ))
+}
+
+// ── FUTURE SELF PILLARS ────────────────────────────────────────────────────────
+export function calcSleepScore(log) {
+  return Math.min(100, Math.round(
+    (Number(log.sleep_hours || 0) / 8) * 65 +
+    (log.sleep_quality || 5) * 3.5
+  ))
+}
+
+export function calcHydrationScore(log) {
+  return Math.min(100, Math.round(Math.min((log.water_ml || 0) / 2500, 1) * 100))
+}
+
+export function calcHabitsScore(log) {
+  return Math.min(100, Math.round(
+    Math.min((log.focus_minutes || 0) / 60, 1) * 40 +
+    Math.min((log.reading_minutes || 0) / 20, 1) * 25 +
+    Math.min((log.meditation_minutes || 0) / 10, 1) * 20 +
+    (log.mood || 5) * 3
   ))
 }
 
@@ -295,16 +120,42 @@ export function calcLongevityScore(log, fitnessScore, nutritionScore, foods = []
 }
 
 // ── FUTURE SELF SCORE ──────────────────────────────────────────────────────────
+// Combines nutrition, fitness, sleep, hydration & daily habits — not food alone.
 export function calcFutureSelfScore(scores, streakDays) {
   const c = 0.7 + (Math.min(streakDays, 100) / 100) * 0.3
-  return Math.min(100, Math.round((
+  const composite = (
+    scores.nutrition * 0.25 +
     scores.fitness   * 0.25 +
-    scores.nutrition * 0.20 +
-    scores.energy    * 0.20 +
-    scores.focus     * 0.15 +
-    scores.longevity * 0.15 +
-    scores.mood      * 0.05
-  ) * c))
+    scores.sleep     * 0.20 +
+    scores.hydration * 0.15 +
+    scores.habits    * 0.15
+  )
+  // 97+ reserved for near-perfect days across all pillars
+  return Math.min(97, Math.round(composite * c))
+}
+
+export function getFutureSelfBreakdown(log, foods = [], streakDays = 0) {
+  const nutrition = calcNutritionFromServings(log, foods)
+  const fitness   = calcFitnessFromWorkout(log)
+  const sleep     = calcSleepScore(log)
+  const hydration = calcHydrationScore(log)
+  const habits    = calcHabitsScore(log)
+  const c = 0.7 + (Math.min(streakDays, 100) / 100) * 0.3
+
+  const items = [
+    { key: 'nutrition', label: 'Nutrition', weight: 0.25, value: nutrition },
+    { key: 'fitness',   label: 'Fitness',   weight: 0.25, value: fitness },
+    { key: 'sleep',     label: 'Sleep',     weight: 0.20, value: sleep },
+    { key: 'hydration', label: 'Hydration', weight: 0.15, value: hydration },
+    { key: 'habits',    label: 'Habits',    weight: 0.15, value: habits },
+  ].map((item) => ({
+    ...item,
+    points:  Math.round(item.value * item.weight * c),
+    percent: Math.round(item.weight * 100),
+  }))
+
+  const score = calcFutureSelfScore({ nutrition, fitness, sleep, hydration, habits }, streakDays)
+  return { score, items, multiplier: c }
 }
 
 // ── BUILD ALL ──────────────────────────────────────────────────────────────────
@@ -315,31 +166,31 @@ export function buildAllScores(log, streakDays = 0, foods = []) {
   const focus     = calcFocusScore(log)
   const longevity = calcLongevityScore(log, fitness, nutrition, foods)
   const mood      = (log.mood || 5) * 10
+  const fss       = getFutureSelfBreakdown(log, foods, streakDays)
   return {
     fitness_score:     fitness,
     nutrition_score:   nutrition,
     energy_score:      energy,
     focus_score:       focus,
     longevity_score:   longevity,
-    future_self_score: calcFutureSelfScore({ fitness, nutrition, energy, focus, longevity, mood }, streakDays),
+    future_self_score: fss.score,
     mood_score:        mood,
   }
 }
 
-// ── SCORE BREAKDOWN ────────────────────────────────────────────────────────────
+// ── SCORE BREAKDOWN (legacy alias) ─────────────────────────────────────────────
 export function getScoreBreakdown(scores, streakDays) {
   const c = 0.7 + (Math.min(streakDays, 100) / 100) * 0.3
   return [
-    { key: 'fitness',   label: 'Fitness',   weight: 0.25, value: scores.fitness   },
-    { key: 'nutrition', label: 'Nutrition', weight: 0.20, value: scores.nutrition },
-    { key: 'energy',    label: 'Energy',    weight: 0.20, value: scores.energy    },
-    { key: 'focus',     label: 'Focus',     weight: 0.15, value: scores.focus     },
-    { key: 'longevity', label: 'Longevity', weight: 0.15, value: scores.longevity },
-    { key: 'mood',      label: 'Mood',      weight: 0.05, value: scores.mood      },
+    { key: 'nutrition', label: 'Nutrition', weight: 0.25, value: scores.nutrition ?? 0 },
+    { key: 'fitness',   label: 'Fitness',   weight: 0.25, value: scores.fitness   ?? 0 },
+    { key: 'sleep',     label: 'Sleep',     weight: 0.20, value: scores.sleep     ?? 0 },
+    { key: 'hydration', label: 'Hydration', weight: 0.15, value: scores.hydration ?? 0 },
+    { key: 'habits',    label: 'Habits',    weight: 0.15, value: scores.habits    ?? 0 },
   ].map((item) => ({
     ...item,
     points:  Math.round(item.value * item.weight * c),
-    percent: Math.round(item.weight * c * 100),
+    percent: Math.round(item.weight * 100),
   }))
 }
 

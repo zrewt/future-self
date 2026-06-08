@@ -39,19 +39,34 @@ export async function searchFoods(query, _signal) {
 }
 
 export function foodToLogItem(product) {
+  const servingG = product.servingG ?? 150
+  const label = product.unit ?? '1 serving'
+
+  // Per-serving base macros (one serving label) — scaled by qty at display time
+  const servingCalories = product.calories ?? Math.round((product.cal100g ?? 0) * servingG / 100)
+  const servingProtein  = product.protein  ?? Math.round((product.p100g   ?? 0) * servingG / 100 * 10) / 10
+  const servingCarbs    = product.carbs    ?? Math.round((product.c100g   ?? 0) * servingG / 100 * 10) / 10
+  const servingFat      = product.fat      ?? Math.round((product.f100g   ?? 0) * servingG / 100 * 10) / 10
+
   return {
-    id:         crypto.randomUUID(),
-    name:       product.name,
-    brand:      '',
-    calories:   product.cal100g ?? product.calories,
-    protein:    product.p100g   ?? product.protein,
-    carbs:      product.c100g   ?? product.carbs,
-    fat:        product.f100g   ?? product.fat,
-    servingG:   product.servingG ?? 150,
-    unit:       product.unit ?? '1 serving',
-    serving:    product.unit ?? '1 serving',
-    offCode:    product.offCode,
-    servingKey: detectServingKey(product.name),
-    qty:        1,
+    id:              crypto.randomUUID(),
+    name:            product.name,
+    brand:           '',
+    servingLabel:    label,
+    servingCalories,
+    servingProtein,
+    servingCarbs,
+    servingFat,
+    // per-100g kept for legacy / manual entries
+    calories:        product.cal100g ?? product.calories,
+    protein:         product.p100g   ?? product.protein,
+    carbs:           product.c100g   ?? product.carbs,
+    fat:             product.f100g   ?? product.fat,
+    servingG,
+    unit:            label,
+    serving:         label,
+    offCode:         product.offCode,
+    servingKey:      detectServingKey(product.name),
+    qty:             1,
   }
 }

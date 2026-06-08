@@ -1,19 +1,35 @@
 import { useEffect, useState, useMemo } from 'react'
 import { searchFoods, foodToLogItem, detectServingKey } from '../../services/openFoodFacts'
 import { useUserStore } from '../../store/useUserStore'
-import { calcFoodQualityScore, calcFoodLongevityScore, calcMacroSummary } from '../../utils/scoring'
+import {
+  calcFoodQualityBreakdown,
+  calcFoodLongevityBreakdown,
+  calcMealMacroTotals,
+} from '../../utils/foodScoring'
+import { getFoodDisplay, formatMacroLine } from '../../utils/servingUnits'
 
-// ── Per-serving macro string — recalculates when qty changes ──────────────────
-function servingMacroStr(f) {
-  const qty    = f.qty ?? 1
-  const g      = f.servingG ?? 150
-  const factor = (g / 100) * qty
-  const parts  = []
-  if (f.calories != null) parts.push(`${Math.round(f.calories * factor)} kcal`)
-  if (f.protein  != null) parts.push(`P ${Math.round(f.protein  * factor * 10) / 10}g`)
-  if (f.carbs    != null) parts.push(`C ${Math.round(f.carbs    * factor * 10) / 10}g`)
-  if (f.fat      != null) parts.push(`F ${Math.round(f.fat      * factor * 10) / 10}g`)
-  return parts.length ? parts.join(' · ') : 'No macro data'
+function ScoreBreakdown({ title, score, lines, accentClass }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[10px] font-bold text-slate-400 uppercase">{title}</p>
+        <p className={`text-xl font-extrabold tabular-nums ${accentClass}`}>{score}</p>
+      </div>
+      <ul className="space-y-1">
+        {lines.map((line) => (
+          <li key={line.label} className="flex items-center gap-2 text-[10px]">
+            <span className="w-28 shrink-0 text-slate-500 font-medium truncate">{line.label}</span>
+            <span className="flex-1 border-b border-dotted border-slate-200 dark:border-white/10 min-w-[20px]" />
+            <span className={`font-bold tabular-nums shrink-0 ${
+              line.deduction ? 'text-coral' : 'text-slate-700 dark:text-slate-200'
+            }`}>
+              {line.points > 0 ? `+${line.points}` : line.points}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 // ── Quality label helpers ──────────────────────────────────────────────────────
@@ -69,10 +85,10 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
   // This is the key performance fix — no recalc on every keystroke/render
   const analysis = useMemo(() => {
     if (!foods.length) return null
-    const fq = calcFoodQualityScore(foods)
-    const fl = calcFoodLongevityScore(foods)
-    const fm = calcMacroSummary(foods)
-    return { fq, fl, fm }
+    const quality = calcFoodQualityBreakdown(foods)
+    const longevity = calcFoodLongevityBreakdown(foods)
+    const macros = calcMealMacroTotals(foods)
+    return { quality, longevity, macros }
   }, [foods])
 
   // ── Food mutations ─────────────────────────────────────────────────────────
@@ -156,13 +172,15 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
       {tab === 'search' && (
         <>
           <p className="text-xs text-slate-500 font-medium">
-            Macros shown per average serving size.
+            Scores reflect health & longevity — not calorie targets.
           </p>
 
           {/* Added foods list */}
           {foods.length > 0 && (
             <ul className="space-y-2">
-              {foods.map((f) => (
+              {foods.map((f) => {
+                const display = getFoodDisplay(f)
+                return (
                 <li
                   key={f.id}
                   className="bg-primary-50/50 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 rounded-2xl px-3 py-2.5"
@@ -173,12 +191,11 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                         {f.name}
                       </p>
-                      {/* This line updates live as qty changes */}
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                        {display.servingLabel}
+                      </p>
                       <p className="text-[10px] text-slate-400 font-medium">
-                        {(f.qty ?? 1) > 1
-                          ? `${f.qty}× ${f.unit || '1 serving'}`
-                          : (f.unit || '1 serving')
-                        } · {servingMacroStr(f)}
+                        {f.calories != null ? formatMacroLine(display) : 'No macro data'}
                       </p>
                     </div>
                     <button
@@ -204,12 +221,12 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       onClick={() => updateQty(f.id, (f.qty ?? 1) + 0.5)}
                       className="w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
                     >+</button>
-                    <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
-                      {f.unit || 'serving'}
+                    <span className="text-[10px] text-slate-400 truncate max-w-[100px]">
+                      {f.servingLabel || f.unit || 'serving'}
                     </span>
                   </div>
                 </li>
-              ))}
+              )})}
             </ul>
           )}
 
@@ -297,52 +314,62 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
 
           {/* Food analysis panel — memoised, only shows when foods are added */}
           {analysis && (
-            <div className="mt-1 p-3 rounded-2xl bg-primary-50/60 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 space-y-2">
+            <div className="mt-1 p-3 rounded-2xl bg-primary-50/60 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 space-y-3">
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
                 Food analysis
               </p>
 
-              <div className="grid grid-cols-2 gap-2">
-                {analysis.fq != null && (
-                  <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Food Quality</p>
-                    <p className="text-xl font-extrabold text-primary tabular-nums">{analysis.fq}</p>
-                    <p className={`text-[10px] font-medium ${qualityLabel(analysis.fq).color}`}>
-                      {qualityLabel(analysis.fq).text}
-                    </p>
-                  </div>
-                )}
-                {analysis.fl != null && (
-                  <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Longevity</p>
-                    <p className="text-xl font-extrabold text-teal tabular-nums">{analysis.fl}</p>
-                    <p className={`text-[10px] font-medium ${longevityLabel(analysis.fl).color}`}>
-                      {longevityLabel(analysis.fl).text}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {analysis.quality && (
+                <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2.5">
+                  <ScoreBreakdown
+                    title="Food Quality"
+                    score={analysis.quality.score}
+                    lines={analysis.quality.lines}
+                    accentClass="text-primary"
+                  />
+                  <p className={`text-[10px] font-medium mt-1.5 ${qualityLabel(analysis.quality.score).color}`}>
+                    {qualityLabel(analysis.quality.score).text}
+                  </p>
+                </div>
+              )}
 
-              {analysis.fm && (
-                <div className="grid grid-cols-4 gap-1 text-center">
-                  {[
-                    { label: 'kcal',    value: analysis.fm.calories },
-                    { label: 'protein', value: `${analysis.fm.protein}g` },
-                    { label: 'carbs',   value: `${analysis.fm.carbs}g` },
-                    { label: 'fat',     value: `${analysis.fm.fat}g` },
-                  ].map((m) => (
-                    <div key={m.label} className="bg-white/70 dark:bg-white/5 rounded-xl py-1.5">
-                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">
-                        {m.value}
-                      </p>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">{m.label}</p>
-                    </div>
-                  ))}
+              {analysis.longevity && (
+                <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2.5">
+                  <ScoreBreakdown
+                    title="Longevity"
+                    score={analysis.longevity.score}
+                    lines={analysis.longevity.lines}
+                    accentClass="text-teal"
+                  />
+                  <p className={`text-[10px] font-medium mt-1.5 ${longevityLabel(analysis.longevity.score).color}`}>
+                    {longevityLabel(analysis.longevity.score).text}
+                  </p>
+                </div>
+              )}
+
+              {analysis.macros && (
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Meal totals</p>
+                  <div className="grid grid-cols-4 gap-1 text-center">
+                    {[
+                      { label: 'kcal',    value: analysis.macros.calories },
+                      { label: 'protein', value: `${analysis.macros.protein}g` },
+                      { label: 'carbs',   value: `${analysis.macros.carbs}g` },
+                      { label: 'fat',     value: `${analysis.macros.fat}g` },
+                    ].map((m) => (
+                      <div key={m.label} className="bg-white/70 dark:bg-white/5 rounded-xl py-1.5">
+                        <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">
+                          {m.value}
+                        </p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               <p className="text-[10px] text-slate-400 font-medium">
-                Macros based on serving size × qty · affects nutrition & longevity scores
+                How good was this meal for your health? See breakdown above — not a calorie score.
               </p>
             </div>
           )}
@@ -361,8 +388,8 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
           ) : (
             savedMeals.map((meal) => {
               const totalCal = (meal.foods || []).reduce((s, f) => {
-                const factor = ((f.servingG ?? 150) / 100) * (f.qty ?? 1)
-                return s + Math.round((f.calories ?? 0) * factor)
+                if (f.calories == null) return s
+                return s + getFoodDisplay(f).calories
               }, 0)
               return (
                 <div
