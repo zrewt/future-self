@@ -5,6 +5,7 @@ import XPBar from '../components/XPBar'
 import Spinner from '../components/ui/Spinner'
 import { IconFlame } from '../components/ui/Icons'
 import FutureProjectionCard from '../components/home/FutureProjectionCard'
+import FutureSelfCoach from '../components/home/FutureSelfCoach'
 import DailyQuests from '../components/home/DailyQuests'
 import ScoreBreakdown from '../components/home/ScoreBreakdown'
 import ScoreCard from '../components/home/ScoreCard'
@@ -222,6 +223,8 @@ export default function Dashboard() {
           </button>
         </>
       )}
+
+      <FutureSelfCoach currentScore={currentFSS} />
 
       <FutureProjectionCard recentScores={recentScores} currentScore={currentFSS} />
 
