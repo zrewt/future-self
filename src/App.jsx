@@ -14,6 +14,7 @@ import Profile from './pages/Profile'
 import Achievements from './pages/Achievements'
 import WeeklyReview from './pages/WeeklyReview'
 import Challenges from './pages/Challenges'
+import PublicProfile from './pages/PublicProfile'
 
 function AppLayout() {
   return (
@@ -36,7 +37,6 @@ function ProtectedLayout() {
 
 function HomeRedirect() {
   const { user, authReady } = useUserStore()
-
   if (!authReady) {
     return (
       <div className="app-bg min-h-screen flex items-center justify-center">
@@ -44,7 +44,6 @@ function HomeRedirect() {
       </div>
     )
   }
-
   return <Navigate to={user ? '/dashboard' : '/login'} replace />
 }
 
@@ -55,9 +54,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public routes — no auth needed */}
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/u/:username" element={<PublicProfile />} />
 
         <Route
           path="/onboarding"
@@ -68,6 +69,7 @@ export default function App() {
           }
         />
 
+        {/* Protected routes */}
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/log" element={<Log />} />
