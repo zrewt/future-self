@@ -5,13 +5,13 @@ import XPBar from '../components/XPBar'
 import Spinner from '../components/ui/Spinner'
 import { IconFlame } from '../components/ui/Icons'
 import FutureProjectionCard from '../components/home/FutureProjectionCard'
+import FutureSelfCoach from '../components/home/FutureSelfCoach'
 import DailyQuests from '../components/home/DailyQuests'
 import ScoreBreakdown from '../components/home/ScoreBreakdown'
-import IntegrityCard from '../components/home/IntegrityCard'
+import ScoreCard from '../components/home/ScoreCard'
 import EmptyHome from '../components/home/EmptyHome'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
-import { computeIntegrityScore } from '../utils/integrity'
 
 function getSecondsUntilMidnight() {
   const now = new Date()
@@ -37,13 +37,13 @@ function getDailyEdge(log, questsDone, questCount) {
   }
 
   const scores = [
-    { label: 'Fitness',   value: log.fitness_score   ?? 0 },
-    { label: 'Nutrition', value: log.nutrition_score  ?? 0 },
-    { label: 'Energy',    value: log.energy_score     ?? 0 },
-    { label: 'Focus',     value: log.focus_score      ?? 0 },
-    { label: 'Longevity', value: log.longevity_score  ?? 0 },
+    { label: 'Fitness', value: log.fitness_score ?? 0 },
+    { label: 'Nutrition', value: log.nutrition_score ?? 0 },
+    { label: 'Energy', value: log.energy_score ?? 0 },
+    { label: 'Focus', value: log.focus_score ?? 0 },
+    { label: 'Longevity', value: log.longevity_score ?? 0 },
   ]
-  const best      = scores.sort((a, b) => b.value - a.value)[0]
+  const best = scores.sort((a, b) => b.value - a.value)[0]
   const questText = questCount ? `${questsDone}/${questCount} quests complete` : 'Quests ready'
 
   if ((log.future_self_score ?? 0) >= 75) {
@@ -53,6 +53,7 @@ function getDailyEdge(log, questsDone, questCount) {
       detail: `${questText}. Keep this rhythm and your projection starts to climb.`,
     }
   }
+
   if (questsDone >= Math.ceil(questCount / 2)) {
     return {
       label: 'Momentum building',
@@ -60,6 +61,7 @@ function getDailyEdge(log, questsDone, questCount) {
       detail: `${questText}. One more small win can move the whole day up.`,
     }
   }
+
   return {
     label: 'Next best move',
     title: `Use ${best.label.toLowerCase()} as your anchor.`,
@@ -71,7 +73,9 @@ function MidnightCountdown() {
   const [seconds, setSeconds] = useState(getSecondsUntilMidnight)
 
   useEffect(() => {
-    const timer = setInterval(() => setSeconds(getSecondsUntilMidnight()), 1000)
+    const timer = setInterval(() => {
+      setSeconds(getSecondsUntilMidnight())
+    }, 1000)
     return () => clearInterval(timer)
   }, [])
 
@@ -87,33 +91,59 @@ function MidnightCountdown() {
 }
 
 export default function Dashboard() {
-  const { profile, todayLog, recentScores, recentLogs } = useUserStore()
+  const { profile, todayLog, recentScores } = useUserStore()
+  const [showScoreCard, setShowScoreCard] = useState(false)
 
   if (!profile) {
-    return <div className="flex justify-center py-24"><Spinner /></div>
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner />
+      </div>
+    )
   }
 
   const isNewUser = recentScores.length === 0
   if (isNewUser) return <EmptyHome />
 
-  const level      = profile.level
-  const levelName  = getLevelName(level)
-  const initial    = (profile.username || '?')[0].toUpperCase()
-  const log        = todayLog || {}
+  const level = profile.level
+  const levelName = getLevelName(level)
+  const initial = (profile.username || '?')[0].toUpperCase()
+  const log = todayLog || {}
   const currentFSS = log.future_self_score ?? recentScores[0] ?? 0
-  const quests     = evaluateQuests(todayLog)
+  const quests = evaluateQuests(todayLog)
   const habitsDone = quests.filter((q) => q.done).length
-  const dailyEdge  = getDailyEdge(todayLog, habitsDone, quests.length)
-  const integrity  = computeIntegrityScore(recentLogs, profile)
-
-  const tierColor = {
-    high:     'text-teal',
-    moderate: 'text-amber-600 dark:text-amber',
-    low:      'text-coral',
-  }
+  const dailyEdge = getDailyEdge(todayLog, habitsDone, quests.length)
 
   return (
     <div className="space-y-3 animate-slide-up max-w-lg mx-auto">
+      {/* Score card modal */}
+      {showScoreCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setShowScoreCard(false)}
+        >
+          <div
+            className="w-full max-w-sm animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-extrabold text-white text-lg">Your score card</p>
+              <button
+                type="button"
+                onClick={() => setShowScoreCard(false)}
+                className="text-white/60 hover:text-white text-2xl font-bold leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <ScoreCard
+              profile={profile}
+              log={log}
+              streak={profile.current_streak}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Hero card */}
       <div className="glass-card p-4 bg-gradient-to-br from-primary/10 via-white to-white dark:from-teal/10 dark:via-slate-950/40 dark:to-primary/10">
@@ -124,7 +154,9 @@ export default function Dashboard() {
             </div>
             <div className="min-w-0">
               <p className="font-extrabold text-slate-900 truncate">{profile.username}</p>
-              <p className="text-xs font-bold text-primary">Lv.{level} · {levelName}</p>
+              <p className="text-xs font-bold text-primary">
+                Lv.{level} · {levelName}
+              </p>
             </div>
           </Link>
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/80 border border-surface-border shadow-sm">
@@ -132,12 +164,9 @@ export default function Dashboard() {
             <span className="text-lg font-extrabold tabular-nums">{profile.current_streak}</span>
           </div>
         </div>
-
         <div className="mt-3">
           <XPBar totalXP={profile.total_xp} level={level} />
         </div>
-
-        {/* Stats row — FSS + Quests + Integrity */}
         <div className="flex gap-2 mt-3">
           <div className="metric-tile bg-primary/10">
             <p className="text-[10px] font-bold text-slate-500 uppercase">Future Self</p>
@@ -149,20 +178,9 @@ export default function Dashboard() {
               {habitsDone}/{quests.length}
             </p>
           </div>
-          {/* Integrity tile — compact inline version */}
-          <div className="metric-tile flex flex-col items-center justify-center">
-            <p className="text-[10px] font-bold text-slate-500 uppercase">Integrity</p>
-            <p className={`text-2xl font-extrabold tabular-nums ${tierColor[integrity.tier]}`}>
-              {integrity.score}%
-            </p>
-            <p className={`text-[9px] font-bold leading-none mt-0.5 ${tierColor[integrity.tier]}`}>
-              {integrity.tier === 'high' ? 'High' : integrity.tier === 'moderate' ? 'Moderate' : 'Low'}
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Daily edge */}
       <div className="edge-card">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -182,19 +200,36 @@ export default function Dashboard() {
         <>
           <div className="flex items-center justify-center gap-2 py-2 rounded-2xl bg-teal/10 border border-teal/20 text-sm font-semibold text-teal">
             ✓ Logged today
-            <Link to="/log" className="text-primary underline ml-1">Edit</Link>
+            <Link to="/log" className="text-primary underline ml-1">
+              Edit
+            </Link>
           </div>
           <MidnightCountdown />
+
+          {/* Share score card button — only shows after logging */}
+          <button
+            type="button"
+            onClick={() => setShowScoreCard(true)}
+            className="w-full glass-card p-3 flex items-center justify-between hover:shadow-card-hover transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏆</span>
+              <div className="text-left">
+                <p className="font-bold text-slate-900 text-sm">Share your score</p>
+                <p className="text-xs text-slate-500 font-medium">Show your Qyven card today</p>
+              </div>
+            </div>
+            <span className="text-primary font-bold text-sm">↑ Share</span>
+          </button>
         </>
       )}
 
+      <FutureSelfCoach currentScore={currentFSS} />
+
       <FutureProjectionCard recentScores={recentScores} currentScore={currentFSS} />
 
-      {/* Full integrity card — below projection */}
-      {recentLogs.length >= 3 && <IntegrityCard />}
-
       {todayLog && (
-        <ScoreBreakdown scores={{ ...log, mood: log.mood }} streakDays={profile.current_streak} />
+        <ScoreBreakdown log={log} streakDays={profile.current_streak} />
       )}
 
       <DailyQuests todayLog={todayLog} />
