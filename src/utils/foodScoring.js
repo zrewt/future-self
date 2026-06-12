@@ -27,6 +27,7 @@ const WHOLE_GRAIN_KEYWORDS = [
 const REFINED_GRAIN_KEYWORDS = [
   'white rice', 'white bread', 'pasta', 'tortilla', 'bagel', 'croissant',
   'pancake', 'waffle', 'cracker', 'pretzel',
+  // Note: rye bread is NOT here — rye is a whole grain
 ]
 
 const NUT_SEED_KEYWORDS = [
@@ -34,7 +35,6 @@ const NUT_SEED_KEYWORDS = [
   'hemp seed', 'pumpkin seed', 'sunflower seed', 'brazil nut', 'hazelnut',
 ]
 
-// Whole-food tier weights (quality score — prevents gaming with white rice)
 const WHOLE_TIER_VERY_HIGH = LEGUME_KEYWORDS
 const WHOLE_TIER_HIGH = [
   ...WHOLE_GRAIN_KEYWORDS,
@@ -45,8 +45,8 @@ const WHOLE_TIER_HIGH = [
 const WHOLE_TIER_MODERATE = [
   'apple', 'banana', 'orange', 'mango', 'grape', 'peach', 'pear', 'cherry',
   'carrot', 'tomato', 'cucumber', 'lettuce', 'pepper', 'onion', 'celery',
-  'zucchini', 'asparagus', 'cabbage', 'cauliflower', 'mushroom', 'white rice',
-  'potato', 'corn', 'tofu', 'tempeh',
+  'zucchini', 'asparagus', 'cabbage', 'cauliflower', 'mushroom',
+  'potato', 'corn', 'tofu', 'tempeh', 'egg',
 ]
 
 const MICRONUTRIENT_KEYWORDS = [
@@ -69,17 +69,24 @@ const ANTI_INFLAM_KEYWORDS = [
 const QUALITY_PROTEIN_KEYWORDS = [
   'salmon', 'sardine', 'mackerel', 'tuna', 'cod', 'shrimp', 'fish',
   'greek yogurt', 'yogurt', 'kefir', 'lentil', 'chickpea', 'black bean',
-  'kidney bean', 'tofu', 'tempeh', 'turkey', 'chicken breast',
+  'kidney bean', 'tofu', 'tempeh', 'turkey', 'chicken breast', 'egg',
 ]
 
-const ANIMAL_PROTEIN_KEYWORDS = [
-  'egg', 'chicken', 'turkey', 'beef', 'steak', 'pork', 'lamb', 'fish',
-  'salmon', 'tuna', 'shrimp', 'cod', 'sardine', 'yogurt', 'cheese', 'milk',
-  'whey', 'protein shake', 'cottage',
+// Only truly heavy animal proteins count toward "load"
+// Eggs, poultry, fish, yogurt are NOT in this list — they're healthy proteins
+const HEAVY_ANIMAL_KEYWORDS = [
+  'beef', 'steak', 'sirloin', 'ground beef', 'lamb', 'pork chop',
+  'pork loin', 'bacon', 'ham', 'sausage', 'hot dog', 'deli meat',
 ]
 
+// Red meat specifically (research shows dose-response with processed/red meat)
 const RED_MEAT_KEYWORDS = [
-  'beef', 'steak', 'sirloin', 'ground beef', 'lamb', 'pork', 'bacon', 'ham', 'sausage',
+  'beef', 'steak', 'sirloin', 'ground beef', 'lamb',
+]
+
+// Processed meat — separate and worse than unprocessed red meat
+const PROCESSED_MEAT_KEYWORDS = [
+  'bacon', 'ham', 'sausage', 'hot dog', 'deli meat', 'salami', 'pepperoni',
 ]
 
 const FIBER_PER_100G = [
@@ -87,7 +94,7 @@ const FIBER_PER_100G = [
   ['kale', 3.6], ['spinach', 2.2], ['broccoli', 2.6], ['lentil', 7.9],
   ['chickpea', 7.6], ['black bean', 8.7], ['apple', 2.4], ['quinoa', 2.8],
   ['brown rice', 1.8], ['white rice', 0.4], ['raspberry', 6.5], ['chia', 34.4],
-  ['flax', 27.3], ['whole wheat', 7], ['green pea', 5.7],
+  ['flax', 27.3], ['whole wheat', 7], ['green pea', 5.7], ['rye', 6.2],
 ]
 
 function matchesAny(name, keywords) {
@@ -106,7 +113,7 @@ function isUltraProcessed(food) {
 
 function isPlant(food) {
   if (food.servingKey === 'vegetable_servings' || food.servingKey === 'fruit_servings') return true
-  if (matchesAny(food.name, ANIMAL_PROTEIN_KEYWORDS)) return false
+  if (matchesAny(food.name, HEAVY_ANIMAL_KEYWORDS)) return false
   if (matchesAny(food.name, RED_MEAT_KEYWORDS)) return false
   return matchesAny(food.name, [
     ...WHOLE_TIER_VERY_HIGH, ...WHOLE_TIER_HIGH, ...WHOLE_TIER_MODERATE,
@@ -166,15 +173,15 @@ function mealTotals(foods) {
   let antiHits = 0
   let qualityProteinHits = 0
   let redMeatCount = 0
+  let processedMeatCount = 0
   let refinedGrainCount = 0
-  let animalProteinCount = 0
+  let heavyAnimalCount = 0  // only beef/pork/lamb — NOT eggs/poultry/fish
   let legumeCount = 0
   let wholeGrainCount = 0
   let nutSeedCount = 0
   let vegFruitCount = 0
   const uniquePlants = new Set()
   const wholeSeen = new Set()
-
   const microSeen = new Set()
   const fatSeen = new Set()
   const antiSeen = new Set()
@@ -198,16 +205,24 @@ function mealTotals(foods) {
     }
 
     if (isUltraProcessed(food)) upfCount += qty
+
+    // Refined grains — rye bread is whole grain so won't match
     if (matchesAny(name, REFINED_GRAIN_KEYWORDS)) refinedGrainCount += qty
+
     if (matchesAny(name, LEGUME_KEYWORDS)) legumeCount += qty
     if (matchesAny(name, WHOLE_GRAIN_KEYWORDS)) wholeGrainCount += qty
     if (matchesAny(name, NUT_SEED_KEYWORDS)) nutSeedCount += qty
+
     if (food.servingKey === 'vegetable_servings' || food.servingKey === 'fruit_servings') {
       vegFruitCount += qty
     } else if (matchesAny(name, ['broccoli', 'kale', 'spinach', 'apple', 'blueberr', 'carrot'])) {
       vegFruitCount += qty
     }
-    if (matchesAny(name, ANIMAL_PROTEIN_KEYWORDS)) animalProteinCount += qty
+
+    // Heavy animal proteins only — eggs/fish/poultry NOT counted here
+    if (matchesAny(name, HEAVY_ANIMAL_KEYWORDS)) heavyAnimalCount += qty
+    if (matchesAny(name, RED_MEAT_KEYWORDS)) redMeatCount += qty
+    if (matchesAny(name, PROCESSED_MEAT_KEYWORDS)) processedMeatCount += qty
 
     for (const kw of MICRONUTRIENT_KEYWORDS) {
       if (name.includes(kw) && !microSeen.has(kw)) { microSeen.add(kw); microHits++ }
@@ -221,16 +236,15 @@ function mealTotals(foods) {
     for (const kw of QUALITY_PROTEIN_KEYWORDS) {
       if (name.includes(kw) && !proteinSeen.has(kw)) { proteinSeen.add(kw); qualityProteinHits++ }
     }
-    if (matchesAny(name, RED_MEAT_KEYWORDS)) redMeatCount += qty
 
     if (isPlant(food)) uniquePlants.add(name.trim())
   }
 
   return {
     protein, fiber, wholePts, upfCount, microHits, fatHits,
-    antiHits, qualityProteinHits, redMeatCount, refinedGrainCount,
-    animalProteinCount, legumeCount, wholeGrainCount, nutSeedCount,
-    vegFruitCount, uniquePlants: uniquePlants.size,
+    antiHits, qualityProteinHits, redMeatCount, processedMeatCount,
+    refinedGrainCount, heavyAnimalCount, legumeCount, wholeGrainCount,
+    nutSeedCount, vegFruitCount, uniquePlants: uniquePlants.size,
     itemCount: real.length,
   }
 }
@@ -265,36 +279,30 @@ function sumLines(lines) {
 }
 
 function isExceptionalLongevityMeal(t, foods) {
-  const hasLegumes = t.legumeCount > 0
-  const multiVeg = t.vegFruitCount >= 3 || t.uniquePlants >= 4
-  const hasFruit = foods.some((f) =>
+  const hasLegumes      = t.legumeCount > 0
+  const multiVeg        = t.vegFruitCount >= 3 || t.uniquePlants >= 4
+  const hasFruit        = foods.some((f) =>
     f.servingKey === 'fruit_servings' || matchesAny(f.name, ['apple', 'berr', 'banana', 'orange', 'grape'])
   )
-  const hasWholeGrain = t.wholeGrainCount > 0
-  const hasNuts = t.nutSeedCount > 0
-  const lowAnimal = t.animalProteinCount <= 1
-  const highFiber = t.fiber >= 12
-  const noRefined = t.refinedGrainCount === 0
-
-  return hasLegumes && multiVeg && hasFruit && hasWholeGrain && hasNuts && lowAnimal && highFiber && noRefined
+  const hasWholeGrain   = t.wholeGrainCount > 0
+  const hasNuts         = t.nutSeedCount > 0
+  const noHeavyAnimal   = t.heavyAnimalCount === 0
+  const highFiber       = t.fiber >= 12
+  const noRefined       = t.refinedGrainCount === 0
+  return hasLegumes && multiVeg && hasFruit && hasWholeGrain && hasNuts && noHeavyAnimal && highFiber && noRefined
 }
 
 function applyLongevityCaps(raw, t, foods) {
   let score = raw
-
-  if (!t.legumeCount && score > 91) score = Math.min(score, 91)
-  if (t.animalProteinCount >= 2 && !t.legumeCount && score > 88) score = Math.min(score, 88)
-  if (t.refinedGrainCount > 0 && !t.wholeGrainCount && score > 89) score = Math.min(score, 89)
-  if (t.animalProteinCount >= 3 && score > 86) score = Math.min(score, 86)
-
+  // Caps only apply when red/heavy meat is present or no legumes on a big meal
+  if (!t.legumeCount && t.itemCount >= 5 && score > 91) score = Math.min(score, 91)
+  if (t.heavyAnimalCount >= 3 && score > 86) score = Math.min(score, 86)
   if (score > 94 && !isExceptionalLongevityMeal(t, foods)) score = Math.min(score, 94)
-  if (score > 97 && !isExceptionalLongevityMeal(t, foods)) score = Math.min(score, 97)
   if (score >= 100 && !isExceptionalLongevityMeal(t, foods)) score = 99
-
   return Math.max(0, Math.round(score))
 }
 
-// ── Food Quality (100 pts) ───────────────────────────────────────────────────
+// ── Food Quality (100 pts) ─────────────────────────────────────────────────────
 
 export function calcFoodQualityBreakdown(foods) {
   if (!foods?.length) return null
@@ -302,12 +310,12 @@ export function calcFoodQualityBreakdown(foods) {
   if (!t.itemCount) return null
 
   const lines = [
-    { label: 'Protein',        points: tierProtein(t.protein),           max: 20 },
-    { label: 'Fiber',          points: tierFiber(t.fiber),               max: 20 },
-    { label: 'Whole Foods',    points: Math.min(20, t.wholePts),         max: 20 },
-    { label: 'Processing',     points: Math.max(0, 20 - Math.round(t.upfCount * 8)), max: 20 },
-    { label: 'Micronutrients', points: Math.min(10, Math.round(t.microHits * 2.5)), max: 10 },
-    { label: 'Healthy Fats',   points: Math.min(10, Math.round(t.fatHits * 3.5)),   max: 10 },
+    { label: 'Protein',        points: tierProtein(t.protein),                          max: 20 },
+    { label: 'Fiber',          points: tierFiber(t.fiber),                               max: 20 },
+    { label: 'Whole Foods',    points: Math.min(20, t.wholePts),                         max: 20 },
+    { label: 'Processing',     points: Math.max(0, 20 - Math.round(t.upfCount * 8)),     max: 20 },
+    { label: 'Micronutrients', points: Math.min(10, Math.round(t.microHits * 2.5)),      max: 10 },
+    { label: 'Healthy Fats',   points: Math.min(10, Math.round(t.fatHits * 3.5)),        max: 10 },
   ]
 
   const score = Math.min(100, Math.max(0, sumLines(lines)))
@@ -318,56 +326,73 @@ export function calcFoodQualityScore(foods) {
   return calcFoodQualityBreakdown(foods)?.score ?? null
 }
 
-// ── Longevity (100 pts — 100 is rare) ──────────────────────────────────────────
+// ── Longevity (100 pts — 100 is rare) ─────────────────────────────────────────
 
 export function calcFoodLongevityBreakdown(foods) {
   if (!foods?.length) return null
   const t = mealTotals(foods)
   if (!t.itemCount) return null
 
-  const plantPts = Math.min(30, Math.round(t.uniquePlants * 3.5 + Math.min(t.vegFruitCount, 4) * 2))
-  const fiberPts = tierFiberLongevity(t.fiber)
-
-  let proteinPts = Math.min(15, t.qualityProteinHits * 4)
-  if (t.redMeatCount > 0) proteinPts = Math.max(0, proteinPts - Math.round(t.redMeatCount * 5))
-
-  const antiPts = Math.min(15, t.antiHits * 3)
+  const plantPts   = Math.min(30, Math.round(t.uniquePlants * 3.5 + Math.min(t.vegFruitCount, 4) * 2))
+  const fiberPts   = tierFiberLongevity(t.fiber)
+  const antiPts    = Math.min(15, t.antiHits * 3)
   const varietyPts = varietyPoints(t.uniquePlants)
 
+  // Quality protein — eggs and poultry are positive here
+  let proteinPts = Math.min(15, t.qualityProteinHits * 4)
+
+  // Processing penalty
   let processingPts = 10
   processingPts -= Math.min(10, Math.round(t.upfCount * 5))
 
+  // Deductions — only for genuinely harmful patterns per research
   const deductions = []
-  if (t.refinedGrainCount > 0) {
+
+  // Refined grains (white bread, pasta etc) — moderate penalty
+  if (t.refinedGrainCount > 0 && t.wholeGrainCount === 0) {
     deductions.push({
       label: 'Refined grains',
-      points: -Math.min(8, Math.round(t.refinedGrainCount * 3)),
-      max: 0,
-      deduction: true,
+      points: -Math.min(5, Math.round(t.refinedGrainCount * 2)),
+      max: 0, deduction: true,
     })
   }
-  if (t.animalProteinCount >= 2 && t.legumeCount === 0) {
-    deductions.push({
-      label: 'Animal protein load',
-      points: -Math.min(8, 3 + Math.round((t.animalProteinCount - 1) * 2)),
-      max: 0,
-      deduction: true,
-    })
-  }
+
+  // Unprocessed red meat — small penalty (not terrible, just not optimal)
+  // Research shows moderate red meat is fine, it's processed meat that's problematic
   if (t.redMeatCount > 0) {
     deductions.push({
       label: 'Red meat',
-      points: -Math.min(6, Math.round(t.redMeatCount * 4)),
-      max: 0,
-      deduction: true,
+      points: -Math.min(4, Math.round(t.redMeatCount * 2)),
+      max: 0, deduction: true,
     })
   }
-  if (!t.legumeCount && t.itemCount >= 3) {
+
+  // Processed meat (bacon, ham, sausage) — stronger penalty per WHO/research
+  if (t.processedMeatCount > 0) {
+    deductions.push({
+      label: 'Processed meat',
+      points: -Math.min(8, Math.round(t.processedMeatCount * 4)),
+      max: 0, deduction: true,
+    })
+  }
+
+  // Heavy animal protein load — only counts beef/pork/lamb, NOT eggs/fish/poultry
+  // Only penalise if 3+ heavy animal servings with no legumes
+  if (t.heavyAnimalCount >= 3 && t.legumeCount === 0) {
+    deductions.push({
+      label: 'High red meat load',
+      points: -Math.min(6, Math.round((t.heavyAnimalCount - 2) * 3)),
+      max: 0, deduction: true,
+    })
+  }
+
+  // No legumes — only penalise larger meals (5+ items) since a 2-item breakfast
+  // like eggs + kale shouldn't be dinged for not having beans
+  if (!t.legumeCount && t.itemCount >= 5) {
     deductions.push({
       label: 'No legumes',
-      points: -3,
-      max: 0,
-      deduction: true,
+      points: -2,
+      max: 0, deduction: true,
     })
   }
 
@@ -381,7 +406,7 @@ export function calcFoodLongevityBreakdown(foods) {
   ]
 
   const lines = [...positiveLines, ...deductions]
-  const raw = sumLines(lines)
+  const raw   = sumLines(lines)
   const score = applyLongevityCaps(raw, t, foods)
 
   return { score, lines, raw }
