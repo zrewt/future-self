@@ -28,27 +28,27 @@ import {
 const EXERCISE_TYPES = ['gym', 'run', 'sport', 'yoga', 'rest']
 const MOOD_EMOJIS = ['😞', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩', '🥳', '🔥']
 const MEDITATION_STYLES = [
-  { value: 'breathwork', label: 'Breathwork' },
-  { value: 'guided',     label: 'Guided'     },
-  { value: 'silent',     label: 'Silent'     },
+  { value: 'breathwork', label: 'Breathwork'     },
+  { value: 'guided',     label: 'Guided'         },
+  { value: 'silent',     label: 'Silent'         },
   { value: 'yoga',       label: 'Yoga / stretch' },
-  { value: 'other',      label: 'Other'      },
+  { value: 'other',      label: 'Other'          },
 ]
 
 const defaultForm = {
-  fruit_servings: 0,
-  vegetable_servings: 0,
-  protein_servings: 0,
-  processed_servings: 0,
-  exercise_type: 'rest',
+  fruit_servings:       0,
+  vegetable_servings:   0,
+  protein_servings:     0,
+  processed_servings:   0,
+  exercise_type:        'rest',
   workout_duration_min: 0,
-  sleep_hours: 7,
-  sleep_quality: 5,
-  water_ml: 1500,
-  focus_minutes: 0,
-  reading_minutes: 0,
-  meditation_minutes: 0,
-  mood: 5,
+  sleep_hours:          7,
+  sleep_quality:        5,
+  water_ml:             1500,
+  focus_minutes:        0,
+  reading_minutes:      0,
+  meditation_minutes:   0,
+  mood:                 5,
 }
 
 function computeStreak(profile, today, isUpdateSameDay) {
@@ -87,7 +87,6 @@ export default function Log() {
   const [details, setDetails] = useState(emptyLogDetails)
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
-  // success: null | { xp: number, honestyMessage: string|null }
   const [success, setSuccess] = useState(null)
 
   const isUpdate = Boolean(todayLog)
@@ -95,30 +94,40 @@ export default function Log() {
   useEffect(() => {
     if (!todayLog) return
     setForm({
-      fruit_servings:      todayLog.fruit_servings      ?? 0,
-      vegetable_servings:  todayLog.vegetable_servings  ?? 0,
-      protein_servings:    todayLog.protein_servings     ?? 0,
-      processed_servings:  todayLog.processed_servings  ?? 0,
-      exercise_type:       todayLog.exercise_type       ?? 'rest',
-      workout_duration_min:todayLog.workout_duration_min?? 0,
-      sleep_hours:         Number(todayLog.sleep_hours) || 7,
-      sleep_quality:       todayLog.sleep_quality       ?? 5,
-      water_ml:            todayLog.water_ml            ?? 1500,
-      focus_minutes:       todayLog.focus_minutes       ?? 0,
-      reading_minutes:     todayLog.reading_minutes     ?? 0,
-      meditation_minutes:  todayLog.meditation_minutes  ?? 0,
-      mood:                todayLog.mood                ?? 5,
+      fruit_servings:       todayLog.fruit_servings       ?? 0,
+      vegetable_servings:   todayLog.vegetable_servings   ?? 0,
+      protein_servings:     todayLog.protein_servings     ?? 0,
+      processed_servings:   todayLog.processed_servings   ?? 0,
+      exercise_type:        todayLog.exercise_type        ?? 'rest',
+      workout_duration_min: todayLog.workout_duration_min ?? 0,
+      sleep_hours:          Number(todayLog.sleep_hours)  || 7,
+      sleep_quality:        todayLog.sleep_quality        ?? 5,
+      water_ml:             todayLog.water_ml             ?? 1500,
+      focus_minutes:        todayLog.focus_minutes        ?? 0,
+      reading_minutes:      todayLog.reading_minutes      ?? 0,
+      meditation_minutes:   todayLog.meditation_minutes   ?? 0,
+      mood:                 todayLog.mood                 ?? 5,
     })
     setDetails(parseLogDetails(todayLog.log_details))
   }, [todayLog])
 
-  const previewLog    = useMemo(() => ({ ...form, sleep_hours: Number(form.sleep_hours) }), [form])
-  const previewScores = useMemo(
-    () => buildAllScores(previewLog, profile?.current_streak || 0),
-    [previewLog, profile?.current_streak]
+  // foods shortcut
+  const foods = details.foods || []
+
+  // Live preview — pass foods so nutrition score updates when foods change
+  const previewLog = useMemo(
+    () => ({ ...form, sleep_hours: Number(form.sleep_hours) }),
+    [form]
   )
-  const nutritionPreview = calcNutritionFromServings(previewLog)
-  const fitnessPreview   = calcFitnessFromWorkout(previewLog)
+  const previewScores = useMemo(
+    () => buildAllScores(previewLog, profile?.current_streak || 0, foods),
+    [previewLog, profile?.current_streak, foods]
+  )
+  const nutritionPreview = useMemo(
+    () => calcNutritionFromServings(previewLog, foods),
+    [previewLog, foods]
+  )
+  const fitnessPreview = calcFitnessFromWorkout(previewLog)
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -126,6 +135,25 @@ export default function Log() {
 
   function patchDetails(section, patch) {
     setDetails((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }))
+  }
+
+  // Called by FoodDetailSection when a food is added —
+  // auto-increments the matching serving stepper
+  function handleServingDetected(servingKey) {
+    if (!servingKey) return
+    setForm((prev) => ({
+      ...prev,
+      [servingKey]: (prev[servingKey] || 0) + 1,
+    }))
+  }
+
+  // Called when a food is removed — decrements the stepper
+  function handleServingRemoved(servingKey) {
+    if (!servingKey) return
+    setForm((prev) => ({
+      ...prev,
+      [servingKey]: Math.max(0, (prev[servingKey] || 0) - 1),
+    }))
   }
 
   const glasses = Math.min(8, Math.floor(form.water_ml / 250))
@@ -143,8 +171,8 @@ export default function Log() {
       ? profile.current_streak
       : computeStreak(profile, today, false).current_streak
 
-    const logPayload  = { ...form, sleep_hours: Number(form.sleep_hours) }
-    const scores      = buildAllScores(logPayload, streakForCalc)
+    const logPayload = { ...form, sleep_hours: Number(form.sleep_hours) }
+    const scores     = buildAllScores(logPayload, streakForCalc, foods)
     const is_perfect_day = isPerfectDay(logPayload)
 
     const prevQuests  = getCompletedQuestIds(todayLog)
@@ -200,8 +228,7 @@ export default function Log() {
     )
     newTotalXP += bonusXP
 
-    // ── Honesty bonus ────────────────────────────────────────────────────────
-    // Small XP reward for logging an imperfect day honestly
+    // Honesty bonus
     const honestyBonus = getHonestyBonus({ ...row, ...scores })
     const honestyXP    = honestyBonus?.xp ?? 0
     newTotalXP        += honestyXP
@@ -218,10 +245,7 @@ export default function Log() {
     await loadUserData(user.id)
 
     setLoading(false)
-    setSuccess({
-      xp:             xp_earned + bonusXP + honestyXP,
-      honestyMessage: honestyBonus?.message ?? null,
-    })
+    setSuccess({ xp: xp_earned + bonusXP + honestyXP, honestyMessage: honestyBonus?.message ?? null })
     confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
     setTimeout(() => navigate('/dashboard'), 2500)
   }
@@ -240,9 +264,7 @@ export default function Log() {
               <p className="text-sm font-semibold text-teal">{success.honestyMessage}</p>
             </div>
           )}
-          <p className="text-xs text-slate-400 font-medium mt-4">
-            Redirecting to dashboard…
-          </p>
+          <p className="text-xs text-slate-400 font-medium mt-4">Redirecting to dashboard…</p>
         </div>
       </div>
     )
@@ -259,6 +281,7 @@ export default function Log() {
         <p className="text-xs text-slate-500 mt-1">Scores auto-calculate from your inputs</p>
       </header>
 
+      {/* Live score preview */}
       <div className="glass-card p-3 mb-4 flex justify-between text-center text-xs">
         {[
           { l: 'Nutrition',   v: nutritionPreview },
@@ -280,22 +303,25 @@ export default function Log() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* ── NUTRITION ──────────────────────────────────────────────────────── */}
+        {/* ── NUTRITION ──────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
-          <label className="label-text">Nutrition — today&apos;s servings</label>
+          <label className="label-text">Nutrition — today's servings</label>
           <ServingStepper label="Fruit"      emoji="🍎" value={form.fruit_servings}     onChange={(v) => updateField('fruit_servings', v)}     />
           <ServingStepper label="Vegetables" emoji="🥬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
           <ServingStepper label="Protein"    emoji="🥩" value={form.protein_servings}   onChange={(v) => updateField('protein_servings', v)}   />
           <ServingStepper label="Processed"  emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
-          <DetailToggle label="Search specific foods" badge={details.foods.length}>
+
+          <DetailToggle label="Search specific foods" badge={foods.length}>
             <FoodDetailSection
-              foods={details.foods}
-              onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+              foods={foods}
+              onChange={(newFoods) => setDetails((d) => ({ ...d, foods: newFoods }))}
+              onServingDetected={handleServingDetected}
+              onServingRemoved={handleServingRemoved}
             />
           </DetailToggle>
         </div>
 
-        {/* ── WORKOUT ────────────────────────────────────────────────────────── */}
+        {/* ── WORKOUT ────────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Workout</label>
           <div className="flex flex-wrap gap-2 mb-3">
@@ -327,7 +353,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── SLEEP ──────────────────────────────────────────────────────────── */}
+        {/* ── SLEEP ──────────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -353,7 +379,7 @@ export default function Log() {
           <p className="text-xs text-primary font-bold mt-2">Energy score: {previewScores.energy_score}</p>
         </div>
 
-        {/* ── WATER ──────────────────────────────────────────────────────────── */}
+        {/* ── WATER ──────────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Water</label>
           <input
@@ -376,7 +402,7 @@ export default function Log() {
           <p className="text-sm mt-2">{'🥛'.repeat(glasses) || '—'} · {form.water_ml} ml</p>
         </div>
 
-        {/* ── FOCUS ──────────────────────────────────────────────────────────── */}
+        {/* ── FOCUS ──────────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Focus (min)</label>
           <input
@@ -390,7 +416,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── READING ────────────────────────────────────────────────────────── */}
+        {/* ── READING ────────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Reading (min)</label>
           <input
@@ -404,7 +430,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── MEDITATION ─────────────────────────────────────────────────────── */}
+        {/* ── MEDITATION ─────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Meditation (min)</label>
           <input
@@ -418,7 +444,7 @@ export default function Log() {
           </DetailToggle>
         </div>
 
-        {/* ── MOOD ───────────────────────────────────────────────────────────── */}
+        {/* ── MOOD ───────────────────────────────────────────────────────── */}
         <div className="glass-card p-5">
           <label className="label-text">Mood</label>
           <div className="flex flex-wrap gap-1.5 justify-between">

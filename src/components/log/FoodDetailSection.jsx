@@ -1,55 +1,42 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { searchFoods, foodToLogItem, detectServingKey } from '../../services/openFoodFacts'
 import { useUserStore } from '../../store/useUserStore'
-import {
-  calcFoodQualityBreakdown,
-  calcFoodLongevityBreakdown,
-  calcMealMacroTotals,
-} from '../../utils/foodScoring'
-import { getFoodDisplay, formatMacroLine } from '../../utils/servingUnits'
+import { calcFoodQualityScore, calcFoodLongevityScore, calcMacroSummary } from '../../utils/scoring'
+import { getFoodDisplay } from '../../utils/servingUnits'
 
-function ScoreBreakdown({ title, score, lines, accentClass }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between">
-        <p className="text-[10px] font-bold text-slate-400 uppercase">{title}</p>
-        <p className={`text-xl font-extrabold tabular-nums ${accentClass}`}>{score}</p>
-      </div>
-      <ul className="space-y-1">
-        {lines.map((line) => (
-          <li key={line.label} className="flex items-center gap-2 text-[10px]">
-            <span className="w-28 shrink-0 text-slate-500 font-medium truncate">{line.label}</span>
-            <span className="flex-1 border-b border-dotted border-slate-200 dark:border-white/10 min-w-[20px]" />
-            <span className={`font-bold tabular-nums shrink-0 ${
-              line.deduction ? 'text-coral' : 'text-slate-700 dark:text-slate-200'
-            }`}>
-              {line.points > 0 ? `+${line.points}` : line.points}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
+// Per-serving macro string — updates live with qty
+function macroStr(food) {
+  const d = getFoodDisplay(food)
+  const parts = []
+  if (d.calories) parts.push(`${d.calories} kcal`)
+  if (food.protein  != null) parts.push(`P ${Math.round((food.protein  ?? 0) * ((food.servingG ?? 150) / 100) * (food.qty ?? 1) * 10) / 10}g`)
+  if (food.carbs    != null) parts.push(`C ${Math.round((food.carbs    ?? 0) * ((food.servingG ?? 150) / 100) * (food.qty ?? 1) * 10) / 10}g`)
+  if (food.fat      != null) parts.push(`F ${Math.round((food.fat      ?? 0) * ((food.servingG ?? 150) / 100) * (food.qty ?? 1) * 10) / 10}g`)
+  return parts.length ? parts.join(' · ') : null
 }
 
-// ── Quality label helpers ──────────────────────────────────────────────────────
 function qualityLabel(score) {
-  if (score >= 82) return { text: 'Excellent 🌿',           color: 'text-teal' }
-  if (score >= 68) return { text: 'Very good 👍',           color: 'text-teal' }
-  if (score >= 54) return { text: 'Pretty solid',           color: 'text-primary' }
-  if (score >= 38) return { text: 'Room to improve',        color: 'text-amber-600 dark:text-amber' }
-  return               { text: 'High processed load',       color: 'text-coral' }
+  if (score >= 82) return { text: 'Excellent 🌿',     color: 'text-teal' }
+  if (score >= 68) return { text: 'Very good 👍',     color: 'text-teal' }
+  if (score >= 54) return { text: 'Pretty solid',     color: 'text-primary' }
+  if (score >= 38) return { text: 'Room to improve',  color: 'text-amber-600 dark:text-amber' }
+  return               { text: 'High processed load', color: 'text-coral' }
 }
 
 function longevityLabel(score) {
-  if (score >= 82) return { text: 'Anti-inflammatory 🔬',   color: 'text-teal' }
-  if (score >= 68) return { text: 'Strong longevity base',  color: 'text-teal' }
-  if (score >= 54) return { text: 'Good base',              color: 'text-primary' }
-  if (score >= 38) return { text: 'Add whole foods',        color: 'text-amber-600 dark:text-amber' }
-  return               { text: 'Low whole food ratio',      color: 'text-coral' }
+  if (score >= 82) return { text: 'Anti-inflammatory 🔬', color: 'text-teal' }
+  if (score >= 68) return { text: 'Strong longevity base', color: 'text-teal' }
+  if (score >= 54) return { text: 'Good base',             color: 'text-primary' }
+  if (score >= 38) return { text: 'Add whole foods',       color: 'text-amber-600 dark:text-amber' }
+  return               { text: 'Low whole food ratio',     color: 'text-coral' }
 }
 
-export default function FoodDetailSection({ foods, onChange, onServingDetected, onServingRemoved }) {
+export default function FoodDetailSection({
+  foods,
+  onChange,
+  onServingDetected,  // (servingKey) => void  — tells Log to increment stepper
+  onServingRemoved,   // (servingKey) => void  — tells Log to decrement stepper
+}) {
   const { savedMeals, addSavedMeal, deleteSavedMeal } = useUserStore()
 
   const [query,       setQuery]       = useState('')
@@ -61,7 +48,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
   const [savingMeal,  setSavingMeal]  = useState(false)
   const [newMealName, setNewMealName] = useState('')
 
-  // ── Search with debounce ───────────────────────────────────────────────────
+  // Search with debounce
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); setSearchError(''); return }
 
@@ -74,34 +61,37 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
         setResults(items)
         if (!items.length) setSearchError('No results — try adding manually below')
       } catch (err) {
-        if (err.name !== 'AbortError') { setSearchError('Search failed — add manually below'); setResults([]) }
+        if (err.name !== 'AbortError') {
+          setSearchError('Search failed — add manually below')
+          setResults([])
+        }
       } finally { setSearching(false) }
     }, 400)
 
     return () => { clearTimeout(timer); ctrl.abort() }
   }, [query])
 
-  // ── Food analysis — memoised so it only recalculates when foods array changes
-  // This is the key performance fix — no recalc on every keystroke/render
+  // Food analysis — memoised so it only recalculates when foods change
   const analysis = useMemo(() => {
     if (!foods.length) return null
-    const quality = calcFoodQualityBreakdown(foods)
-    const longevity = calcFoodLongevityBreakdown(foods)
-    const macros = calcMealMacroTotals(foods)
-    return { quality, longevity, macros }
+    const fq = calcFoodQualityScore(foods)
+    const fl = calcFoodLongevityScore(foods)
+    const fm = calcMacroSummary(foods)
+    return { fq, fl, fm }
   }, [foods])
 
   // ── Food mutations ─────────────────────────────────────────────────────────
   function addFood(item) {
-    const food = { ...item, qty: 1, servingKey: item.servingKey || detectServingKey(item.name) }
+    const servingKey = item.servingKey || detectServingKey(item.name)
+    const food = { ...item, qty: 1, servingKey }
     onChange([...foods, food])
     setQuery('')
     setResults([])
-    if (food.servingKey && onServingDetected) onServingDetected(food.servingKey)
+    // Tell Log.jsx to auto-increment the right serving stepper
+    if (servingKey && onServingDetected) onServingDetected(servingKey)
   }
 
   function updateQty(id, qty) {
-    // Clamp to 0.5 minimum, round to nearest 0.5
     const clamped = Math.max(0.5, Math.round(qty * 2) / 2)
     onChange(foods.map((f) => f.id === id ? { ...f, qty: clamped } : f))
   }
@@ -109,20 +99,27 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
   function removeFood(id) {
     const food = foods.find((f) => f.id === id)
     onChange(foods.filter((f) => f.id !== id))
+    // Tell Log.jsx to decrement the serving stepper
     if (food?.servingKey && onServingRemoved) onServingRemoved(food.servingKey)
   }
 
   function addCustom() {
     const name = customName.trim()
     if (!name) return
-    const key = detectServingKey(name)
+    const servingKey = detectServingKey(name)
     addFood({
       id: crypto.randomUUID(),
       name,
       brand: '',
-      calories: null, protein: null, carbs: null, fat: null,
-      servingG: 150, unit: '1 serving', serving: '1 serving',
-      servingKey: key, qty: 1,
+      calories: null,
+      protein: null,
+      carbs: null,
+      fat: null,
+      servingG: 150,
+      unit: '1 serving',
+      serving: '1 serving',
+      servingKey,
+      qty: 1,
     })
     setCustomName('')
   }
@@ -139,11 +136,12 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
   function loadMeal(meal) {
     const newFoods = (meal.foods || []).map((f) => ({ ...f, id: crypto.randomUUID() }))
     onChange([...foods, ...newFoods])
-    newFoods.forEach((f) => { if (f.servingKey && onServingDetected) onServingDetected(f.servingKey) })
+    newFoods.forEach((f) => {
+      if (f.servingKey && onServingDetected) onServingDetected(f.servingKey)
+    })
     setTab('search')
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-3">
 
@@ -178,9 +176,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
           {/* Added foods list */}
           {foods.length > 0 && (
             <ul className="space-y-2">
-              {foods.map((f) => {
-                const display = getFoodDisplay(f)
-                return (
+              {foods.map((f) => (
                 <li
                   key={f.id}
                   className="bg-primary-50/50 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 rounded-2xl px-3 py-2.5"
@@ -191,11 +187,9 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                         {f.name}
                       </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                        {display.servingLabel}
-                      </p>
                       <p className="text-[10px] text-slate-400 font-medium">
-                        {f.calories != null ? formatMacroLine(display) : 'No macro data'}
+                        {getFoodDisplay(f).servingLabel}
+                        {macroStr(f) ? ` · ${macroStr(f)}` : ''}
                       </p>
                     </div>
                     <button
@@ -211,7 +205,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                     <button
                       type="button"
                       onClick={() => updateQty(f.id, (f.qty ?? 1) - 0.5)}
-                      className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
+                      className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 text-sm font-bold hover:bg-slate-200 transition-colors"
                     >−</button>
                     <span className="text-sm font-extrabold text-primary tabular-nums w-8 text-center">
                       {f.qty ?? 1}
@@ -222,11 +216,11 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       className="w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
                     >+</button>
                     <span className="text-[10px] text-slate-400 truncate max-w-[100px]">
-                      {f.servingLabel || f.unit || 'serving'}
+                      {f.unit || 'serving'}
                     </span>
                   </div>
                 </li>
-              )})}
+              ))}
             </ul>
           )}
 
@@ -247,7 +241,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                 value={newMealName}
                 onChange={(e) => setNewMealName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSaveMeal())}
-                placeholder="e.g. Morning bowl, Post-workout…"
+                placeholder="e.g. Morning bowl…"
                 className="input-field text-sm flex-1"
                 autoFocus
               />
@@ -289,8 +283,6 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       {p.unit}
                       {p.calories != null ? ` · ${p.calories} kcal` : ''}
                       {p.protein  != null ? ` · P ${p.protein}g`    : ''}
-                      {p.carbs    != null ? ` · C ${p.carbs}g`      : ''}
-                      {p.fat      != null ? ` · F ${p.fat}g`        : ''}
                     </p>
                   </button>
                 </li>
@@ -312,64 +304,49 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
               className="btn-secondary !py-2.5 !px-4 text-sm shrink-0">Add</button>
           </div>
 
-          {/* Food analysis panel — memoised, only shows when foods are added */}
+          {/* Food analysis panel */}
           {analysis && (
-            <div className="mt-1 p-3 rounded-2xl bg-primary-50/60 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 space-y-3">
+            <div className="mt-1 p-3 rounded-2xl bg-primary-50/60 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 space-y-2">
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
                 Food analysis
               </p>
-
-              {analysis.quality && (
-                <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2.5">
-                  <ScoreBreakdown
-                    title="Food Quality"
-                    score={analysis.quality.score}
-                    lines={analysis.quality.lines}
-                    accentClass="text-primary"
-                  />
-                  <p className={`text-[10px] font-medium mt-1.5 ${qualityLabel(analysis.quality.score).color}`}>
-                    {qualityLabel(analysis.quality.score).text}
-                  </p>
-                </div>
-              )}
-
-              {analysis.longevity && (
-                <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2.5">
-                  <ScoreBreakdown
-                    title="Longevity"
-                    score={analysis.longevity.score}
-                    lines={analysis.longevity.lines}
-                    accentClass="text-teal"
-                  />
-                  <p className={`text-[10px] font-medium mt-1.5 ${longevityLabel(analysis.longevity.score).color}`}>
-                    {longevityLabel(analysis.longevity.score).text}
-                  </p>
-                </div>
-              )}
-
-              {analysis.macros && (
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Meal totals</p>
-                  <div className="grid grid-cols-4 gap-1 text-center">
-                    {[
-                      { label: 'kcal',    value: analysis.macros.calories },
-                      { label: 'protein', value: `${analysis.macros.protein}g` },
-                      { label: 'carbs',   value: `${analysis.macros.carbs}g` },
-                      { label: 'fat',     value: `${analysis.macros.fat}g` },
-                    ].map((m) => (
-                      <div key={m.label} className="bg-white/70 dark:bg-white/5 rounded-xl py-1.5">
-                        <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">
-                          {m.value}
-                        </p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">{m.label}</p>
-                      </div>
-                    ))}
+              <div className="grid grid-cols-2 gap-2">
+                {analysis.fq != null && (
+                  <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Food Quality</p>
+                    <p className="text-xl font-extrabold text-primary tabular-nums">{analysis.fq}</p>
+                    <p className={`text-[10px] font-medium ${qualityLabel(analysis.fq).color}`}>
+                      {qualityLabel(analysis.fq).text}
+                    </p>
                   </div>
+                )}
+                {analysis.fl != null && (
+                  <div className="bg-white/70 dark:bg-white/5 rounded-xl px-3 py-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Longevity</p>
+                    <p className="text-xl font-extrabold text-teal tabular-nums">{analysis.fl}</p>
+                    <p className={`text-[10px] font-medium ${longevityLabel(analysis.fl).color}`}>
+                      {longevityLabel(analysis.fl).text}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {analysis.fm && (
+                <div className="grid grid-cols-4 gap-1 text-center">
+                  {[
+                    { label: 'kcal',    value: analysis.fm.calories },
+                    { label: 'protein', value: `${analysis.fm.protein}g` },
+                    { label: 'carbs',   value: `${analysis.fm.carbs}g`   },
+                    { label: 'fat',     value: `${analysis.fm.fat}g`     },
+                  ].map((m) => (
+                    <div key={m.label} className="bg-white/70 dark:bg-white/5 rounded-xl py-1.5">
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">{m.value}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">{m.label}</p>
+                    </div>
+                  ))}
                 </div>
               )}
-
               <p className="text-[10px] text-slate-400 font-medium">
-                How good was this meal for your health? See breakdown above — not a calorie score.
+                Meal totals · affects nutrition & longevity scores
               </p>
             </div>
           )}
@@ -388,8 +365,8 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
           ) : (
             savedMeals.map((meal) => {
               const totalCal = (meal.foods || []).reduce((s, f) => {
-                if (f.calories == null) return s
-                return s + getFoodDisplay(f).calories
+                const factor = ((f.servingG ?? 150) / 100) * (f.qty ?? 1)
+                return s + Math.round((f.calories ?? 0) * factor)
               }, 0)
               return (
                 <div
@@ -419,7 +396,7 @@ export default function FoodDetailSection({ foods, onChange, onServingDetected, 
                       <button
                         type="button"
                         onClick={() => deleteSavedMeal(meal.id)}
-                        className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 text-xs font-bold flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-500/20"
+                        className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 text-xs font-bold flex items-center justify-center hover:bg-red-100"
                       >×</button>
                     </div>
                   </div>
