@@ -43,6 +43,7 @@ export const useUserStore = create((set, get) => ({
   recentScores: [],
   recentLogs: [],
   earnedAchievements: [],
+  userChallenges: [],
   savedMeals: [],
   authReady: false,
   dataLoading: false,
@@ -53,62 +54,9 @@ export const useUserStore = create((set, get) => ({
   setRecentScores: (recentScores) => set({ recentScores }),
   setRecentLogs: (recentLogs) => set({ recentLogs }),
   setEarnedAchievements: (earnedAchievements) => set({ earnedAchievements }),
-  setAuthReady: (authReady) => set({ authReady }),
+  setUserChallenges: (userChallenges) => set({ userChallenges }),
   setSavedMeals: (savedMeals) => set({ savedMeals }),
-
-  // Optimistic add — instant UI, syncs to Supabase in background
-  addSavedMeal: async (name, foods) => {
-    const user = get().user
-    if (!user) return
-
-    const optimistic = {
-      id: crypto.randomUUID(),
-      name,
-      foods,
-      created_at: new Date().toISOString(),
-      _saving: true,
-    }
-
-    // Add instantly to store
-    set((s) => ({ savedMeals: [optimistic, ...s.savedMeals] }))
-
-    // Sync to Supabase
-    const { data, error } = await supabase
-      .from('saved_meals')
-      .insert({ user_id: user.id, name, foods })
-      .select()
-      .single()
-
-    if (!error && data) {
-      // Replace optimistic with real record
-      set((s) => ({
-        savedMeals: s.savedMeals.map((m) => m.id === optimistic.id ? data : m),
-      }))
-    } else {
-      // Rollback on failure
-      set((s) => ({
-        savedMeals: s.savedMeals.filter((m) => m.id !== optimistic.id),
-      }))
-    }
-  },
-
-  // Optimistic delete
-  deleteSavedMeal: async (mealId) => {
-    const prev = get().savedMeals
-
-    // Remove instantly
-    set((s) => ({ savedMeals: s.savedMeals.filter((m) => m.id !== mealId) }))
-
-    const { error } = await supabase
-      .from('saved_meals')
-      .delete()
-      .eq('id', mealId)
-
-    if (error) {
-      // Rollback
-      set({ savedMeals: prev })
-    }
-  },
+  setAuthReady: (authReady) => set({ authReady }),
 
   loadUserData: async (userId, { silent = false } = {}) => {
     if (!userId) return
@@ -120,7 +68,7 @@ export const useUserStore = create((set, get) => ({
     try {
       const profile = await fetchOrCreateProfile(userId, user)
 
-      const [todayLogRes, logsRes, achievementsRes, mealsRes] = await Promise.all([
+      const [todayLogRes, logsRes, achievementsRes, challengesRes, savedMealsRes] = await Promise.all([
         supabase
           .from('daily_logs')
           .select('*')
@@ -133,23 +81,17 @@ export const useUserStore = create((set, get) => ({
           .eq('user_id', userId)
           .order('log_date', { ascending: false })
           .limit(30),
-        supabase
-          .from('achievements')
-          .select('achievement_key')
-          .eq('user_id', userId),
-        supabase
-          .from('saved_meals')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(50),
+        supabase.from('achievements').select('achievement_key').eq('user_id', userId),
+        supabase.from('user_challenges').select('*').eq('user_id', userId),
+        supabase.from('saved_meals').select('*').eq('user_id', userId),
       ])
 
-      const todayLog          = todayLogRes.error ? null : todayLogRes.data
-      const recentLogs        = logsRes.data || []
-      const recentScores      = recentLogs.map((r) => r.future_self_score)
+      const todayLog = todayLogRes.error ? null : todayLogRes.data
+      const recentLogs = logsRes.data || []
+      const recentScores = recentLogs.map((r) => r.future_self_score)
       const earnedAchievements = (achievementsRes.data || []).map((a) => a.achievement_key)
-      const savedMeals        = mealsRes.data || []
+      const userChallenges = challengesRes.data || []
+      const savedMeals = savedMealsRes.data || []
 
       set({
         profile,
@@ -157,12 +99,59 @@ export const useUserStore = create((set, get) => ({
         recentLogs,
         recentScores,
         earnedAchievements,
+        userChallenges,
         savedMeals,
         dataLoading: false,
       })
     } catch (err) {
       console.error('loadUserData failed:', err)
       set({ dataLoading: false })
+    }
+  },
+
+  // Optimistically adds a saved meal, then persists it to Supabase.
+  // On success the temporary row is replaced with the real DB row (real id).
+  // On failure the optimistic row is rolled back.
+  addSavedMeal: async (name, foods) => {
+    const userId = get().user?.id
+    if (!userId) return
+
+    const tempId = crypto.randomUUID()
+    const optimisticMeal = { id: tempId, user_id: userId, name, foods, _saving: true }
+
+    set((state) => ({ savedMeals: [optimisticMeal, ...state.savedMeals] }))
+
+    const { data, error } = await supabase
+      .from('saved_meals')
+      .insert({ user_id: userId, name, foods })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('addSavedMeal failed:', error.message)
+      set((state) => ({ savedMeals: state.savedMeals.filter((m) => m.id !== tempId) }))
+      return
+    }
+
+    set((state) => ({
+      savedMeals: state.savedMeals.map((m) => (m.id === tempId ? data : m)),
+    }))
+  },
+
+  // Optimistically removes a saved meal, then deletes it from Supabase.
+  // Rolls back if the delete fails.
+  deleteSavedMeal: async (id) => {
+    const userId = get().user?.id
+    if (!userId) return
+
+    const prev = get().savedMeals
+    set({ savedMeals: prev.filter((m) => m.id !== id) })
+
+    const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', userId)
+
+    if (error) {
+      console.error('deleteSavedMeal failed:', error.message)
+      set({ savedMeals: prev })
     }
   },
 
@@ -174,6 +163,7 @@ export const useUserStore = create((set, get) => ({
       recentScores: [],
       recentLogs: [],
       earnedAchievements: [],
+      userChallenges: [],
       savedMeals: [],
       dataLoading: false,
     }),
