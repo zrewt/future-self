@@ -195,10 +195,10 @@ export function getScoreBreakdown(scores, streakDays) {
 }
 
 // ── XP ─────────────────────────────────────────────────────────────────────────
-export function calcXP(log, streakDays, questXP = 0) {
+export function calcXP(log, streakDays, questXP = 0, foods = []) {
   let base = 0
   if (calcFitnessFromWorkout(log) >= 50 || (log.workout_duration_min || 0) >= 20) base += 25
-  if (calcNutritionFromServings(log) >= 50) base += 15
+  if (calcNutritionFromServings(log, foods) >= 50) base += 15
   if (Number(log.sleep_hours) >= 7.5)          base += 20
   if ((log.water_ml       || 0) >= 2500)        base += 10
   if ((log.focus_minutes  || 0) >= 60)          base += 20
@@ -209,8 +209,8 @@ export function calcXP(log, streakDays, questXP = 0) {
 }
 
 // ── PERFECT DAY ────────────────────────────────────────────────────────────────
-export function isPerfectDay(log) {
-  const s = buildAllScores(log, 0)
+export function isPerfectDay(log, foods = []) {
+  const s = buildAllScores(log, 0, foods)
   return (
     s.nutrition_score >= 55 &&
     s.fitness_score   >= 50 &&

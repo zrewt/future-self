@@ -127,8 +127,11 @@ export default function Log() {
   }, [todayLog])
 
   const previewLog = useMemo(() => ({ ...form, sleep_hours: Number(form.sleep_hours) }), [form])
-  const previewScores = useMemo(() => buildAllScores(previewLog, profile?.current_streak || 0), [previewLog, profile?.current_streak])
-  const nutritionPreview = calcNutritionFromServings(previewLog)
+  const previewScores = useMemo(
+    () => buildAllScores(previewLog, profile?.current_streak || 0, details.foods),
+    [previewLog, profile?.current_streak, details.foods]
+  )
+  const nutritionPreview = calcNutritionFromServings(previewLog, details.foods)
   const fitnessPreview = calcFitnessFromWorkout(previewLog)
 
   function updateField(key, value) {
@@ -137,6 +140,16 @@ export default function Log() {
 
   function patchDetails(section, patch) {
     setDetails((prev) => ({ ...prev, [section]: { ...prev[section], ...patch } }))
+  }
+
+  // Bump/un-bump the matching serving stepper when FoodDetailSection detects
+  // that a searched food maps to fruit/vegetable/protein/processed.
+  function handleServingDetected(servingKey) {
+    setForm((prev) => ({ ...prev, [servingKey]: (prev[servingKey] ?? 0) + 1 }))
+  }
+
+  function handleServingRemoved(servingKey) {
+    setForm((prev) => ({ ...prev, [servingKey]: Math.max(0, (prev[servingKey] ?? 0) - 1) }))
   }
 
   const glasses = Math.min(8, Math.floor(form.water_ml / 250))
@@ -154,9 +167,10 @@ export default function Log() {
       ? profile.current_streak
       : computeStreak(profile, today, false).current_streak
 
+    const foods = details.foods || []
     const logPayload = { ...form, sleep_hours: Number(form.sleep_hours) }
-    const scores = buildAllScores(logPayload, streakForCalc)
-    const is_perfect_day = isPerfectDay(logPayload)
+    const scores = buildAllScores(logPayload, streakForCalc, foods)
+    const is_perfect_day = isPerfectDay(logPayload, foods)
 
     const prevQuests = getCompletedQuestIds(todayLog)
     const newQuestIds = newlyCompletedQuestIds(logPayload, prevQuests)
@@ -164,7 +178,7 @@ export default function Log() {
     const questXP = questXPForLog(logPayload, prevQuests)
 
     const mergedDetails = { ...details, quests_completed: allQuestIds }
-    const xp_earned = calcXP({ ...logPayload, is_perfect_day }, streakForCalc, questXP)
+    const xp_earned = calcXP({ ...logPayload, is_perfect_day }, streakForCalc, questXP, foods)
 
     const row = {
       user_id: user.id,
@@ -277,7 +291,12 @@ export default function Log() {
           <ServingStepper label="Protein" emoji="🥩" value={form.protein_servings} onChange={(v) => updateField('protein_servings', v)} />
           <ServingStepper label="Processed" emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
           <DetailToggle label="Search specific foods" badge={details.foods.length}>
-            <FoodDetailSection foods={details.foods} onChange={(foods) => setDetails((d) => ({ ...d, foods }))} />
+            <FoodDetailSection
+              foods={details.foods}
+              onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+              onServingDetected={handleServingDetected}
+              onServingRemoved={handleServingRemoved}
+            />
           </DetailToggle>
         </div>
 
