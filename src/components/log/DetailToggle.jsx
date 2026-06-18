@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-export default function DetailToggle({ label, badge, children, defaultOpen = false }) {
+export default function DetailToggle({ label, badge, children, defaultOpen = false, forceOpen = false }) {
   const [open, setOpen] = useState(defaultOpen || (badge > 0))
+
+  useEffect(() => {
+    if (forceOpen) setOpen(true)
+  }, [forceOpen])
 
   return (
     <div className="mt-4 pt-4 border-t border-slate-100/80">
