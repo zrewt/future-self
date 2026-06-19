@@ -9,6 +9,7 @@ import DailyQuests from '../components/home/DailyQuests'
 import ScoreBreakdown from '../components/home/ScoreBreakdown'
 import EmptyHome from '../components/home/EmptyHome'
 import EngagementHub from '../components/home/EngagementHub'
+import TrendChart from '../components/home/TrendChart'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
 
@@ -90,7 +91,15 @@ function MidnightCountdown() {
 }
 
 export default function Dashboard() {
-  const { profile, todayLog, recentScores, recentLogs, userChallenges } = useUserStore()
+  const {
+    profile,
+    todayLog,
+    recentScores,
+    recentLogs,
+    trendLogs,
+    achievementEvents,
+    userChallenges,
+  } = useUserStore()
 
   if (!profile) {
     return (
@@ -155,6 +164,12 @@ export default function Dashboard() {
         todayLog={todayLog}
         recentScores={recentScores}
         recentLogs={recentLogs}
+        userChallenges={userChallenges}
+      />
+
+      <TrendChart
+        trendLogs={trendLogs}
+        achievementEvents={achievementEvents}
         userChallenges={userChallenges}
       />
 

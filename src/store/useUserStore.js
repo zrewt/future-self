@@ -42,7 +42,9 @@ export const useUserStore = create((set, get) => ({
   todayLog: null,
   recentScores: [],
   recentLogs: [],
+  trendLogs: [],          // NEW — up to 90 days, for the trend chart
   earnedAchievements: [],
+  achievementEvents: [],  // NEW — [{ key, earned_at }], for milestone dots
   userChallenges: [],
   savedMeals: [],
   authReady: false,
@@ -68,7 +70,13 @@ export const useUserStore = create((set, get) => ({
     try {
       const profile = await fetchOrCreateProfile(userId, user)
 
-      const [todayLogRes, logsRes, achievementsRes, challengesRes, savedMealsRes] = await Promise.all([
+      // Update last_active_date (fire-and-forget, doesn't block load) —
+      // powers the 3/7/14-day re-engagement messaging in EngagementHub
+      if (profile && profile.last_active_date !== today) {
+        supabase.from('users_profile').update({ last_active_date: today }).eq('id', userId)
+      }
+
+      const [todayLogRes, logsRes, trendLogsRes, achievementsRes, challengesRes, savedMealsRes] = await Promise.all([
         supabase
           .from('daily_logs')
           .select('*')
@@ -81,15 +89,26 @@ export const useUserStore = create((set, get) => ({
           .eq('user_id', userId)
           .order('log_date', { ascending: false })
           .limit(30),
-        supabase.from('achievements').select('achievement_key').eq('user_id', userId),
+        supabase
+          .from('daily_logs')
+          .select('log_date, future_self_score, nutrition_score, fitness_score, energy_score, focus_score, longevity_score')
+          .eq('user_id', userId)
+          .order('log_date', { ascending: false })
+          .limit(90),
+        supabase.from('achievements').select('achievement_key, earned_at').eq('user_id', userId),
         supabase.from('user_challenges').select('*').eq('user_id', userId),
         supabase.from('saved_meals').select('*').eq('user_id', userId),
       ])
 
       const todayLog = todayLogRes.error ? null : todayLogRes.data
       const recentLogs = logsRes.data || []
+      const trendLogs = trendLogsRes.data || []
       const recentScores = recentLogs.map((r) => r.future_self_score)
       const earnedAchievements = (achievementsRes.data || []).map((a) => a.achievement_key)
+      const achievementEvents = (achievementsRes.data || []).map((a) => ({
+        key: a.achievement_key,
+        earned_at: a.earned_at,
+      }))
       const userChallenges = challengesRes.data || []
       const savedMeals = savedMealsRes.data || []
 
@@ -97,8 +116,10 @@ export const useUserStore = create((set, get) => ({
         profile,
         todayLog,
         recentLogs,
+        trendLogs,
         recentScores,
         earnedAchievements,
+        achievementEvents,
         userChallenges,
         savedMeals,
         dataLoading: false,
@@ -109,9 +130,6 @@ export const useUserStore = create((set, get) => ({
     }
   },
 
-  // Optimistically adds a saved meal, then persists it to Supabase.
-  // On success the temporary row is replaced with the real DB row (real id).
-  // On failure the optimistic row is rolled back.
   addSavedMeal: async (name, foods) => {
     const userId = get().user?.id
     if (!userId) return
@@ -138,8 +156,6 @@ export const useUserStore = create((set, get) => ({
     }))
   },
 
-  // Optimistically removes a saved meal, then deletes it from Supabase.
-  // Rolls back if the delete fails.
   deleteSavedMeal: async (id) => {
     const userId = get().user?.id
     if (!userId) return
@@ -162,7 +178,9 @@ export const useUserStore = create((set, get) => ({
       todayLog: null,
       recentScores: [],
       recentLogs: [],
+      trendLogs: [],
       earnedAchievements: [],
+      achievementEvents: [],
       userChallenges: [],
       savedMeals: [],
       dataLoading: false,
