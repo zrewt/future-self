@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
 import ScoreCard from './ScoreCard'
 import { recommendChallenge } from '../../utils/challengeRecommend'
+import { daysSinceLastActive } from '../../utils/streakShield'
 
 const DISMISS_PREFIX = 'qyven_dismiss_'
 const DISMISS_DAYS = 7
@@ -20,7 +21,7 @@ function dismiss(key, days = DISMISS_DAYS) {
   try {
     localStorage.setItem(DISMISS_PREFIX + key, String(Date.now() + days * 86400000))
   } catch {
-    // ignore — storage unavailable
+    // ignore
   }
 }
 
@@ -30,7 +31,9 @@ export default function EngagementHub({ profile, todayLog, recentScores, recentL
 
   const streak = profile?.current_streak ?? 0
   const longestStreak = profile?.longest_streak ?? 0
+  const shields = profile?.streak_shields ?? 0
   const hour = new Date().getHours()
+  const daysAway = daysSinceLastActive(profile?.last_active_date)
 
   const score = todayLog?.future_self_score
   const allTimeBest = recentScores?.length ? Math.max(...recentScores) : 0
@@ -40,10 +43,47 @@ export default function EngagementHub({ profile, todayLog, recentScores, recentL
   const active = (userChallenges || []).filter((c) => !c.completed)
   const completedIds = (userChallenges || []).filter((c) => c.completed).map((c) => c.challenge_id)
 
+  // ── Re-engagement (highest priority — only fires on actual return) ─────────
+  let reengagement = null
+  if (daysAway >= 3 && !todayLog) {
+    if (daysAway >= 14) {
+      reengagement = {
+        key: 'reengage_14',
+        icon: '👋',
+        label: 'Welcome back',
+        title: "It's been a while — your data's all still here",
+        detail: `Your best streak was ${longestStreak} days. No pressure to match it today — just pick back up.`,
+      }
+    } else if (daysAway >= 7) {
+      reengagement = {
+        key: 'reengage_7',
+        icon: '🌱',
+        label: 'We miss you',
+        title: "A week away — let's ease back in",
+        detail: 'One log today resets your momentum. Your Future Self is still rooting for you.',
+      }
+    } else {
+      reengagement = {
+        key: 'reengage_3',
+        icon: '⏳',
+        label: 'A few days gone',
+        title: 'Quick check-in?',
+        detail: "Even a partial log keeps things warm. Today's a good day to jump back in.",
+      }
+    }
+  }
+
   // ── Primary nudge: comeback / streak-risk / personal best ──────────────────
   let primary = null
 
-  if (isPersonalBest) {
+  if (reengagement) {
+    primary = reengagement
+    primary.action = (
+      <Link to="/log" className="btn-primary w-full !py-2.5 text-sm text-center">
+        Log today
+      </Link>
+    )
+  } else if (isPersonalBest) {
     primary = {
       key: 'personal_best',
       icon: '🏆',
@@ -65,42 +105,60 @@ export default function EngagementHub({ profile, todayLog, recentScores, recentL
       key: 'comeback',
       icon: '↩️',
       label: 'Welcome back',
-      title: `Your ${longestStreak}-day streak reset — start a new one today`,
-      detail: 'One log gets the momentum going again. Future you is still counting on this.',
+      title: `Your ${longestStreak}-day streak reset — beat it this time`,
+      detail: 'One log gets the momentum going again. Your best run is the target now.',
       action: (
         <Link to="/log" className="btn-primary w-full !py-2.5 text-sm text-center">
           Log today
         </Link>
       ),
     }
-  } else if (!todayLog && streak > 0 && hour >= 18) {
-    primary = {
-      key: 'streak_risk',
-      icon: '🔥',
-      label: 'Streak at risk',
-      title: `Don't lose your ${streak}-day streak`,
-      detail: 'It resets at midnight. A quick log keeps it alive.',
-      action: (
-        <Link to="/log" className="btn-primary w-full !py-2.5 text-sm text-center">
-          Log now
-        </Link>
-      ),
+  } else if (!todayLog && streak > 0) {
+    // Escalating streak-risk warning — gets louder as the day goes on
+    if (hour >= 21) {
+      primary = {
+        key: 'streak_risk_critical',
+        icon: '🚨',
+        label: 'Last call',
+        title: `Only hours left to save your ${streak}-day streak!`,
+        detail: shields > 0
+          ? `It resets at midnight. You do have ${shields} shield${shields > 1 ? 's' : ''} banked, but don't rely on it — log now.`
+          : "It resets at midnight and you have no shields banked. Log now to keep it alive.",
+        action: (
+          <Link to="/log" className="btn-primary w-full !py-2.5 text-sm text-center animate-pulse">
+            Log now — don't lose it
+          </Link>
+        ),
+      }
+    } else if (hour >= 18) {
+      primary = {
+        key: 'streak_risk',
+        icon: '🔥',
+        label: 'Streak at risk',
+        title: `Don't lose your ${streak}-day streak`,
+        detail: 'It resets at midnight. A quick log keeps it alive.',
+        action: (
+          <Link to="/log" className="btn-primary w-full !py-2.5 text-sm text-center">
+            Log now
+          </Link>
+        ),
+      }
     }
   }
 
-  // ── Challenge nudge: suggest one when nothing active ────────────────────────
+  // ── Challenge nudge ──────────────────────────────────────────────────────
   let challengeCard = null
-  if (active.length === 0) {
+  if (active.length === 0 && !reengagement) {
     const rec = recommendChallenge(recentLogs || [], profile, completedIds)
     if (rec) challengeCard = rec
   }
 
-  // ── Share profile: lower priority, dismissible for a week ───────────────────
+  // ── Share profile ────────────────────────────────────────────────────────
   const shareWorthy = longestStreak >= 3 || (recentScores?.[0] ?? 0) >= 60
   const shareProfileCard =
     !primary && shareWorthy && Boolean(profile?.username) && !isDismissed('share_profile')
 
-  // ── Confetti for a fresh personal best ──────────────────────────────────────
+  // ── Confetti for personal best ───────────────────────────────────────────
   useEffect(() => {
     if (primary?.key !== 'personal_best' || !todayLog?.log_date) return
     const key = `qyven_pb_confetti_${todayLog.log_date}`
@@ -110,7 +168,7 @@ export default function EngagementHub({ profile, todayLog, recentScores, recentL
         sessionStorage.setItem(key, '1')
       }
     } catch {
-      // ignore — storage unavailable
+      // ignore
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primary?.key, todayLog?.log_date])
@@ -128,14 +186,22 @@ export default function EngagementHub({ profile, todayLog, recentScores, recentL
         await navigator.clipboard.writeText(url)
       }
     } catch {
-      // user cancelled or share unsupported — no-op
+      // ignore
     }
   }
 
   return (
     <div className="space-y-3">
+      {/* Shield count indicator — only shown when you have at least one */}
+      {shields > 0 && !reengagement && (
+        <div className="flex items-center gap-1.5 text-xs font-bold text-primary px-1">
+          <span>🛡️</span>
+          <span>{shields} streak shield{shields > 1 ? 's' : ''} banked</span>
+        </div>
+      )}
+
       {primary && (
-        <div className="glass-card p-4">
+        <div className={`glass-card p-4 ${primary.key === 'streak_risk_critical' ? 'border-2 border-coral/40' : ''}`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="section-title mb-1">

@@ -6,6 +6,7 @@ import { useUserStore } from '../store/useUserStore'
 import DetailToggle from '../components/log/DetailToggle'
 import FoodDetailSection from '../components/log/FoodDetailSection'
 import ServingStepper from '../components/log/ServingStepper'
+import ShieldNotice from '../components/log/ShieldNotice'
 import { TextField, SelectField } from '../components/log/TextDetailFields'
 import {
   buildAllScores,
@@ -26,6 +27,7 @@ import {
   questXPForLog,
 } from '../data/quests'
 import { PRESET_WORKOUTS, getSavedWorkouts } from '../data/workouts'
+import { evaluateStreakGap, checkNewShieldEarned } from '../utils/streakShield'
 
 const EXERCISE_TYPES = ['gym', 'run', 'sport', 'yoga', 'rest']
 const MOOD_EMOJIS = ['😞', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩', '🥳', '🔥']
@@ -89,29 +91,93 @@ function numericFieldProps(value, onChange) {
   }
 }
 
-// ── Streak computation ────────────────────────────────────────────────────────
+// ── Streak computation — now shield/grace aware ────────────────────────────────
+// Returns either a normal result, or { graceAvailable: missedDate } meaning
+// the caller should pause and ask the user before finalizing the streak.
 function computeStreak(profile, today, isUpdateSameDay) {
   if (isUpdateSameDay) {
     return {
       current_streak: profile.current_streak,
       longest_streak: profile.longest_streak,
       last_log_date:  profile.last_log_date || today,
+      shieldEvent: null,
+      newShieldEarned: 0,
+      streak_shields: profile.streak_shields || 0,
+      shield_used_dates: profile.shield_used_dates || [],
+      last_shield_earned_streak: profile.last_shield_earned_streak || 0,
+      graceAvailable: null,
     }
   }
-  const last = profile.last_log_date
-  let streak = 1
-  if (last) {
-    const lastDate  = new Date(`${last}T12:00:00`)
-    const todayDate = new Date(`${today}T12:00:00`)
-    const diffDays  = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24))
-    if (diffDays === 1)      streak = (profile.current_streak || 0) + 1
-    else if (diffDays === 0) streak = profile.current_streak || 1
-    else                     streak = 1
+
+  const gapResult = evaluateStreakGap(profile, today)
+
+  if (gapResult.type === 'grace_available') {
+    // Pause here — caller must ask the user yes/no before we touch the streak
+    return { graceAvailable: gapResult.missedDate }
   }
+
+  let streak
+  let shieldEvent = null
+  let shieldsRemaining = profile.streak_shields || 0
+  let shieldUsedDates = profile.shield_used_dates || []
+
+  if (gapResult.type === 'continue') {
+    streak = (profile.current_streak || 0) + 1
+  } else if (gapResult.type === 'shield_consumed') {
+    streak = (profile.current_streak || 0) + 1
+    shieldsRemaining = Math.max(0, shieldsRemaining - 1)
+    shieldUsedDates = [...shieldUsedDates, gapResult.missedDate]
+    shieldEvent = { type: 'shield_consumed', missedDate: gapResult.missedDate }
+  } else {
+    streak = 1
+  }
+
+  const newLongest = Math.max(profile.longest_streak || 0, streak)
+  const shieldCheck = checkNewShieldEarned(profile, streak)
+
   return {
     current_streak: streak,
-    longest_streak: Math.max(profile.longest_streak || 0, streak),
-    last_log_date:  today,
+    longest_streak: newLongest,
+    last_log_date: today,
+    streak_shields: shieldCheck.earned ? shieldCheck.newShieldTotal : shieldsRemaining,
+    shield_used_dates: shieldUsedDates,
+    last_shield_earned_streak: shieldCheck.earned ? streak : (profile.last_shield_earned_streak || 0),
+    shieldEvent,
+    newShieldEarned: shieldCheck.earned ? shieldCheck.count : 0,
+    graceAvailable: null,
+  }
+}
+
+// Force a normal increment/break, skipping the grace pause — used once the
+// user has answered the grace-window yes/no prompt.
+function computeStreakForced(profile, today, graceAccepted) {
+  if (graceAccepted) {
+    const streak = (profile.current_streak || 0) + 1 // missed day "filled in", chain continues
+    const newLongest = Math.max(profile.longest_streak || 0, streak)
+    const shieldCheck = checkNewShieldEarned(profile, streak)
+    return {
+      current_streak: streak,
+      longest_streak: newLongest,
+      last_log_date: today,
+      streak_shields: shieldCheck.earned ? shieldCheck.newShieldTotal : (profile.streak_shields || 0),
+      shield_used_dates: profile.shield_used_dates || [],
+      last_shield_earned_streak: shieldCheck.earned ? streak : (profile.last_shield_earned_streak || 0),
+      shieldEvent: null,
+      newShieldEarned: shieldCheck.earned ? shieldCheck.count : 0,
+      graceAvailable: null,
+    }
+  }
+  // Declined — streak breaks normally
+  return {
+    current_streak: 1,
+    longest_streak: profile.longest_streak || 0,
+    last_log_date: today,
+    streak_shields: profile.streak_shields || 0,
+    shield_used_dates: profile.shield_used_dates || [],
+    last_shield_earned_streak: profile.last_shield_earned_streak || 0,
+    shieldEvent: null,
+    newShieldEarned: 0,
+    graceAvailable: null,
   }
 }
 
@@ -172,7 +238,7 @@ const QUICK_PRESETS = [
 ]
 
 // ── Animated XP success screen ────────────────────────────────────────────────
-function XPSuccessScreen({ lines, total }) {
+function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
   const [visible, setVisible] = useState(0)
   const [shown, setShown]     = useState(false)
 
@@ -189,6 +255,7 @@ function XPSuccessScreen({ lines, total }) {
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up px-4">
       <div className="glass-card p-8 w-full max-w-sm text-center">
+        <ShieldNotice shieldEvent={shieldEvent} newShieldEarned={newShieldEarned} />
         <p className="text-4xl mb-1">🔒</p>
         <p className="text-2xl font-extrabold text-slate-900 mb-1">Locked in!</p>
         <p className="text-3xl font-extrabold text-primary tabular-nums mb-6">+{displayedTotal} XP</p>
@@ -212,6 +279,46 @@ function XPSuccessScreen({ lines, total }) {
             <span className="text-xl font-extrabold text-primary tabular-nums">+{total} XP</span>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Grace window prompt ───────────────────────────────────────────────────────
+function GracePrompt({ missedDate, onAnswer, loading }) {
+  const formatted = new Date(`${missedDate}T12:00:00`).toLocaleDateString(undefined, {
+    weekday: 'long', month: 'short', day: 'numeric',
+  })
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up px-4">
+      <div className="glass-card p-8 w-full max-w-sm text-center">
+        <p className="text-4xl mb-2">🤔</p>
+        <p className="text-xl font-extrabold text-slate-900 mb-2">Missed a day?</p>
+        <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">
+          Looks like you didn't log on <span className="font-bold text-slate-700">{formatted}</span>.
+          Did you roughly hit your basics that day — eating reasonably, some movement, decent sleep?
+        </p>
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => onAnswer(true)}
+            className="btn-primary w-full !py-3 text-sm"
+          >
+            Yes, keep my streak going
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => onAnswer(false)}
+            className="btn-secondary w-full !py-3 text-sm"
+          >
+            No, that's fair — reset it
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-400 font-medium mt-4">
+          This grace window only covers a single missed day, once.
+        </p>
       </div>
     </div>
   )
@@ -249,7 +356,6 @@ export default function Log() {
     earnedAchievements, loadUserData, setTodayLog, setProfile,
   } = useUserStore()
 
-  // Computed once at mount — safe because getDefaultForm is a plain function
   const defaultForm = useMemo(
     () => getDefaultForm(recentLogs, todayLog),
     [] // eslint-disable-line react-hooks/exhaustive-deps
@@ -276,6 +382,7 @@ export default function Log() {
   const [savedWorkouts, setSavedWorkouts]   = useState([])
   const [workoutLibTab, setWorkoutLibTab]   = useState('presets')
   const [lowMoodPrompt, setLowMoodPrompt]   = useState(false)
+  const [gracePrompt, setGracePrompt]       = useState(null) // missedDate string, or null
 
   const isUpdate = Boolean(todayLog)
 
@@ -405,15 +512,83 @@ export default function Log() {
     }
   }
 
-  // ── Partial save ──────────────────────────────────────────────────────────
+  // ── Shared finalize step — writes profile + log, shows success screen ──────
+  async function finalizeSubmit(streakUpdate) {
+    const today = localDateISO()
+    const foods          = details.foods || []
+    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours) }
+    const scores         = buildAllScores(logPayload, streakUpdate.current_streak, foods)
+    const is_perfect_day = isPerfectDay(logPayload, foods)
+    const prevQuests     = getCompletedQuestIds(todayLog)
+    const newQuestIds    = newlyCompletedQuestIds(logPayload, prevQuests)
+    const allQuestIds    = [...new Set([...prevQuests, ...newQuestIds])]
+    const questXP        = questXPForLog(logPayload, prevQuests)
+    const mergedDetails  = { ...details, quests_completed: allQuestIds }
+    const xp_earned      = calcXP({ ...logPayload, is_perfect_day }, streakUpdate.current_streak, questXP, foods)
+    const row             = buildRow(user.id, today, scores, xp_earned, is_perfect_day, mergedDetails)
+
+    const { error: logError } = await supabase.from('daily_logs').upsert(row, { onConflict: 'user_id,log_date' })
+    if (logError) { setLoading(false); setError(logError.message); return }
+
+    const previousXP = todayLog?.xp_earned || 0
+    let newTotalXP   = profile.total_xp - previousXP + xp_earned
+
+    const { bonusXP } = await checkAndAwardAchievements(
+      user.id,
+      { ...profile, current_streak: streakUpdate.current_streak, longest_streak: streakUpdate.longest_streak, level: getLevelFromXP(newTotalXP) },
+      earnedAchievements
+    )
+    newTotalXP    += bonusXP
+    const newLevel = getLevelFromXP(newTotalXP)
+
+    await supabase.from('users_profile')
+      .update({
+        total_xp: newTotalXP,
+        level: newLevel,
+        current_streak: streakUpdate.current_streak,
+        longest_streak: streakUpdate.longest_streak,
+        last_log_date: streakUpdate.last_log_date,
+        last_active_date: today,
+        streak_shields: streakUpdate.streak_shields,
+        shield_used_dates: streakUpdate.shield_used_dates,
+        last_shield_earned_streak: streakUpdate.last_shield_earned_streak,
+      })
+      .eq('id', user.id)
+
+    setProfile({
+      ...profile,
+      total_xp: newTotalXP,
+      level: newLevel,
+      current_streak: streakUpdate.current_streak,
+      longest_streak: streakUpdate.longest_streak,
+      last_log_date: streakUpdate.last_log_date,
+      streak_shields: streakUpdate.streak_shields,
+      shield_used_dates: streakUpdate.shield_used_dates,
+      last_shield_earned_streak: streakUpdate.last_shield_earned_streak,
+    })
+    setTodayLog({ ...row, id: todayLog?.id })
+    await loadUserData(user.id)
+
+    setLoading(false)
+    setGracePrompt(null)
+    const xpLines = buildXPBreakdown({ ...logPayload, is_perfect_day }, streakUpdate.current_streak, questXP, foods, bonusXP)
+    setSuccess({
+      lines: xpLines,
+      total: xp_earned + bonusXP,
+      shieldEvent: streakUpdate.shieldEvent,
+      newShieldEarned: streakUpdate.newShieldEarned,
+    })
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
+    setTimeout(() => navigate('/dashboard'), xpLines.length * 220 + 2800)
+  }
+
+  // ── Partial save (no streak/shield logic — just persists progress) ─────────
   async function handlePartialSave() {
     if (!user || !profile) return
     setSaving(true)
-    const today           = localDateISO()
+    const today = localDateISO()
     const isUpdateSameDay = profile.last_log_date === today
-    const streakForCalc   = isUpdateSameDay
-      ? profile.current_streak
-      : computeStreak(profile, today, false).current_streak
+    const streakForCalc = isUpdateSameDay ? profile.current_streak : profile.current_streak
 
     const foods          = details.foods || []
     const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours) }
@@ -438,56 +613,42 @@ export default function Log() {
     setError('')
     setLoading(true)
 
-    const today           = localDateISO()
+    const today = localDateISO()
     const isUpdateSameDay = profile.last_log_date === today
-    const streakForCalc   = isUpdateSameDay
-      ? profile.current_streak
-      : computeStreak(profile, today, false).current_streak
-
-    const foods          = details.foods || []
-    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours) }
-    const scores         = buildAllScores(logPayload, streakForCalc, foods)
-    const is_perfect_day = isPerfectDay(logPayload, foods)
-    const prevQuests     = getCompletedQuestIds(todayLog)
-    const newQuestIds    = newlyCompletedQuestIds(logPayload, prevQuests)
-    const allQuestIds    = [...new Set([...prevQuests, ...newQuestIds])]
-    const questXP        = questXPForLog(logPayload, prevQuests)
-    const mergedDetails  = { ...details, quests_completed: allQuestIds }
-    const xp_earned      = calcXP({ ...logPayload, is_perfect_day }, streakForCalc, questXP, foods)
-    const row            = buildRow(user.id, today, scores, xp_earned, is_perfect_day, mergedDetails)
-
-    const { error: logError } = await supabase.from('daily_logs').upsert(row, { onConflict: 'user_id,log_date' })
-    if (logError) { setLoading(false); setError(logError.message); return }
-
     const streakUpdate = computeStreak(profile, today, isUpdateSameDay)
-    const previousXP   = todayLog?.xp_earned || 0
-    let newTotalXP     = profile.total_xp - previousXP + xp_earned
 
-    const { bonusXP } = await checkAndAwardAchievements(
-      user.id,
-      { ...profile, ...streakUpdate, level: getLevelFromXP(newTotalXP) },
-      earnedAchievements
-    )
-    newTotalXP    += bonusXP
-    const newLevel = getLevelFromXP(newTotalXP)
+    if (streakUpdate.graceAvailable) {
+      // Pause submission — ask the user about the missed day first
+      setLoading(false)
+      setGracePrompt(streakUpdate.graceAvailable)
+      return
+    }
 
-    await supabase.from('users_profile')
-      .update({ total_xp: newTotalXP, level: newLevel, ...streakUpdate })
-      .eq('id', user.id)
+    await finalizeSubmit(streakUpdate)
+  }
 
-    setProfile({ ...profile, total_xp: newTotalXP, level: newLevel, ...streakUpdate })
-    setTodayLog({ ...row, id: todayLog?.id })
-    await loadUserData(user.id)
+  // ── Grace prompt answer handler ─────────────────────────────────────────────
+  async function handleGraceAnswer(accepted) {
+    if (!user || !profile) return
+    setLoading(true)
+    const today = localDateISO()
+    const streakUpdate = computeStreakForced(profile, today, accepted)
+    await finalizeSubmit(streakUpdate)
+  }
 
-    setLoading(false)
-    const xpLines = buildXPBreakdown({ ...logPayload, is_perfect_day }, streakForCalc, questXP, foods, bonusXP)
-    setSuccess({ lines: xpLines, total: xp_earned + bonusXP })
-    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
-    setTimeout(() => navigate('/dashboard'), xpLines.length * 220 + 2800)
+  if (gracePrompt) {
+    return <GracePrompt missedDate={gracePrompt} onAnswer={handleGraceAnswer} loading={loading} />
   }
 
   if (success) {
-    return <XPSuccessScreen lines={success.lines} total={success.total} />
+    return (
+      <XPSuccessScreen
+        lines={success.lines}
+        total={success.total}
+        shieldEvent={success.shieldEvent}
+        newShieldEarned={success.newShieldEarned}
+      />
+    )
   }
 
   return (
@@ -516,6 +677,13 @@ export default function Log() {
           )}
         </div>
       </header>
+
+      {profile?.streak_shields > 0 && (
+        <div className="flex items-center gap-1.5 text-xs font-bold text-primary px-1 mb-3">
+          <span>🛡️</span>
+          <span>{profile.streak_shields} streak shield{profile.streak_shields > 1 ? 's' : ''} banked</span>
+        </div>
+      )}
 
       {/* Live score preview */}
       <div className="glass-card p-3 mb-4 grid grid-cols-3 gap-2 text-center text-xs">
