@@ -12,6 +12,7 @@ import EngagementHub from '../components/home/EngagementHub'
 import TrendChart from '../components/home/TrendChart'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
+import AskYourData from '../components/home/AskYourData'
 
 function getSecondsUntilMidnight() {
   const now = new Date()
@@ -167,11 +168,8 @@ export default function Dashboard() {
         userChallenges={userChallenges}
       />
 
-      <TrendChart
-        trendLogs={trendLogs}
-        achievementEvents={achievementEvents}
-        userChallenges={userChallenges}
-      />
+<TrendChart trendLogs={trendLogs} achievementEvents={achievementEvents} userChallenges={userChallenges} />
+<AskYourData trendLogs={trendLogs} profile={profile} />
 
       <div className="edge-card">
         <div className="flex items-start justify-between gap-3">

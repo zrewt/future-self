@@ -15,6 +15,7 @@ import Achievements from './pages/Achievements'
 import WeeklyReview from './pages/WeeklyReview'
 import Challenges from './pages/Challenges'
 import PublicProfile from './pages/PublicProfile'
+import Insights from './pages/Insights'
 
 function AppLayout() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/u/:username" element={<PublicProfile />} />
+        <Route path="/insights" element={<Insights />} />
 
         <Route
           path="/onboarding"
