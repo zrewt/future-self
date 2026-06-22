@@ -1,99 +1,79 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  ResponsiveContainer, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../services/supabase'
 import { useUserStore } from '../store/useUserStore'
 import XPBar from '../components/XPBar'
-import { Card } from '../components/ui/Card'
 import Spinner from '../components/ui/Spinner'
 import { getLevelName } from '../utils/scoring'
 
-const LINES = [
-  { key: 'fitness_score', name: 'Fitness', color: '#D85A30' },
-  { key: 'nutrition_score', name: 'Nutrition', color: '#1D9E75' },
-  { key: 'energy_score', name: 'Energy', color: '#EF9F27' },
-  { key: 'focus_score', name: 'Focus', color: '#7F77DD' },
-  { key: 'longevity_score', name: 'Longevity', color: '#1D9E75' },
-  { key: 'future_self_score', name: 'Future Self', color: '#7F77DD' },
-]
 
 export default function Profile() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
   const { user, profile, reset } = useUserStore()
 
-  const [chartData, setChartData] = useState([])
-  const [stats, setStats] = useState({
-    totalLogs: 0,
-    perfectDays: 0,
-    longestStreak: 0,
-    bestFSS: 0,
-  })
-
-  const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
+  const [chartData, setChartData]   = useState([])
+  const [stats, setStats]           = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [shareStatus, setShareStatus] = useState(null)
 
   useEffect(() => {
     if (!user) return
-
     async function load() {
       const { data, error } = await supabase
         .from('daily_logs')
-        .select('*')
+        .select('log_date, future_self_score, nutrition_score, fitness_score, energy_score, focus_score, longevity_score, is_perfect_day')
         .eq('user_id', user.id)
         .order('log_date', { ascending: true })
         .limit(30)
 
       if (!error && data) {
-        setChartData(
-          data.map((d) => ({
-            date: d.log_date.slice(5),
-            fitness_score: d.fitness_score,
-            nutrition_score: d.nutrition_score,
-            energy_score: d.energy_score,
-            focus_score: d.focus_score,
-            longevity_score: d.longevity_score,
-            future_self_score: d.future_self_score,
-          }))
-        )
-
+        setChartData(data.map((d) => ({
+          date: d.log_date.slice(5),
+          fss:  d.future_self_score,
+          nut:  d.nutrition_score,
+          fit:  d.fitness_score,
+          nrg:  d.energy_score,
+          foc:  d.focus_score,
+          lon:  d.longevity_score,
+        })))
         setStats({
-          totalLogs: data.length,
-          perfectDays: data.filter((d) => d.is_perfect_day).length,
+          totalLogs:     data.length,
+          perfectDays:   data.filter((d) => d.is_perfect_day).length,
           longestStreak: profile?.longest_streak ?? 0,
-          bestFSS: data.reduce(
-            (m, d) => Math.max(m, d.future_self_score || 0),
-            0
-          ),
+          bestFSS:       data.reduce((m, d) => Math.max(m, d.future_self_score || 0), 0),
+          currentStreak: profile?.current_streak ?? 0,
         })
       }
-
       setLoading(false)
     }
-
     load()
-  }, [user, profile?.longest_streak])
+  }, [user, profile?.longest_streak, profile?.current_streak])
 
-  async function handleShareProfile() {
-    const url = `${window.location.origin}/u/${profile.username}`
-
+  async function handleShare() {
+    const url  = `${window.location.origin}/u/${profile.username}`
+    const text = `Check out my Qyven profile — Level ${profile.level} with a ${profile.current_streak} day streak 🔥\n${url}`
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: `${profile.username}'s Qyven Profile`,
-          text: `Check out my Qyven profile — Level ${profile.level} with a ${profile.current_streak} day streak 🔥`,
-          url,
-        })
+        await navigator.share({ title: `${profile.username} on Qyven`, text, url })
+        setShareStatus('shared')
       } else {
         await navigator.clipboard.writeText(url)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2500)
+        setShareStatus('copied')
       }
-    } catch {
-      // user cancelled
-    }
+    } catch { /* cancelled */ }
+    setTimeout(() => setShareStatus(null), 2500)
+  }
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`)
+      setShareStatus('link')
+    } catch { /* silent */ }
+    setTimeout(() => setShareStatus(null), 2000)
   }
 
   async function handleSignOut() {
@@ -103,141 +83,218 @@ export default function Profile() {
   }
 
   if (!profile) {
-    return (
-      <div className="flex justify-center py-24">
-        <Spinner />
-      </div>
-    )
+    return <div className="flex justify-center py-24"><Spinner /></div>
   }
 
-  const initial = (profile.username || '?')[0].toUpperCase()
+  const initial   = (profile.username || '?')[0].toUpperCase()
   const levelName = getLevelName(profile.level)
   const publicURL = `${window.location.origin}/u/${profile.username}`
 
+  const statItems = [
+    { label: 'Total logs',    value: stats?.totalLogs     ?? 0, icon: '📋' },
+    { label: 'Perfect days',  value: stats?.perfectDays   ?? 0, icon: '⭐' },
+    { label: 'Best streak',   value: stats?.longestStreak ?? 0, icon: '🔥' },
+    { label: 'Personal best', value: stats?.bestFSS       ?? 0, icon: '🏆' },
+  ]
+
   return (
-    <div className="space-y-5 animate-slide-up pb-8">
+    <div className="max-w-lg mx-auto space-y-4 animate-slide-up pb-10">
 
-      {/* Avatar */}
-      <div className="flex flex-col items-center text-center py-4">
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-primary-700 text-white flex items-center justify-center text-4xl font-extrabold shadow-glow">
-          {initial}
+      {/* ── Profile hero ───────────────────────────────────────────────── */}
+      <div className="glass-card overflow-hidden">
+        <div className="bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-5 pb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-700 text-white flex items-center justify-center text-2xl font-extrabold shadow-md shrink-0">
+              {initial}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-extrabold text-slate-900 dark:text-white truncate">
+                {profile.username}
+              </h1>
+              <p className="text-sm font-bold text-primary">
+                Level {profile.level} · {levelName}
+              </p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="text-xs font-bold text-slate-500">
+                  🔥 {profile.current_streak} day streak
+                </span>
+                {(profile.streak_shields ?? 0) > 0 && (
+                  <span className="text-xs font-bold text-primary">
+                    🛡️ {profile.streak_shields} shield{profile.streak_shields > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* FIX #1: Added missing <a */}
+            <a
+              href={publicURL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1.5 rounded-full shrink-0"
+            >
+              View public →
+            </a>
+          </div>
         </div>
-
-        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-5">
-          {profile.username}
-        </h1>
-
-        <p className="pill bg-primary-50 text-primary-700 dark:bg-teal/10 dark:text-teal mt-2">
-          Level {profile.level} · {levelName}
-        </p>
-
-        <Link to="/weekly" className="text-sm font-semibold text-primary mt-3 hover:underline">
-          Weekly review →
-        </Link>
+        <div className="px-5 pb-5">
+          <XPBar totalXP={profile.total_xp} level={profile.level} />
+        </div>
       </div>
 
-      {/* XP */}
-      <Card>
-        <XPBar totalXP={profile.total_xp} level={profile.level} />
-      </Card>
-
-      {/* Stats */}
+      {/* ── Stats grid ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: 'Total logs', value: stats.totalLogs },
-          { label: 'Perfect days', value: stats.perfectDays },
-          { label: 'Best streak', value: stats.longestStreak },
-          { label: 'Best score', value: stats.bestFSS },
-        ].map((s) => (
-          <div key={s.label} className="glass-card p-4 text-center">
-            <p className="text-2xl font-extrabold bg-gradient-to-br from-primary to-primary-600 bg-clip-text text-transparent">
+        {statItems.map((s) => (
+          <div key={s.label} className="glass-card p-4">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{s.label}</p>
+              <span className="text-base">{s.icon}</span>
+            </div>
+            <p className="text-3xl font-extrabold bg-gradient-to-br from-primary to-primary-600 bg-clip-text text-transparent tabular-nums">
               {s.value}
-            </p>
-            <p className="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wide">
-              {s.label}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Share */}
-      <div className="glass-card p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-bold text-slate-900 dark:text-white text-sm">
-              Your public profile
-            </p>
-
-            <p className="text-xs text-slate-400 font-medium mt-0.5 truncate">
-              {publicURL}
-            </p>
-
-            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              Anyone with the link can see your streak, score, level and achievements.
-            </p>
-          </div>
-
-          <span className="text-2xl shrink-0">🌐</span>
+      {/* ── Share public profile ────────────────────────────────────────── */}
+      <div className="glass-card p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lg">🌐</span>
+          <p className="font-extrabold text-slate-900 dark:text-white text-sm">Your public profile</p>
         </div>
-
-        <div className="flex gap-2 mt-3">
+        <p className="text-xs text-slate-400 font-medium mb-1 truncate">{publicURL}</p>
+        <p className="text-xs text-slate-500 font-medium leading-relaxed mb-3">
+          Anyone with the link sees your streak, score, level, and achievements — a great way to share your progress.
+        </p>
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={handleShareProfile}
+            onClick={handleShare}
             className="btn-primary flex-1 !py-2.5 text-sm"
           >
-            {copied ? '✓ Copied!' : '↗ Share profile'}
+            {shareStatus === 'shared' ? '✓ Shared!' : shareStatus === 'copied' ? '✓ Copied!' : '↗ Share profile'}
           </button>
-
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="btn-secondary !py-2.5 !px-3 text-sm"
+            title="Copy link"
+          >
+            {shareStatus === 'link' ? '✓' : '🔗'}
+          </button>
+          {/* FIX #2: Added missing <a */}
           <a
             href={publicURL}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary !py-2.5 !px-4 text-sm inline-flex items-center justify-center"
+            className="btn-secondary !py-2.5 !px-3 text-sm inline-flex items-center"
           >
-            Preview
+            👁
           </a>
         </div>
       </div>
 
-      {/* Chart */}
-      <Card className="!p-4">
-        <p className="section-title mb-4">Score history · 30 days</p>
+      {/* ── Score history chart ─────────────────────────────────────────── */}
+      <div className="glass-card p-5">
+        <p className="section-title mb-1">Score history</p>
+        <p className="text-xs text-slate-400 font-medium mb-4">Last 30 days — Future Self Score</p>
 
         {loading ? (
-          <div className="h-64 flex items-center justify-center">
-            <Spinner className="w-8 h-8" />
-          </div>
+          <div className="h-48 flex items-center justify-center"><Spinner /></div>
         ) : chartData.length === 0 ? (
-          <p className="text-slate-500 text-sm text-center py-12 font-medium">
-            No logs yet — start logging!
-          </p>
+          <div className="h-48 flex flex-col items-center justify-center text-center">
+            <p className="text-3xl mb-2">📋</p>
+            <p className="text-sm font-semibold text-slate-500">No logs yet — start logging to see your history here.</p>
+          </div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8EAEF" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip />
-              <Legend />
+          <>
+            <div style={{ width: '100%', height: 160 }}>
+              <ResponsiveContainer>
+                <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                  <defs>
+                    <linearGradient id="fssGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7F77DD" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#7F77DD" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={6} />
+                  <YAxis domain={[0, 100]} hide />
+                  <Tooltip
+                    contentStyle={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 12 }}
+                    formatter={(v) => [v, 'Future Self']}
+                  />
+                  <Area type="monotone" dataKey="fss" stroke="#7F77DD" strokeWidth={2} fill="url(#fssGrad)" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
 
-              {LINES.map((line) => (
-                <Line
-                  key={line.key}
-                  type="monotone"
-                  dataKey={line.key}
-                  name={line.name}
-                  stroke={line.color}
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+            {/* Pillar mini-chart below */}
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/10">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">Pillar breakdown — last 30 days</p>
+              <div style={{ width: '100%', height: 120 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={6} />
+                    <YAxis domain={[0, 100]} hide />
+                    <Tooltip
+                      contentStyle={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, fontSize: 11 }}
+                    />
+                    {[
+                      { key: 'nut', color: '#1D9E75', label: 'Nutrition' },
+                      { key: 'fit', color: '#D85A30', label: 'Fitness' },
+                      { key: 'nrg', color: '#EF9F27', label: 'Energy' },
+                      { key: 'foc', color: '#7F77DD', label: 'Focus' },
+                    ].map((l) => (
+                      <Area
+                        key={l.key}
+                        type="monotone"
+                        dataKey={l.key}
+                        name={l.label}
+                        stroke={l.color}
+                        strokeWidth={1.5}
+                        fill="none"
+                        dot={false}
+                      />
+                    ))}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </>
         )}
-      </Card>
+      </div>
 
-      <button type="button" onClick={handleSignOut} className="btn-secondary w-full">
+      {/* ── Quick links ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        <Link to="/achievements" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+          <span className="text-2xl block mb-2">🏆</span>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-0.5">Earned</p>
+          <p className="text-sm font-extrabold text-slate-900 dark:text-white">Achievements</p>
+        </Link>
+        <Link to="/challenges" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+          <span className="text-2xl block mb-2">⚔️</span>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-0.5">Active</p>
+          <p className="text-sm font-extrabold text-slate-900 dark:text-white">Challenges</p>
+        </Link>
+        <Link to="/weekly" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+          <span className="text-2xl block mb-2">📊</span>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-0.5">Analysis</p>
+          <p className="text-sm font-extrabold text-slate-900 dark:text-white">Weekly review</p>
+        </Link>
+        <Link to="/insights" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+          <span className="text-2xl block mb-2">🔎</span>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-0.5">Your data</p>
+          <p className="text-sm font-extrabold text-slate-900 dark:text-white">Ask your data</p>
+        </Link>
+      </div>
+
+      {/* ── Sign out ────────────────────────────────────────────────────── */}
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="btn-secondary w-full text-slate-500"
+      >
         Sign out
       </button>
     </div>
