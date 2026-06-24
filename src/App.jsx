@@ -16,6 +16,7 @@ import WeeklyReview from './pages/WeeklyReview'
 import Challenges from './pages/Challenges'
 import PublicProfile from './pages/PublicProfile'
 import Insights from './pages/Insights'
+import Landing from './pages/Landing'
 
 function AppLayout() {
   return (
@@ -56,7 +57,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes — no auth needed */}
-        <Route path="/" element={<HomeRedirect />} />
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/u/:username" element={<PublicProfile />} />
