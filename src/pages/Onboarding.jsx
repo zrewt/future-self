@@ -10,14 +10,24 @@ const PATHS = [
   { id: 'builder', label: 'Builder', icon: '🔨', desc: 'Habits & systems' },
 ]
 
+// Each goal maps to the pillar it primarily affects on the dashboard
 const GOALS = [
-  'Get fitter',
-  'Sleep better',
-  'Eat healthier',
-  'Build focus',
-  'Read more',
-  'Reduce stress',
+  { label: 'Get fitter',     pillar: 'fitness',   icon: '🏃' },
+  { label: 'Sleep better',   pillar: 'energy',    icon: '💤' },
+  { label: 'Eat healthier',  pillar: 'nutrition', icon: '🥗' },
+  { label: 'Build focus',    pillar: 'focus',     icon: '🎯' },
+  { label: 'Read more',      pillar: 'focus',     icon: '📚' },
+  { label: 'Reduce stress',  pillar: 'energy',    icon: '🧘' },
+  { label: 'Live longer',    pillar: 'longevity', icon: '🌿' },
+  { label: 'Lose weight',    pillar: 'nutrition', icon: '⚖️' },
 ]
+
+// The single most important goal maps to a focus_pillar saved on the profile
+function pickFocusPillar(selectedGoals) {
+  if (!selectedGoals.length) return 'fitness'
+  const first = GOALS.find((g) => g.label === selectedGoals[0])
+  return first?.pillar || 'fitness'
+}
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -46,9 +56,14 @@ export default function Onboarding() {
     setError('')
     setLoading(true)
 
+    const focusPillar = pickFocusPillar(goals)
+
     const { data: savedProfile, error: profileError } = await supabase
       .from('users_profile')
-      .upsert({ id: user.id, username, avatar_class: avatarClass }, { onConflict: 'id' })
+      .upsert(
+        { id: user.id, username, avatar_class: avatarClass, focus_pillar: focusPillar },
+        { onConflict: 'id' }
+      )
       .select()
       .single()
 
@@ -100,13 +115,14 @@ export default function Onboarding() {
           <div className="glass-card p-6 md:p-8">
             <h2 className="text-xl font-extrabold text-slate-900 mb-2">What should we call you?</h2>
             <p className="text-slate-500 text-sm mb-6 font-medium">
-              This is how you&apos;ll appear on your dashboard.
+              This is how you&apos;ll appear on your public profile.
             </p>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="input-field mb-6"
+              placeholder="yourname"
             />
             <button
               type="button"
@@ -122,7 +138,9 @@ export default function Onboarding() {
         {step === 2 && (
           <div>
             <h2 className="text-xl font-extrabold text-slate-900 mb-2">Choose your path</h2>
-            <p className="text-slate-500 text-sm mb-6 font-medium">Pick the archetype that fits you best.</p>
+            <p className="text-slate-500 text-sm mb-6 font-medium">
+              Pick the archetype that fits you best.
+            </p>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {PATHS.map((path) => (
                 <button
@@ -155,27 +173,64 @@ export default function Onboarding() {
 
         {step === 3 && (
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900 mb-2">What are you working toward?</h2>
-            <p className="text-slate-500 text-sm mb-6 font-medium">Select up to 3 goals.</p>
+            <h2 className="text-xl font-extrabold text-slate-900 mb-2">
+              What&apos;s your #1 focus?
+            </h2>
+            <p className="text-slate-500 text-sm mb-1 font-medium">
+              Select up to 3 goals. Your top pick shapes your daily dashboard.
+            </p>
+            <p className="text-[11px] text-primary font-bold mb-5">
+              First selection = your main focus pillar
+            </p>
             <div className="space-y-2 mb-6">
-              {GOALS.map((goal) => (
-                <label
-                  key={goal}
-                  className={[
-                    'flex items-center gap-3 glass-card px-4 py-3.5 cursor-pointer transition-all',
-                    goals.includes(goal) ? 'ring-2 ring-primary bg-primary-50/30' : '',
-                  ].join(' ')}
-                >
-                  <input
-                    type="checkbox"
-                    checked={goals.includes(goal)}
-                    onChange={() => toggleGoal(goal)}
-                    className="accent-primary w-5 h-5 rounded"
-                  />
-                  <span className="text-slate-800 font-semibold text-sm">{goal}</span>
-                </label>
-              ))}
+              {GOALS.map((goal, idx) => {
+                const selected = goals.includes(goal.label)
+                const isFirst  = goals[0] === goal.label
+                return (
+                  <button
+                    key={goal.label}
+                    type="button"
+                    onClick={() => toggleGoal(goal.label)}
+                    className={[
+                      'w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border text-left transition-all',
+                      selected
+                        ? isFirst
+                          ? 'bg-primary/10 border-primary ring-2 ring-primary'
+                          : 'bg-primary/5 border-primary/40'
+                        : 'bg-white border-surface-border',
+                    ].join(' ')}
+                  >
+                    <span className="text-xl">{goal.icon}</span>
+                    <span className="flex-1 text-slate-800 font-semibold text-sm">{goal.label}</span>
+                    {isFirst && (
+                      <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        Main focus
+                      </span>
+                    )}
+                    {selected && !isFirst && (
+                      <span className="text-[10px] font-bold text-slate-400">✓</span>
+                    )}
+                    {!selected && goals.length < 3 && (
+                      <span className="text-[10px] font-bold text-slate-300">+</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
+
+            {goals.length > 0 && (
+              <div className="glass-card p-3 mb-4 flex items-center gap-2">
+                <span className="text-lg">🎯</span>
+                <p className="text-xs font-semibold text-slate-600">
+                  Your dashboard will highlight your{' '}
+                  <span className="font-extrabold text-primary capitalize">
+                    {pickFocusPillar(goals)}
+                  </span>{' '}
+                  pillar every day
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(2)} className="btn-secondary flex-1">
                 Back
@@ -183,10 +238,10 @@ export default function Onboarding() {
               <button
                 type="button"
                 onClick={finish}
-                disabled={loading}
-                className="btn-primary flex-1 shadow-glow"
+                disabled={loading || goals.length === 0}
+                className="btn-primary flex-1 shadow-glow disabled:opacity-50"
               >
-                {loading ? 'Saving…' : 'Start your Qyven journey'}
+                {loading ? 'Saving…' : 'Start my journey 🚀'}
               </button>
             </div>
           </div>
