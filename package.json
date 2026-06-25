@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/analytics": "^2.0.1",
     "canvas-confetti": "^1.9.3",
     "html2canvas": "^1.4.1",
     "react": "^19.0.0",
