@@ -116,7 +116,7 @@ export default function NavBar() {
                         transition-colors duration-150
                         ${
                           isActive
-                            ? 'text-[#7F5AF0] dark:text-[#00E87A] bg-[#7F5AF0]/8 dark:bg-[#00E87A]/10'
+                            ? 'text-[#7F5AF0] dark:text-[#00E87A] bg-[#7F5AF0]/10 dark:bg-[#00E87A]/10'
                             : 'text-slate-400 dark:text-[#5A7050] hover:text-slate-600 dark:hover:text-[#9DB890]'
                         }
                       `}
@@ -138,7 +138,7 @@ export default function NavBar() {
           className="
             flex flex-col h-full rounded-2xl p-4
             bg-white/92 dark:bg-[#161C0F]/92
-            border border-white/75 dark:border-[#00E87A]/10
+            border border-slate-200/80 dark:border-[#00E87A]/10
             shadow-card dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_32px_rgba(0,0,0,0.45)]
             backdrop-blur-xl
           "
@@ -171,29 +171,28 @@ export default function NavBar() {
           <div
             className="
               mx-2 mb-3 rounded-2xl p-3
-              bg-slate-900 dark:bg-[#1E2616]
-              border border-transparent dark:border-[#00E87A]/15
+              bg-slate-100/80 dark:bg-[#1E2616]
+              border border-slate-200/60 dark:border-[#00E87A]/15
             "
           >
             <div className="flex items-center gap-3">
               <div
                 className="
                   h-10 w-10 rounded-xl flex items-center justify-center font-extrabold text-sm flex-shrink-0
-                  bg-white/15 dark:bg-[#00E87A]/15
-                  text-white dark:text-[#00E87A]
-                  border border-white/10 dark:border-[#00E87A]/25
+                  bg-[#7F5AF0]/15 dark:bg-[#00E87A]/15
+                  text-[#7F5AF0] dark:text-[#00E87A]
+                  border border-[#7F5AF0]/20 dark:border-[#00E87A]/25
                 "
               >
                 {initial}
               </div>
 
               <div className="min-w-0">
-                <p className="text-sm font-bold truncate text-white">
+                <p className="text-sm font-bold truncate text-slate-900 dark:text-[#E8F0E0]">
                   {profile?.username || 'Future builder'}
                 </p>
 
-                {/* Fixed: dark text in light mode, muted green in dark mode */}
-                <p className="text-[11px] text-slate-500 dark:text-[#5A7050]">
+                <p className="text-[11px] text-slate-500 dark:text-[#9DB890]">
                   Make today count
                 </p>
               </div>
@@ -201,7 +200,7 @@ export default function NavBar() {
           </div>
 
           {/* Nav links */}
-          <div className="flex-1 flex flex-col gap-1 mt-2">
+          <div className="flex-1 flex flex-col gap-1.5 mt-2">
             {desktopTabs.map((tab) => {
               const { Icon } = tab
 
@@ -211,13 +210,11 @@ export default function NavBar() {
                     <span
                       className={`
                         flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm
-                        transition-colors duration-150 w-full
+                        transition-all duration-150 w-full
                         ${
                           isActive
-                            ? 'bg-gradient-to-r from-[#7F5AF0] to-[#6D44E0] dark:from-[#00E87A]/20 dark:to-[#00E87A]/10 text-white dark:text-[#00E87A] dark:border dark:border-[#00E87A]/25'
-                            : tab.fab
-                            ? 'bg-[#7F5AF0]/6 dark:bg-[#00E87A]/6 text-[#7F5AF0] dark:text-[#00E87A] border border-[#7F5AF0]/15 dark:border-[#00E87A]/15'
-                            : 'text-slate-500 dark:text-[#5A7050] hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-[#9DB890]'
+                            ? 'bg-gradient-to-r from-[#7F5AF0] to-[#6D44E0] dark:from-[#00E87A]/20 dark:to-[#00E87A]/10 text-white dark:text-[#00E87A] dark:border dark:border-[#00E87A]/20'
+                            : 'text-slate-500 dark:text-[#5A7050] hover:bg-slate-100/70 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-[#9DB890]'
                         }
                       `}
                     >
@@ -240,10 +237,10 @@ export default function NavBar() {
                 inline-flex items-center justify-center gap-2
                 rounded-xl px-3 py-2.5 text-xs font-bold
                 transition-colors duration-150
-                bg-[#7F5AF0]/8 dark:bg-[#00E87A]/8
-                border border-[#7F5AF0]/18 dark:border-[#00E87A]/18
-                text-[#7F5AF0] dark:text-[#00E87A]
-                hover:bg-[#7F5AF0]/14 dark:hover:bg-[#00E87A]/14
+                bg-slate-100 dark:bg-[#00E87A]/8
+                border border-slate-200/70 dark:border-[#00E87A]/18
+                text-slate-700 dark:text-[#00E87A]
+                hover:bg-slate-200/60 dark:hover:bg-[#00E87A]/14
               "
             >
               <ThemeIcon className="w-4 h-4" />
@@ -258,10 +255,10 @@ export default function NavBar() {
                 inline-flex items-center justify-center gap-2
                 rounded-xl px-3 py-2.5 text-xs font-bold
                 transition-colors duration-150
-                bg-red-50 dark:bg-[#FF5C5C]/8
-                border border-red-100 dark:border-[#FF5C5C]/18
-                !text-red-600 dark:!text-[#FF5C5C]
-                hover:bg-red-100 dark:hover:bg-[#FF5C5C]/14
+                bg-red-50/80 dark:bg-[#FF5C5C]/10
+                border border-red-200/50 dark:border-[#FF5C5C]/20
+                text-red-600 dark:text-[#FF5C5C]
+                hover:bg-red-100/70 dark:hover:bg-[#FF5C5C]/20
               "
             >
               <IconSignOut className="w-4 h-4" />
@@ -281,8 +278,8 @@ export default function NavBar() {
             flex items-center justify-center
             transition-colors duration-150
             bg-white/90 dark:bg-[#161C0F]/90
-            border border-white/85 dark:border-[#00E87A]/15
-            text-[#7F5AF0] dark:text-[#00E87A]
+            border border-slate-200/70 dark:border-[#00E87A]/15
+            text-slate-700 dark:text-[#00E87A]
             shadow-sm dark:shadow-none
           "
         >
@@ -297,8 +294,8 @@ export default function NavBar() {
             flex items-center justify-center
             transition-colors duration-150
             bg-red-50/90 dark:bg-[#FF5C5C]/10
-            border border-red-100 dark:border-[#FF5C5C]/20
-            !text-red-600 dark:!text-[#FF5C5C]
+            border border-red-200/50 dark:border-[#FF5C5C]/20
+            text-red-600 dark:text-[#FF5C5C]
             shadow-sm dark:shadow-none
           "
         >
