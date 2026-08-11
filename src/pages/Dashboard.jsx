@@ -403,13 +403,22 @@ export default function Dashboard() {
         userChallenges={userChallenges}
       />
 
-      <div className="flex items-center justify-between border-t border-slate-200/80 dark:border-white/10 pt-4 px-1">
-        <p className="text-xs font-semibold text-slate-500 dark:text-[#9DB890]">Explore your progress</p>
-        <div className="flex items-center gap-4">
-          <Link to="/weekly" className="text-xs font-bold text-primary dark:text-green hover:underline">Weekly review</Link>
-          <Link to="/insights" className="text-xs font-bold text-primary dark:text-green hover:underline">Data insights</Link>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] dark:border-[#24312B] dark:bg-[#131B18]">
+        <div className="mb-3">
+          <p className="text-sm font-bold text-slate-800 dark:text-[#E8F0E0]">Explore your progress</p>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-[#9DB890]">Review patterns and turn your recent activity into useful next steps.</p>
         </div>
-      </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Link to="/weekly" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#2A3932] dark:bg-[#111915] dark:hover:border-[#315146] dark:hover:bg-[#16231E]">
+            <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">Weekly review</p>
+            <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-[#9DB890]">Your week at a glance <span className="transition-transform group-hover:translate-x-0.5 inline-block">→</span></p>
+          </Link>
+          <Link to="/insights" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#2A3932] dark:bg-[#111915] dark:hover:border-[#315146] dark:hover:bg-[#16231E]">
+            <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">Data insights</p>
+            <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-[#9DB890]">What your logs show <span className="transition-transform group-hover:translate-x-0.5 inline-block">→</span></p>
+          </Link>
+        </div>
+      </section>
     </div>
   )
 }
