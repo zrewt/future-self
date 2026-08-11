@@ -17,6 +17,7 @@ import Challenges from './pages/Challenges'
 import PublicProfile from './pages/PublicProfile'
 import Insights from './pages/Insights'
 import Landing from './pages/Landing'
+import GetStarted from './pages/GetStarted'
 
 function AppLayout() {
   return (
@@ -37,18 +38,6 @@ function ProtectedLayout() {
   )
 }
 
-function HomeRedirect() {
-  const { user, authReady } = useUserStore()
-  if (!authReady) {
-    return (
-      <div className="app-bg min-h-screen flex items-center justify-center">
-        <Spinner />
-      </div>
-    )
-  }
-  return <Navigate to={user ? '/dashboard' : '/login'} replace />
-}
-
 export default function App() {
   useAuthInit()
   useTheme()
@@ -56,8 +45,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes — no auth needed */}
+        {/* Public / marketing */}
         <Route path="/" element={<Landing />} />
+        <Route path="/get-started" element={<GetStarted />} />
+
+        {/* Auth */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/u/:username" element={<PublicProfile />} />
@@ -72,7 +64,7 @@ export default function App() {
           }
         />
 
-        {/* Protected routes */}
+        {/* Protected app */}
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/log" element={<Log />} />
