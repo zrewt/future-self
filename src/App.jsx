@@ -53,7 +53,6 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/u/:username" element={<PublicProfile />} />
-        <Route path="/insights" element={<Insights />} />
 
         <Route
           path="/onboarding"
@@ -72,6 +71,7 @@ export default function App() {
           <Route path="/weekly" element={<WeeklyReview />} />
           <Route path="/achievements" element={<Achievements />} />
           <Route path="/challenges" element={<Challenges />} />
+          <Route path="/insights" element={<Insights />} />
         </Route>
       </Routes>
     </BrowserRouter>

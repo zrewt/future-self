@@ -1,35 +1,15 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { useUserStore } from '../store/useUserStore'
 import { useTheme } from '../hooks/useTheme'
 import XPBar from '../components/XPBar'
 import Spinner from '../components/ui/Spinner'
 import { IconFlame } from '../components/ui/Icons'
-import FutureProjectionCard from '../components/home/FutureProjectionCard'
-import DailyQuests from '../components/home/DailyQuests'
-import ScoreBreakdown from '../components/home/ScoreBreakdown'
 import EmptyHome from '../components/home/EmptyHome'
-import EngagementHub from '../components/home/EngagementHub'
 import TrendChart from '../components/home/TrendChart'
-import AskYourData from '../components/home/AskYourData'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getSecondsUntilMidnight() {
-  const now = new Date()
-  const midnight = new Date()
-  midnight.setHours(24, 0, 0, 0)
-  return Math.floor((midnight - now) / 1000)
-}
-
-function formatCountdown(seconds) {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-}
 
 function getBestWeekAvg(recentScores) {
   if (!recentScores || recentScores.length < 7) return null
@@ -50,11 +30,11 @@ function getCurrentWeekAvg(recentScores) {
 
 // Per-pillar colors — fixed semantic meaning in both modes
 const PILLAR_COLORS = {
-  nutrition_score: { bar: 'bg-[#00E87A]',  text: 'text-[#00C466]',  glow: 'rgba(0,232,122,0.5)'   },
-  fitness_score:   { bar: 'bg-[#7F5AF0]',  text: 'text-[#7F5AF0]',  glow: 'rgba(127,90,240,0.5)'  },
-  energy_score:    { bar: 'bg-[#4DA6FF]',  text: 'text-[#4DA6FF]',  glow: 'rgba(77,166,255,0.5)'  },
-  focus_score:     { bar: 'bg-[#FFB830]',  text: 'text-[#FFB830]',  glow: 'rgba(255,184,48,0.5)'  },
-  longevity_score: { bar: 'bg-[#FF5C5C]',  text: 'text-[#FF5C5C]',  glow: 'rgba(255,92,92,0.5)'   },
+  nutrition_score: { bar: 'bg-[#0F9F88]',  text: 'text-[#0F9F88]',  glow: 'rgba(15,159,136,0.5)'  },
+  fitness_score:   { bar: 'bg-[#4F46E5]',  text: 'text-[#4F46E5]',  glow: 'rgba(79,70,229,0.5)'   },
+  energy_score:    { bar: 'bg-[#2684C7]',  text: 'text-[#2684C7]',  glow: 'rgba(38,132,199,0.5)'  },
+  focus_score:     { bar: 'bg-[#C47A12]',  text: 'text-[#C47A12]',  glow: 'rgba(196,122,18,0.5)'  },
+  longevity_score: { bar: 'bg-[#D94E4E]',  text: 'text-[#D94E4E]',  glow: 'rgba(217,78,78,0.5)'   },
 }
 
 const PILLAR_CONFIG = {
@@ -107,28 +87,6 @@ function getDailyEdge(log, questsDone, questCount) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function MidnightCountdown() {
-  const [seconds, setSeconds] = useState(getSecondsUntilMidnight)
-  useEffect(() => {
-    const t = setInterval(() => setSeconds(getSecondsUntilMidnight()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  return (
-    <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/8">
-      <div>
-        <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Resets in</p>
-        <p className="text-lg font-extrabold tabular-nums text-slate-700 dark:text-[#E8F0E0] leading-none mt-0.5">
-          {formatCountdown(seconds)}
-        </p>
-      </div>
-      <div className="text-right">
-        <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Today&apos;s log</p>
-        <Link to="/log" className="text-xs font-bold text-[#7F5AF0] dark:text-[#00E87A]">Edit →</Link>
-      </div>
-    </div>
-  )
-}
-
 function ScoreRing({ score }) {
   const { theme } = useTheme()
   const radius = 40
@@ -137,8 +95,8 @@ function ScoreRing({ score }) {
 
   // Light mode: purple scale. Dark mode: green scale.
   const scoreColor = theme === 'dark'
-    ? score >= 70 ? '#00E87A' : score >= 45 ? '#FFB830' : '#FF5C5C'
-    : score >= 70 ? '#7F5AF0' : score >= 45 ? '#7F5AF0' : '#FF5C5C'
+    ? score >= 70 ? '#5EEAD4' : score >= 45 ? '#FBBF24' : '#FB7185'
+    : score >= 70 ? '#4F46E5' : score >= 45 ? '#4F46E5' : '#E05252'
 
   const trackColor = theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9'
 
@@ -229,9 +187,9 @@ function WeekPaceCard({ recentScores }) {
 
   return (
     <div className={`rounded-2xl px-4 py-3 flex items-center justify-between border ${
-      ahead   ? 'bg-[#00E87A]/5 dark:bg-[#00E87A]/8 border-[#00E87A]/20'
-      : onPace ? 'bg-[#7F5AF0]/5 dark:bg-[#7F5AF0]/8 border-[#7F5AF0]/15 dark:border-[#7F5AF0]/20'
-              : 'bg-slate-50 dark:bg-white/4 border-slate-100 dark:border-white/8'
+      ahead   ? 'bg-[#0F9F88]/5 dark:bg-[#131B18] border-[#0F9F88]/20 dark:border-[#315146]'
+      : onPace ? 'bg-indigo-50/60 dark:bg-[#131B18] border-indigo-200/70 dark:border-[#24312B]'
+              : 'bg-slate-50 dark:bg-[#131B18] border-slate-200 dark:border-[#24312B]'
     }`}>
       <div>
         <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 dark:text-[#5A7050] mb-0.5">
@@ -264,14 +222,14 @@ function LogCTA({ todayLog }) {
     <div className={`rounded-2xl p-4 border ${
       isUrgent
         ? 'bg-[#FF5C5C]/8 border-[#FF5C5C]/20'
-        : 'bg-[#7F5AF0]/5 dark:bg-[#00E87A]/5 border-[#7F5AF0]/15 dark:border-[#00E87A]/15'
+        : 'bg-indigo-50/70 dark:bg-green/[0.06] border-indigo-200/70 dark:border-green/20'
     }`}>
       <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-        isUrgent ? 'text-[#FF5C5C]' : 'text-[#7F5AF0] dark:text-[#00E87A]'
+        isUrgent ? 'text-[#FF5C5C]' : 'text-indigo-600 dark:text-green'
       }`}>
         {isUrgent ? '⚡ Log before midnight' : '📋 Daily check-in'}
       </p>
-      <p className="text-sm font-semibold text-slate-700 dark:text-[#9DB890] mb-3">
+      <p className="text-sm font-medium text-slate-700 dark:text-[#B8C9AF] mb-3">
         {isUrgent
           ? 'Your streak resets at midnight — one quick log keeps it alive.'
           : "Log today's habits to unlock your score, XP, and daily insights."}
@@ -281,7 +239,7 @@ function LogCTA({ todayLog }) {
         className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-white transition-all ${
           isUrgent
             ? 'bg-[#FF5C5C] hover:bg-[#FF5C5C]/90'
-            : 'bg-gradient-to-r from-[#7F5AF0] to-[#6D44E0] dark:from-[#00E87A] dark:to-[#7F5AF0] shadow-[0_4px_16px_rgba(127,90,240,0.4)] dark:shadow-[0_4px_16px_rgba(0,232,122,0.4)]'
+            : 'bg-slate-900 hover:bg-slate-800 dark:bg-green dark:hover:bg-green-bright dark:text-slate-950'
         }`}
       >
         {isUrgent ? 'Log now — save your streak 🔥' : "Start today's log →"}
@@ -294,7 +252,7 @@ function LogCTA({ todayLog }) {
 
 export default function Dashboard() {
   const {
-    profile, todayLog, recentScores, recentLogs,
+    profile, todayLog, recentScores,
     trendLogs, achievementEvents, userChallenges,
   } = useUserStore()
 
@@ -332,27 +290,22 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-3 animate-slide-up max-w-lg mx-auto">
+    <div className="space-y-5 animate-slide-up max-w-2xl mx-auto">
 
       {/* ── Hero card ── */}
       <div className="glass-card overflow-hidden">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100 dark:border-white/6">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-white/6">
           <Link to="/profile" className="flex items-center gap-3 min-w-0">
-            <div className="
-              w-10 h-10 rounded-xl text-white flex items-center justify-center text-base font-bold shrink-0
-              bg-gradient-to-br from-[#7F5AF0] to-[#6D44E0]
-              dark:from-[#00E87A] dark:to-[#7F5AF0]
-              shadow-[0_2px_8px_rgba(127,90,240,0.35)]
-              dark:shadow-[0_2px_8px_rgba(0,232,122,0.35)]
-            ">
+            <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-base font-bold shrink-0 bg-slate-900 dark:bg-green dark:text-slate-950">
               {initial}
             </div>
             <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-[#5A7050]">Dashboard</p>
               <p className="font-extrabold text-slate-900 dark:text-[#E8F0E0] text-sm truncate">
                 {profile.username}
               </p>
-              <p className="text-[10px] font-bold text-[#7F5AF0] dark:text-[#00E87A]">
+              <p className="text-[10px] font-semibold text-slate-500 dark:text-[#9DB890]">
                 Lv.{level} · {levelName}
               </p>
             </div>
@@ -379,7 +332,7 @@ export default function Dashboard() {
         </div>
 
         {/* Score ring + pillars */}
-        <div className="px-4 py-4">
+        <div className="px-5 py-5">
           <div className="flex items-center gap-4">
             <ScoreRing score={currentFSS} />
             <div className="flex-1 space-y-2 min-w-0">
@@ -390,29 +343,29 @@ export default function Dashboard() {
           </div>
 
           {todayLog && (
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-3 mt-4 rounded-xl bg-slate-50/80 dark:bg-[#131B18] border border-slate-200 dark:border-[#24312B] px-3 py-2.5">
               {allQuestsDone ? (
-                <div className="flex-1 flex items-center gap-2 py-2 px-3 rounded-xl bg-[#00E87A]/10 border border-[#00E87A]/20">
+                <div className="flex-1 flex items-center gap-2">
                   <span className="text-[#00C466] dark:text-[#00E87A] text-sm">✓</span>
-                  <p className="text-xs font-bold text-[#00C466] dark:text-[#00E87A]">All {quests.length} quests complete today</p>
+                  <p className="text-xs font-bold text-[#00C466] dark:text-[#00E87A]">Daily checklist complete</p>
                 </div>
               ) : (
-                <div className="flex-1 flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/4 border border-slate-100 dark:border-white/8">
+                <div className="flex-1 flex items-center gap-2">
                   <div className="flex gap-0.5">
                     {quests.map((q, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#00E87A]' : 'bg-slate-200 dark:bg-white/15'}`} />
+                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#0F9F88] dark:bg-green' : 'bg-slate-200 dark:bg-white/15'}`} />
                     ))}
                   </div>
-                  <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050]">{habitsDone}/{quests.length} quests</p>
+                  <p className="text-xs font-bold text-slate-600 dark:text-[#9DB890]">{habitsDone} of {quests.length} daily actions complete</p>
                 </div>
               )}
-              <MidnightCountdown />
+              <Link to="/log" className="text-xs font-bold text-primary dark:text-green shrink-0">Edit log</Link>
             </div>
           )}
         </div>
 
         {/* XP bar */}
-        <div className="px-4 pb-4">
+        <div className="px-5 pb-5">
           <XPBar totalXP={profile.total_xp} level={level} />
         </div>
       </div>
@@ -423,14 +376,12 @@ export default function Dashboard() {
       {/* ── Log CTA ── */}
       <LogCTA todayLog={todayLog} />
 
-      {/* ── Focus pillar ── */}
-      {focusPillar && <FocusPillarCard pillar={focusPillar} todayLog={todayLog} />}
-
-      {/* ── Daily insight ── */}
+      {/* ── Today's focus ── */}
       {todayLog && (
         <div className="glass-card p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
+              <p className="section-title mb-1">Today&apos;s focus</p>
               <p className={`text-[10px] font-extrabold uppercase tracking-wide mb-1 ${insightColors[dailyEdge.type]}`}>
                 {dailyEdge.label}
               </p>
@@ -441,19 +392,9 @@ export default function Dashboard() {
                 {dailyEdge.detail}
               </p>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#00E87A]/10 text-[#00C466] dark:text-[#00E87A] shrink-0 mt-0.5">Live</span>
           </div>
         </div>
       )}
-
-      {/* ── Engagement hub ── */}
-      <EngagementHub
-        profile={profile}
-        todayLog={todayLog}
-        recentScores={recentScores}
-        recentLogs={recentLogs}
-        userChallenges={userChallenges}
-      />
 
       {/* ── Trend chart ── */}
       <TrendChart
@@ -462,32 +403,12 @@ export default function Dashboard() {
         userChallenges={userChallenges}
       />
 
-      {/* ── Ask your data ── */}
-      <AskYourData trendLogs={trendLogs} profile={profile} />
-
-      {/* ── Score breakdown ── */}
-      {todayLog && (
-        <ScoreBreakdown scores={{ ...log, mood: log.mood }} streakDays={profile.current_streak} />
-      )}
-
-      {/* ── Daily quests ── */}
-      <DailyQuests todayLog={todayLog} />
-
-      {/* ── Future projection ── */}
-      <FutureProjectionCard recentScores={recentScores} currentScore={currentFSS} />
-
-      {/* ── Nav cards ── */}
-      <div className="grid grid-cols-2 gap-3">
-        <Link to="/weekly" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
-          <span className="text-2xl block mb-2">📊</span>
-          <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050] uppercase tracking-wide mb-0.5">This week</p>
-          <p className="text-sm font-extrabold text-slate-900 dark:text-[#E8F0E0] leading-snug">Weekly review</p>
-        </Link>
-        <Link to="/insights" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
-          <span className="text-2xl block mb-2">🔎</span>
-          <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050] uppercase tracking-wide mb-0.5">Analysis</p>
-          <p className="text-sm font-extrabold text-slate-900 dark:text-[#E8F0E0] leading-snug">Ask your data</p>
-        </Link>
+      <div className="flex items-center justify-between border-t border-slate-200/80 dark:border-white/10 pt-4 px-1">
+        <p className="text-xs font-semibold text-slate-500 dark:text-[#9DB890]">Explore your progress</p>
+        <div className="flex items-center gap-4">
+          <Link to="/weekly" className="text-xs font-bold text-primary dark:text-green hover:underline">Weekly review</Link>
+          <Link to="/insights" className="text-xs font-bold text-primary dark:text-green hover:underline">Data insights</Link>
+        </div>
       </div>
     </div>
   )

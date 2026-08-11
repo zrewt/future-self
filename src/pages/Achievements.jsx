@@ -138,15 +138,15 @@ export default function Achievements() {
               className="rounded-3xl p-4 transition-all duration-200 border"
               style={{
                 background: earned
-                  ? isDark ? 'rgba(22,28,15,0.88)' : 'rgba(255,255,255,0.92)'
-                  : isDark ? 'rgba(255,255,255,0.03)' : 'rgba(248,249,250,0.8)',
+                  ? isDark ? '#16201C' : '#F8FAFF'
+                  : isDark ? '#111915' : '#F8FAFC',
                 borderColor: earned
-                  ? isDark ? 'rgba(0,232,122,0.2)' : 'rgba(127,90,240,0.2)'
-                  : isDark ? 'rgba(255,255,255,0.07)' : '#E2E6DC',
+                  ? isDark ? 'rgba(94,234,212,0.22)' : '#C7D2FE'
+                  : isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0',
                 boxShadow: earned
                   ? isDark
-                    ? 'inset 0 1px 0 rgba(0,232,122,0.08), 0 4px 16px rgba(0,0,0,0.3)'
-                    : '0 1px 2px rgba(15,23,42,0.04), 0 4px 16px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.9)'
+                    ? '0 6px 18px rgba(0,0,0,0.2)'
+                    : '0 4px 14px rgba(79,70,229,0.07)'
                   : 'none',
               }}
             >
@@ -160,13 +160,13 @@ export default function Achievements() {
                 <div className="flex-1 min-w-0">
                   <p
                     className="font-bold leading-tight"
-                    style={{ color: earned ? (isDark ? '#E8F0E0' : '#0D1409') : (isDark ? '#5A7050' : '#94A3B8') }}
+                    style={{ color: earned ? (isDark ? '#E8F0E0' : '#1E293B') : (isDark ? '#5A7050' : '#94A3B8') }}
                   >
                     {ach.name}
                   </p>
                   <p
                     className="text-xs mt-0.5"
-                    style={{ color: isDark ? '#5A7050' : '#94A3B8' }}
+                    style={{ color: earned ? (isDark ? '#9DB890' : '#64748B') : (isDark ? '#5A7050' : '#94A3B8') }}
                   >
                     {ach.desc}
                   </p>
