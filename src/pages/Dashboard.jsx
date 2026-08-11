@@ -95,7 +95,7 @@ function ScoreRing({ score }) {
 
   // Light mode: purple scale. Dark mode: green scale.
   const scoreColor = theme === 'dark'
-    ? score >= 70 ? '#5EEAD4' : score >= 45 ? '#FBBF24' : '#FB7185'
+    ? score >= 70 ? '#00E8C6' : score >= 45 ? '#FFB830' : '#FF7AC6'
     : score >= 70 ? '#4F46E5' : score >= 45 ? '#4F46E5' : '#E05252'
 
   const trackColor = theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9'
@@ -120,7 +120,7 @@ function ScoreRing({ score }) {
 function PillarBar({ label, value, icon, scoreKey, highlight }) {
   const colors = PILLAR_COLORS[scoreKey] || { bar: 'bg-slate-300', text: 'text-slate-500' }
   return (
-    <div className={`flex-1 min-w-0 rounded-lg px-1 py-0.5 transition-all ${highlight ? 'ring-1 ring-[#7F5AF0]/30 dark:ring-[#00E87A]/30 bg-[#7F5AF0]/5 dark:bg-[#00E87A]/5' : ''}`}>
+    <div className={`flex-1 min-w-0 rounded-lg px-1 py-0.5 transition-all ${highlight ? 'ring-1 ring-[#7F5AF0]/30 dark:ring-[#00E8C6]/30 bg-[#7F5AF0]/5 dark:bg-[#00E8C6]/5' : ''}`}>
       <div className="flex items-center justify-between mb-1">
         <span className="text-[11px] leading-none">{icon}</span>
         <p className={`text-[10px] font-extrabold tabular-nums ${colors.text}`}>{value}</p>
@@ -187,9 +187,9 @@ function WeekPaceCard({ recentScores }) {
 
   return (
     <div className={`rounded-2xl px-4 py-3 flex items-center justify-between border ${
-      ahead   ? 'bg-[#0F9F88]/5 dark:bg-[#131B18] border-[#0F9F88]/20 dark:border-[#315146]'
-      : onPace ? 'bg-indigo-50/60 dark:bg-[#131B18] border-indigo-200/70 dark:border-[#24312B]'
-              : 'bg-slate-50 dark:bg-[#131B18] border-slate-200 dark:border-[#24312B]'
+      ahead   ? 'bg-[#0F9F88]/5 dark:bg-[#141220] border-[#0F9F88]/20 dark:border-[#3B3560]'
+      : onPace ? 'bg-indigo-50/60 dark:bg-[#141220] border-indigo-200/70 dark:border-[#29263B]'
+              : 'bg-slate-50 dark:bg-[#141220] border-slate-200 dark:border-[#29263B]'
     }`}>
       <div>
         <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 dark:text-[#5A7050] mb-0.5">
@@ -197,7 +197,7 @@ function WeekPaceCard({ recentScores }) {
         </p>
         <p className={`text-sm font-extrabold ${
           ahead   ? 'text-[#00C466]'
-          : onPace ? 'text-[#7F5AF0] dark:text-[#00E87A]'
+          : onPace ? 'text-[#7F5AF0] dark:text-[#00E8C6]'
                   : 'text-slate-500 dark:text-[#9DB890]'
         }`}>
           {ahead
@@ -222,7 +222,7 @@ function LogCTA({ todayLog }) {
     <div className={`rounded-2xl p-4 border ${
       isUrgent
         ? 'bg-[#FF5C5C]/8 border-[#FF5C5C]/20'
-        : 'bg-indigo-50/70 dark:bg-green/[0.06] border-indigo-200/70 dark:border-green/20'
+        : 'bg-indigo-50/70 dark:bg-[#7F5AF0]/10 border-indigo-200/70 dark:border-[#7F5AF0]/25'
     }`}>
       <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
         isUrgent ? 'text-[#FF5C5C]' : 'text-indigo-600 dark:text-green'
@@ -239,7 +239,7 @@ function LogCTA({ todayLog }) {
         className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-white transition-all ${
           isUrgent
             ? 'bg-[#FF5C5C] hover:bg-[#FF5C5C]/90'
-            : 'bg-slate-900 hover:bg-slate-800 dark:bg-green dark:hover:bg-green-bright dark:text-slate-950'
+            : 'bg-slate-900 hover:bg-slate-800 dark:bg-[#7F5AF0] dark:hover:bg-[#8B6EF3]'
         }`}
       >
         {isUrgent ? 'Log now — save your streak 🔥' : "Start today's log →"}
@@ -284,8 +284,8 @@ export default function Dashboard() {
   ]
 
   const insightColors = {
-    good:      'text-[#00C466] dark:text-[#00E87A]',
-    neutral:   'text-[#7F5AF0] dark:text-[#00E87A]',
+    good:      'text-[#00C466] dark:text-[#00E8C6]',
+    neutral:   'text-[#7F5AF0] dark:text-[#C4B5FD]',
     attention: 'text-[#FF5C5C]',
   }
 
@@ -297,7 +297,7 @@ export default function Dashboard() {
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-white/6">
           <Link to="/profile" className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-base font-bold shrink-0 bg-slate-900 dark:bg-green dark:text-slate-950">
+            <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-base font-bold shrink-0 bg-slate-900 dark:bg-[#7F5AF0]">
               {initial}
             </div>
             <div className="min-w-0">
@@ -323,7 +323,7 @@ export default function Dashboard() {
             {(profile.streak_shields ?? 0) > 0 && (
               <div className="text-right">
                 <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Shields</p>
-                <p className="text-base font-extrabold tabular-nums text-[#7F5AF0] dark:text-[#00E87A]">
+                <p className="text-base font-extrabold tabular-nums text-[#7F5AF0] dark:text-[#00E8C6]">
                   🛡️ {profile.streak_shields}
                 </p>
               </div>
@@ -343,17 +343,17 @@ export default function Dashboard() {
           </div>
 
           {todayLog && (
-            <div className="flex items-center gap-3 mt-4 rounded-xl bg-slate-50/80 dark:bg-[#131B18] border border-slate-200 dark:border-[#24312B] px-3 py-2.5">
+            <div className="flex items-center gap-3 mt-4 rounded-xl bg-slate-50/80 dark:bg-[#141220] border border-slate-200 dark:border-[#29263B] px-3 py-2.5">
               {allQuestsDone ? (
                 <div className="flex-1 flex items-center gap-2">
-                  <span className="text-[#00C466] dark:text-[#00E87A] text-sm">✓</span>
-                  <p className="text-xs font-bold text-[#00C466] dark:text-[#00E87A]">Daily checklist complete</p>
+                  <span className="text-[#00C466] dark:text-[#00E8C6] text-sm">✓</span>
+                  <p className="text-xs font-bold text-[#00C466] dark:text-[#00E8C6]">Daily checklist complete</p>
                 </div>
               ) : (
                 <div className="flex-1 flex items-center gap-2">
                   <div className="flex gap-0.5">
                     {quests.map((q, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#0F9F88] dark:bg-green' : 'bg-slate-200 dark:bg-white/15'}`} />
+                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#0F9F88] dark:bg-[#00E8C6]' : 'bg-slate-200 dark:bg-white/15'}`} />
                     ))}
                   </div>
                   <p className="text-xs font-bold text-slate-600 dark:text-[#9DB890]">{habitsDone} of {quests.length} daily actions complete</p>
@@ -403,17 +403,17 @@ export default function Dashboard() {
         userChallenges={userChallenges}
       />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] dark:border-[#24312B] dark:bg-[#131B18]">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] dark:border-[#29263B] dark:bg-[#141220]">
         <div className="mb-3">
           <p className="text-sm font-bold text-slate-800 dark:text-[#E8F0E0]">Explore your progress</p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-[#9DB890]">Review patterns and turn your recent activity into useful next steps.</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Link to="/weekly" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#2A3932] dark:bg-[#111915] dark:hover:border-[#315146] dark:hover:bg-[#16231E]">
+          <Link to="/weekly" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#302D45] dark:bg-[#11101C] dark:hover:border-[#4A4270] dark:hover:bg-[#1B1929]">
             <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">Weekly review</p>
             <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-[#9DB890]">Your week at a glance <span className="transition-transform group-hover:translate-x-0.5 inline-block">→</span></p>
           </Link>
-          <Link to="/insights" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#2A3932] dark:bg-[#111915] dark:hover:border-[#315146] dark:hover:bg-[#16231E]">
+          <Link to="/insights" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#302D45] dark:bg-[#11101C] dark:hover:border-[#4A4270] dark:hover:bg-[#1B1929]">
             <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">Data insights</p>
             <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-[#9DB890]">What your logs show <span className="transition-transform group-hover:translate-x-0.5 inline-block">→</span></p>
           </Link>

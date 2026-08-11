@@ -12,8 +12,8 @@
   }
 
   .dark body {
-    background: #0D1210;
-    color: #E8F0E0;
+    background: #0B0A14;
+    color: #F1EEF9;
   }
 
   /* ── Range Inputs ── */
@@ -89,8 +89,9 @@
 
   .dark .app-bg {
     background:
-      radial-gradient(ellipse 70% 45% at 50% -10%, rgba(45, 212, 191, 0.06) 0%, transparent 65%),
-      #0D1210;
+      radial-gradient(ellipse 55% 42% at 10% -10%, rgba(127, 90, 240, 0.16) 0%, transparent 66%),
+      radial-gradient(ellipse 45% 35% at 100% 0%, rgba(255, 122, 198, 0.10) 0%, transparent 60%),
+      #0B0A14;
   }
 
   /* ══════════════════════════════════════════
@@ -122,8 +123,8 @@
 
   .dark .glass-card {
     background:
-      rgba(19, 27, 23, 0.94);
-    border-color: #24312B;
+      rgba(20, 18, 32, 0.92);
+    border-color: #29263B;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       inset 0 -1px 0 rgba(0, 0, 0, 0.2),
@@ -132,7 +133,7 @@
   }
 
   .dark .glass-card:hover {
-    border-color: #315146;
+    border-color: rgba(127, 90, 240, 0.38);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       0 10px 28px rgba(0, 0, 0, 0.32);
@@ -177,16 +178,16 @@
   }
 
   .dark .btn-primary {
-    background: linear-gradient(135deg, #00E87A 0%, #7F5AF0 100%);
+    background: linear-gradient(135deg, #FF7AC6 0%, #7F5AF0 52%, #00E8C6 100%);
     color: #ffffff;
     box-shadow:
-      0 4px 20px rgba(0, 232, 122, 0.35),
+      0 4px 20px rgba(127, 90, 240, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .dark .btn-primary:hover {
     box-shadow:
-      0 6px 30px rgba(0, 232, 122, 0.5),
+      0 6px 30px rgba(127, 90, 240, 0.5),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
@@ -207,16 +208,16 @@
   }
 
   .dark .btn-secondary {
-    background: rgba(0, 232, 122, 0.06);
-    border-color: rgba(0, 232, 122, 0.2);
-    color: #00E87A;
+    background: rgba(0, 232, 198, 0.07);
+    border-color: rgba(0, 232, 198, 0.22);
+    color: #00E8C6;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .dark .btn-secondary:hover {
-    background: rgba(0, 232, 122, 0.12);
-    border-color: rgba(0, 232, 122, 0.38);
-    color: #1AFF8C;
+    background: rgba(0, 232, 198, 0.12);
+    border-color: rgba(0, 232, 198, 0.38);
+    color: #00E8C6;
   }
 
   .btn-ghost {
@@ -231,12 +232,12 @@
   }
 
   .dark .btn-ghost {
-    color: #9DB890;
+    color: #B4B7D4;
   }
 
   .dark .btn-ghost:hover {
-    background: rgba(0, 232, 122, 0.07);
-    color: #00E87A;
+    background: rgba(127, 90, 240, 0.12);
+    color: #00E8C6;
   }
 
   /* ══════════════════════════════════════════
@@ -434,13 +435,13 @@
      DARK MODE TEXT / BG OVERRIDES
   ══════════════════════════════════════════ */
   .dark .app-bg .text-slate-900,
-  .dark .app-bg .text-slate-800 { color: #E8F0E0; }
+  .dark .app-bg .text-slate-800 { color: #F1EEF9; }
 
   .dark .app-bg .text-slate-700,
-  .dark .app-bg .text-slate-600 { color: #9DB890; }
+  .dark .app-bg .text-slate-600 { color: #B4B7D4; }
 
   .dark .app-bg .text-slate-500,
-  .dark .app-bg .text-slate-400 { color: #5A7050; }
+  .dark .app-bg .text-slate-400 { color: #8A8FA3; }
 
   .dark .app-bg .bg-white,
   .dark .app-bg .bg-white\/80,
@@ -457,26 +458,26 @@
 
   /* Primary overrides in dark → green */
   .dark .app-bg .text-primary,
-  .dark .app-bg .text-primary-700 { color: #00E87A; }
+  .dark .app-bg .text-primary-700 { color: #00E8C6; }
 
   .dark .app-bg .bg-primary,
-  .dark .app-bg .bg-primary-600 { background-color: #00E87A !important; }
+  .dark .app-bg .bg-primary-600 { background-color: #00E8C6 !important; }
 
   .dark .app-bg .bg-primary-50,
   .dark .app-bg .bg-primary-50\/30,
-  .dark .app-bg .bg-primary\/10 { background-color: rgba(0, 232, 122, 0.08); }
+  .dark .app-bg .bg-primary\/10 { background-color: rgba(0, 232, 198, 0.08); }
 
   .dark .app-bg .border-primary\/20,
-  .dark .app-bg .border-primary-200 { border-color: rgba(0, 232, 122, 0.2); }
+  .dark .app-bg .border-primary-200 { border-color: rgba(0, 232, 198, 0.2); }
 
-  .dark .app-bg .shadow-primary\/25 { box-shadow: 0 4px 12px rgba(0, 232, 122, 0.25); }
+  .dark .app-bg .shadow-primary\/25 { box-shadow: 0 4px 12px rgba(0, 232, 198, 0.25); }
 
   /* Teal overrides in dark */
   .dark .app-bg .text-teal,
-  .dark .app-bg .text-teal-500 { color: #00E87A; }
+  .dark .app-bg .text-teal-500 { color: #00E8C6; }
 
-  .dark .app-bg .bg-teal\/10 { background-color: rgba(0, 232, 122, 0.08); }
-  .dark .app-bg .border-teal\/20 { border-color: rgba(0, 232, 122, 0.18); }
+  .dark .app-bg .bg-teal\/10 { background-color: rgba(0, 232, 198, 0.08); }
+  .dark .app-bg .border-teal\/20 { border-color: rgba(0, 232, 198, 0.18); }
 
   /* Coral overrides in dark */
   .dark .app-bg .text-coral { color: #FF5C5C; }
