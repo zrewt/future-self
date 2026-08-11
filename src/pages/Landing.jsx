@@ -178,14 +178,22 @@ export default function Landing() {
             Dashboard →
           </Link>
         ) : (
-          <Link to="/get-started" style={{
-            background: 'linear-gradient(135deg, #00E87A, #7F5AF0)',
-            color: '#fff', fontWeight: 700, fontSize: 13,
-            padding: '9px 20px', borderRadius: 99, textDecoration: 'none',
-            boxShadow: '0 0 20px rgba(0,232,122,0.3)',
-          }}>
-            Find My Score →
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Link to="/login" style={{
+              color: '#9DB890', fontWeight: 600, fontSize: 13,
+              textDecoration: 'none',
+            }}>
+              Sign in
+            </Link>
+            <Link to="/get-started" style={{
+              background: 'linear-gradient(135deg, #00E87A, #7F5AF0)',
+              color: '#fff', fontWeight: 700, fontSize: 13,
+              padding: '9px 20px', borderRadius: 99, textDecoration: 'none',
+              boxShadow: '0 0 20px rgba(0,232,122,0.3)',
+            }}>
+              Find My Score →
+            </Link>
+          </div>
         )}
       </nav>
 
@@ -256,13 +264,14 @@ export default function Landing() {
               }}>
                 Find My Score →
               </Link>
-              <a href="#how" style={{
-                color: '#5A7050', fontSize: 15, fontWeight: 500,
+              <Link to="/login" style={{
+                color: '#9DB890', fontSize: 15, fontWeight: 600,
                 textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
-                padding: '16px 8px',
+                padding: '16px 8px', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 99, paddingLeft: 24, paddingRight: 24,
               }}>
-                See how it works ↓
-              </a>
+                Already have an account? Sign in
+              </Link>
             </>
           )}
         </div>
