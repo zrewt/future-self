@@ -72,7 +72,7 @@ function Reveal({ children, delay = 0, scale = false }) {
           ? 'translateY(0) scale(1)'
           : `translateY(28px) scale(${scale ? 0.95 : 1})`,
         transition: `opacity 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1),
-                      transform 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1)`,
+          transform 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1)`,
       }}
     >
       {children}
@@ -394,7 +394,7 @@ function FloatingBlobs({ scrollY }) {
           }
 
           @media (max-width: 640px) {
-            .qyven-desktop-only {
+            .qyven-mobile-blob {
               display: none !important;
             }
           }
@@ -453,6 +453,7 @@ export default function Landing() {
 
   return (
     <div
+      className="qyven-landing"
       style={{
         minHeight: '100vh',
         background: '#0B0A14',
@@ -461,6 +462,8 @@ export default function Landing() {
           "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         overflowX: 'hidden',
         position: 'relative',
+        width: '100%',
+        maxWidth: '100%',
       }}
     >
       <FloatingBlobs scrollY={scrollY} />
@@ -468,6 +471,7 @@ export default function Landing() {
       {/* ───────────────── NAV ───────────────── */}
 
       <nav
+        className="qyven-nav"
         style={{
           position: 'fixed',
           top: 0,
@@ -523,11 +527,13 @@ export default function Landing() {
 
           <Link
             to={isLoggedIn ? '/dashboard' : '/get-started'}
+            className="qyven-nav-cta"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               padding: '9px 18px',
+              minHeight: 40,
               borderRadius: 999,
               background:
                 'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
@@ -537,6 +543,7 @@ export default function Landing() {
               fontWeight: 800,
               boxShadow:
                 '0 0 26px rgba(127,90,240,0.3)',
+              whiteSpace: 'nowrap',
             }}
           >
             {isLoggedIn
@@ -549,10 +556,10 @@ export default function Landing() {
       {/* ───────────────── HERO ───────────────── */}
 
       <section
+        className="qyven-hero"
         style={{
           minHeight: '100vh',
-          padding:
-            '125px 20px 70px',
+          padding: '125px 20px 70px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -561,6 +568,7 @@ export default function Landing() {
         }}
       >
         <div
+          className="qyven-hero-grid"
           style={{
             width: '100%',
             maxWidth: 1100,
@@ -573,7 +581,7 @@ export default function Landing() {
         >
           {/* Hero copy */}
 
-          <div>
+          <div className="qyven-hero-copy">
             <Reveal>
               <div
                 style={{
@@ -610,6 +618,7 @@ export default function Landing() {
 
             <Reveal delay={80}>
               <h1
+                className="qyven-hero-title"
                 style={{
                   margin: 0,
                   fontSize:
@@ -640,6 +649,7 @@ export default function Landing() {
 
             <Reveal delay={160}>
               <p
+                className="qyven-hero-description"
                 style={{
                   margin:
                     '25px 0 0',
@@ -658,6 +668,7 @@ export default function Landing() {
 
             <Reveal delay={230}>
               <div
+                className="qyven-hero-actions"
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -672,12 +683,14 @@ export default function Landing() {
                       ? '/dashboard'
                       : '/get-started'
                   }
+                  className="qyven-main-cta"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding:
                       '16px 25px',
+                    minHeight: 52,
                     borderRadius: 999,
                     background:
                       'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
@@ -709,6 +722,7 @@ export default function Landing() {
 
             <Reveal delay={300}>
               <div
+                className="qyven-trust-points"
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -730,15 +744,16 @@ export default function Landing() {
 
           <Reveal delay={180} scale>
             <div
+              className="qyven-score-preview-wrapper"
               style={{
                 position: 'relative',
                 maxWidth: 390,
                 width: '100%',
-                margin:
-                  '0 auto',
+                margin: '0 auto',
               }}
             >
               <div
+                className="qyven-score-glow"
                 style={{
                   position: 'absolute',
                   inset: -40,
@@ -751,6 +766,7 @@ export default function Landing() {
               />
 
               <div
+                className="qyven-score-card"
                 style={{
                   position: 'relative',
                   padding: 25,
@@ -830,6 +846,7 @@ export default function Landing() {
                 </div>
 
                 <div
+                  className="qyven-score-ring-container"
                   style={{
                     display: 'flex',
                     justifyContent:
@@ -1003,6 +1020,7 @@ export default function Landing() {
       {/* ───────────────── HOW IT WORKS ───────────────── */}
 
       <section
+        className="qyven-section"
         style={{
           padding: '70px 24px 100px',
           maxWidth: 1050,
@@ -1170,6 +1188,7 @@ export default function Landing() {
       {/* ───────────────── TRAJECTORY ───────────────── */}
 
       <section
+        className="qyven-section"
         style={{
           padding: '20px 24px 110px',
           maxWidth: 1050,
@@ -1180,6 +1199,7 @@ export default function Landing() {
       >
         <Reveal scale>
           <div
+            className="qyven-trajectory-card"
             style={{
               borderRadius: 30,
               padding:
@@ -1267,6 +1287,7 @@ export default function Landing() {
             {/* Trajectory chart */}
 
             <div
+              className="qyven-chart"
               style={{
                 maxWidth: 650,
                 margin: '0 auto',
@@ -1444,6 +1465,7 @@ export default function Landing() {
             {!isLoggedIn && (
               <Link
                 to="/get-started"
+                className="qyven-secondary-cta"
                 style={{
                   display:
                     'inline-flex',
@@ -1453,6 +1475,7 @@ export default function Landing() {
                     'center',
                   padding:
                     '14px 25px',
+                  minHeight: 48,
                   borderRadius: 999,
                   background:
                     'rgba(255,255,255,0.08)',
@@ -1475,6 +1498,7 @@ export default function Landing() {
       {/* ───────────────── WHAT YOU'LL SEE ───────────────── */}
 
       <section
+        className="qyven-section"
         style={{
           padding: '20px 24px 100px',
           maxWidth: 1050,
@@ -1620,6 +1644,7 @@ export default function Landing() {
       {/* ───────────────── FIVE PILLARS ───────────────── */}
 
       <section
+        className="qyven-section"
         style={{
           padding: '20px 24px 100px',
           maxWidth: 1050,
@@ -1731,6 +1756,7 @@ export default function Landing() {
       {/* ───────────────── FINAL CTA ───────────────── */}
 
       <section
+        className="qyven-final-cta"
         style={{
           padding:
             '70px 24px 120px',
@@ -1811,6 +1837,7 @@ export default function Landing() {
                   ? '/dashboard'
                   : '/get-started'
               }
+              className="qyven-final-button"
               style={{
                 display:
                   'inline-flex',
@@ -1820,6 +1847,7 @@ export default function Landing() {
                   'center',
                 padding:
                   '17px 32px',
+                minHeight: 54,
                 borderRadius: 999,
                 background:
                   'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
@@ -1853,6 +1881,7 @@ export default function Landing() {
       {/* ───────────────── FOOTER ───────────────── */}
 
       <footer
+        className="qyven-footer"
         style={{
           borderTop:
             '1px solid rgba(255,255,255,0.06)',
@@ -1910,32 +1939,282 @@ export default function Landing() {
         )}
       </footer>
 
-      {/* ───────────────── RESPONSIVE CSS ───────────────── */}
+      {/* ───────────────── MOBILE / PWA RESPONSIVE CSS ───────────────── */}
 
       <style>
         {`
+          * {
+            box-sizing: border-box;
+          }
+
+          html {
+            overflow-x: hidden;
+            width: 100%;
+          }
+
+          body {
+            overflow-x: hidden;
+            width: 100%;
+            margin: 0;
+          }
+
           @media (max-width: 780px) {
-            nav {
+            .qyven-nav {
+              height: 60px !important;
               padding-left: 16px !important;
               padding-right: 16px !important;
             }
-          }
 
-          @media (max-width: 720px) {
-            section {
-              scroll-margin-top: 70px;
+            .qyven-nav > a:first-child {
+              font-size: 21px !important;
+            }
+
+            .qyven-nav-cta {
+              padding: 8px 14px !important;
+              min-height: 38px !important;
+              font-size: 11px !important;
+            }
+
+            .qyven-desktop-only {
+              display: none !important;
+            }
+
+            .qyven-hero {
+              min-height: auto !important;
+              padding:
+                105px 18px 55px !important;
+              display: block !important;
+            }
+
+            .qyven-hero-grid {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 42px !important;
+              align-items: stretch !important;
+            }
+
+            .qyven-hero-copy {
+              width: 100% !important;
+              text-align: left !important;
+            }
+
+            .qyven-hero-title {
+              font-size:
+                clamp(42px, 11vw, 56px) !important;
+              line-height: 0.98 !important;
+              letter-spacing: -0.065em !important;
+              max-width: 100% !important;
+            }
+
+            .qyven-hero-description {
+              font-size: 16px !important;
+              line-height: 1.6 !important;
+              max-width: 100% !important;
+              margin-top: 20px !important;
+            }
+
+            .qyven-hero-actions {
+              margin-top: 25px !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: stretch !important;
+              gap: 10px !important;
+            }
+
+            .qyven-main-cta {
+              width: 100% !important;
+              min-height: 54px !important;
+              padding:
+                15px 20px !important;
+              font-size: 14px !important;
+            }
+
+            .qyven-hero-actions > span {
+              text-align: center !important;
+              width: 100% !important;
+              font-size: 11px !important;
+            }
+
+            .qyven-trust-points {
+              justify-content: center !important;
+              gap: 8px 14px !important;
+              margin-top: 19px !important;
+              font-size: 10px !important;
+              line-height: 1.5 !important;
+            }
+
+            .qyven-score-preview-wrapper {
+              max-width: 100% !important;
+              width: 100% !important;
+              margin: 0 auto !important;
+            }
+
+            .qyven-score-glow {
+              inset: -20px !important;
+            }
+
+            .qyven-score-card {
+              padding: 20px !important;
+              border-radius: 24px !important;
+            }
+
+            .qyven-score-ring-container {
+              padding:
+                8px 0 20px !important;
+            }
+
+            .qyven-score-ring-container > div {
+              transform: scale(0.9);
+            }
+
+            .qyven-section {
+              padding-left: 18px !important;
+              padding-right: 18px !important;
+            }
+
+            .qyven-trajectory-card {
+              padding:
+                42px 16px 30px !important;
+              border-radius: 24px !important;
+            }
+
+            .qyven-chart {
+              width: 100% !important;
+              height: 185px !important;
+              padding:
+                12px 4px 38px !important;
+            }
+
+            .qyven-chart svg {
+              min-width: 0 !important;
+            }
+
+            .qyven-secondary-cta {
+              width: 100% !important;
+              min-height: 50px !important;
+            }
+
+            .qyven-final-cta {
+              padding:
+                55px 18px 90px !important;
+            }
+
+            .qyven-final-button {
+              width: 100% !important;
+              max-width: 420px !important;
+              padding:
+                16px 20px !important;
+              min-height: 54px !important;
+              font-size: 14px !important;
+            }
+
+            .qyven-footer {
+              padding:
+                24px 18px !important;
+              flex-direction: column !important;
+              text-align: center !important;
+              gap: 14px !important;
+            }
+
+            .qyven-footer p {
+              max-width: 280px !important;
+              line-height: 1.5 !important;
             }
           }
 
-          @media (max-width: 700px) {
-            .hero-grid {
-              grid-template-columns: 1fr !important;
+          @media (max-width: 480px) {
+            .qyven-hero {
+              padding:
+                96px 16px 48px !important;
+            }
+
+            .qyven-hero-grid {
+              gap: 34px !important;
+            }
+
+            .qyven-hero-title {
+              font-size:
+                clamp(39px, 11.5vw, 51px) !important;
+            }
+
+            .qyven-hero-copy > div:first-child {
+              font-size: 8px !important;
+              padding:
+                6px 10px !important;
+              letter-spacing:
+                0.1em !important;
+              margin-bottom: 18px !important;
+            }
+
+            .qyven-score-card {
+              padding: 18px !important;
+              border-radius: 22px !important;
+            }
+
+            .qyven-score-ring-container > div {
+              transform: scale(0.82);
+            }
+
+            .qyven-score-ring-container {
+              height: 168px !important;
+              align-items: center !important;
+            }
+
+            .qyven-section {
+              padding-left: 16px !important;
+              padding-right: 16px !important;
+            }
+
+            .qyven-trajectory-card {
+              padding:
+                38px 14px 28px !important;
+            }
+
+            .qyven-chart {
+              height: 165px !important;
             }
           }
 
-          @media (max-width: 520px) {
-            h1 {
-              font-size: 43px !important;
+          @media (max-width: 360px) {
+            .qyven-nav-cta {
+              padding:
+                7px 11px !important;
+              font-size: 10px !important;
+            }
+
+            .qyven-hero-title {
+              font-size: 38px !important;
+            }
+
+            .qyven-score-card {
+              padding: 15px !important;
+            }
+
+            .qyven-trust-points {
+              font-size: 9px !important;
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+              scroll-behavior: auto !important;
+              animation-duration: 0.01ms !important;
+              animation-iteration-count: 1 !important;
+              transition-duration: 0.01ms !important;
+            }
+          }
+
+          @supports (padding: env(safe-area-inset-bottom)) {
+            .qyven-footer {
+              padding-bottom:
+                max(24px, env(safe-area-inset-bottom)) !important;
+            }
+
+            .qyven-nav {
+              padding-top:
+                env(safe-area-inset-top) !important;
             }
           }
         `}
