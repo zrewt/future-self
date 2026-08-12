@@ -2,101 +2,223 @@ import { Link } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { useUserStore } from '../store/useUserStore'
 
-// ── Scroll-linked parallax value ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Scroll-linked parallax
+// ─────────────────────────────────────────────────────────────────────────────
+
 function useParallax() {
   const [scrollY, setScrollY] = useState(0)
+
   useEffect(() => {
     let ticking = false
+
     const onScroll = () => {
       if (!ticking) {
-        requestAnimationFrame(() => { setScrollY(window.scrollY); ticking = false })
+        requestAnimationFrame(() => {
+          setScrollY(window.scrollY)
+          ticking = false
+        })
         ticking = true
       }
     }
+
     window.addEventListener('scroll', onScroll, { passive: true })
+
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
   return scrollY
 }
 
-// ── Scroll reveal (fade + scale + slide) ─────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Reveal animation
+// ─────────────────────────────────────────────────────────────────────────────
+
 function useReveal(threshold = 0.15) {
   const ref = useRef(null)
   const [visible, setVisible] = useState(false)
+
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setVisible(true); obs.disconnect() }
-    }, { threshold })
-    obs.observe(el)
-    return () => obs.disconnect()
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold }
+    )
+
+    observer.observe(el)
+
+    return () => observer.disconnect()
   }, [threshold])
+
   return [ref, visible]
 }
 
 function Reveal({ children, delay = 0, scale = false }) {
   const [ref, visible] = useReveal()
+
   return (
-    <div ref={ref} style={{
-      opacity: visible ? 1 : 0,
-      transform: visible
-        ? 'translateY(0) scale(1)'
-        : `translateY(28px) scale(${scale ? 0.94 : 1})`,
-      transition: `opacity 0.7s ${delay}ms cubic-bezier(0.16,1,0.3,1), transform 0.7s ${delay}ms cubic-bezier(0.16,1,0.3,1)`,
-    }}>
+    <div
+      ref={ref}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible
+          ? 'translateY(0) scale(1)'
+          : `translateY(28px) scale(${scale ? 0.95 : 1})`,
+        transition: `opacity 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1),
+                      transform 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1)`,
+      }}
+    >
       {children}
     </div>
   )
 }
 
-// ── Animated score ring ───────────────────────────────────────────────────────
-function ScoreRing({ score = 67, size = 150, strokeWidth = 8 }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Animated score ring
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ScoreRing({
+  score = 67,
+  size = 170,
+  strokeWidth = 8,
+}) {
   const [displayed, setDisplayed] = useState(0)
-  const r = (size / 2) - strokeWidth
-  const circ = 2 * Math.PI * r
-  const dash = (displayed / 100) * circ
+
+  const radius = size / 2 - strokeWidth
+  const circumference = 2 * Math.PI * radius
+  const dash = (displayed / 100) * circumference
 
   useEffect(() => {
+    let frame
     let start = null
-    const dur = 1600
-    const step = (ts) => {
-      if (!start) start = ts
-      const p = Math.min((ts - start) / dur, 1)
-      const ease = 1 - Math.pow(1 - p, 3)
-      setDisplayed(Math.round(ease * score))
-      if (p < 1) requestAnimationFrame(step)
+
+    const duration = 1500
+
+    const animate = (timestamp) => {
+      if (!start) start = timestamp
+
+      const progress = Math.min(
+        (timestamp - start) / duration,
+        1
+      )
+
+      const eased = 1 - Math.pow(1 - progress, 3)
+
+      setDisplayed(Math.round(eased * score))
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate)
+      }
     }
-    const t = setTimeout(() => requestAnimationFrame(step), 300)
-    return () => clearTimeout(t)
+
+    const timeout = setTimeout(() => {
+      frame = requestAnimationFrame(animate)
+    }, 400)
+
+    return () => {
+      clearTimeout(timeout)
+      if (frame) cancelAnimationFrame(frame)
+    }
   }, [score])
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg style={{ transform: 'rotate(-90deg)', position: 'absolute' }} width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <div
+      style={{
+        width: size,
+        height: size,
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{
+          position: 'absolute',
+          transform: 'rotate(-90deg)',
+        }}
+      >
         <defs>
-          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient
+            id="landingScoreGradient"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
             <stop offset="0%" stopColor="#FF7AC6" />
             <stop offset="50%" stopColor="#7F5AF0" />
             <stop offset="100%" stopColor="#00E8C6" />
           </linearGradient>
         </defs>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="url(#ringGrad)"
-          strokeWidth={strokeWidth} strokeLinecap="round"
-          strokeDasharray={`${dash} ${circ}`}
-          style={{ transition: 'stroke-dasharray 0.08s linear', filter: 'drop-shadow(0 0 10px rgba(127,90,240,0.4))' }}
+
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.07)"
+          strokeWidth={strokeWidth}
+        />
+
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="url(#landingScoreGradient)"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+          style={{
+            filter: 'drop-shadow(0 0 12px rgba(127,90,240,0.45))',
+            transition: 'stroke-dasharray 0.08s linear',
+          }}
         />
       </svg>
-      <div className="text-center z-10">
-        <div className="font-extrabold tabular-nums leading-none" style={{
-          fontSize: size * 0.3,
-          background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-        }}>
+
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontSize: size * 0.3,
+            lineHeight: 0.95,
+            fontWeight: 800,
+            letterSpacing: '-0.06em',
+            background:
+              'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
           {displayed}
         </div>
-        <div style={{ fontSize: size * 0.065, color: '#8A8FA3', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 2 }}>
+
+        <div
+          style={{
+            marginTop: 7,
+            fontSize: size * 0.06,
+            fontWeight: 800,
+            color: '#858AA5',
+            letterSpacing: '0.13em',
+          }}
+        >
           FSS
         </div>
       </div>
@@ -104,471 +226,1720 @@ function ScoreRing({ score = 67, size = 150, strokeWidth = 8 }) {
   )
 }
 
-function PillarBar({ icon, label, value, color, delay = 0 }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Pillar mini bar
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PillarBar({
+  icon,
+  label,
+  value,
+  color,
+  delay = 0,
+}) {
   const [width, setWidth] = useState(0)
+
   useEffect(() => {
-    const t = setTimeout(() => setWidth(value), 600 + delay)
-    return () => clearTimeout(t)
+    const timeout = setTimeout(() => {
+      setWidth(value)
+    }, 650 + delay)
+
+    return () => clearTimeout(timeout)
   }, [value, delay])
+
   return (
-    <div className="flex items-center gap-3">
-      <span style={{ fontSize: 14, width: 22, flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#9DA3C4', width: 62, flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', borderRadius: 99, width: `${width}%`, background: color,
-          boxShadow: `0 0 10px ${color}99`,
-          transition: 'width 1.1s cubic-bezier(0.16,1,0.3,1)',
-        }} />
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '22px 66px 1fr 28px',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      <span style={{ fontSize: 13 }}>{icon}</span>
+
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          color: '#9499B5',
+        }}
+      >
+        {label}
+      </span>
+
+      <div
+        style={{
+          height: 5,
+          background: 'rgba(255,255,255,0.06)',
+          borderRadius: 999,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${width}%`,
+            borderRadius: 999,
+            background: color,
+            boxShadow: `0 0 10px ${color}88`,
+            transition:
+              'width 1.15s cubic-bezier(0.16,1,0.3,1)',
+          }}
+        />
       </div>
-      <span style={{ fontSize: 12, fontWeight: 800, color, width: 24, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </span>
     </div>
   )
 }
 
-const PILLARS_DEMO = [
-  { icon: '🏋️', label: 'Fitness',   value: 74, color: '#7F5AF0', delay: 0   },
-  { icon: '🥗', label: 'Nutrition', value: 61, color: '#00E87A', delay: 100 },
-  { icon: '💤', label: 'Energy',    value: 68, color: '#4DA6FF', delay: 200 },
-  { icon: '🎯', label: 'Focus',     value: 59, color: '#FFB830', delay: 300 },
-  { icon: '🌿', label: 'Longevity', value: 81, color: '#FF5C8A', delay: 400 },
-]
+// ─────────────────────────────────────────────────────────────────────────────
+// Floating background blobs
+// ─────────────────────────────────────────────────────────────────────────────
 
-const FIVE_PILLARS = [
-  { icon: '🥗', label: 'Nutrition', color: '#00E87A', glow: 'rgba(0,232,122,0.18)',  weight: '25%', desc: 'Food quality, servings, hydration' },
-  { icon: '🏋️', label: 'Fitness',   color: '#7F5AF0', glow: 'rgba(127,90,240,0.18)', weight: '25%', desc: 'Duration, intensity, consistency' },
-  { icon: '💤', label: 'Sleep',     color: '#4DA6FF', glow: 'rgba(77,166,255,0.18)', weight: '20%', desc: 'Hours, quality, recovery' },
-  { icon: '🎯', label: 'Focus',     color: '#FFB830', glow: 'rgba(255,184,48,0.18)', weight: '15%', desc: 'Deep work, reading, mindfulness' },
-  { icon: '🌿', label: 'Longevity', color: '#FF5C8A', glow: 'rgba(255,92,138,0.18)', weight: '15%', desc: 'Habits that compound over years' },
-]
-
-const HOW_STEPS = [
-  { icon: '📋', title: 'Log',     desc: 'A 90-second daily check-in across five areas of your life.', color: '#00E8C6' },
-  { icon: '🔢', title: 'Score',   desc: 'Qyven turns your day into a single 0–99 Future Self Score.', color: '#7F5AF0' },
-  { icon: '📈', title: 'Improve', desc: 'See what actually changes your trajectory over time.', color: '#FF7AC6' },
-]
-
-// ── Floating gradient blobs (parallax) ────────────────────────────────────────
 function FloatingBlobs({ scrollY }) {
   const blobs = [
-    { top: -120, left: '8%',  size: 380, color: 'rgba(127,90,240,0.28)', speed: 0.15 },
-    { top: 200,  left: '78%', size: 320, color: 'rgba(255,122,198,0.22)', speed: 0.3  },
-    { top: 700,  left: '4%',  size: 300, color: 'rgba(0,232,198,0.2)',   speed: 0.2  },
-    { top: 1200, left: '70%', size: 360, color: 'rgba(255,184,48,0.18)', speed: 0.25 },
-    { top: 1900, left: '10%', size: 340, color: 'rgba(0,232,122,0.2)',   speed: 0.18 },
+    {
+      top: -120,
+      left: '4%',
+      size: 430,
+      color: 'rgba(127,90,240,0.24)',
+      speed: 0.12,
+    },
+    {
+      top: 240,
+      left: '78%',
+      size: 340,
+      color: 'rgba(255,122,198,0.18)',
+      speed: 0.22,
+    },
+    {
+      top: 820,
+      left: '-4%',
+      size: 320,
+      color: 'rgba(0,232,198,0.14)',
+      speed: 0.16,
+    },
+    {
+      top: 1500,
+      left: '76%',
+      size: 390,
+      color: 'rgba(255,184,48,0.12)',
+      speed: 0.2,
+    },
+    {
+      top: 2200,
+      left: '8%',
+      size: 340,
+      color: 'rgba(0,232,122,0.13)',
+      speed: 0.14,
+    },
   ]
+
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '100%', overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      {blobs.map((b, i) => (
-        <div key={i} style={{
-          position: 'absolute', top: b.top - scrollY * b.speed, left: b.left,
-          width: b.size, height: b.size, borderRadius: '50%',
-          background: `radial-gradient(circle, ${b.color} 0%, transparent 70%)`,
-          filter: 'blur(20px)',
-          animation: `drift${i % 3} ${14 + i * 2}s ease-in-out infinite`,
-        }} />
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        height: '100%',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    >
+      {blobs.map((blob, index) => (
+        <div
+          key={index}
+          style={{
+            position: 'absolute',
+            top: blob.top - scrollY * blob.speed,
+            left: blob.left,
+            width: blob.size,
+            height: blob.size,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${blob.color} 0%, transparent 70%)`,
+            filter: 'blur(20px)',
+            animation: `qyvenDrift${index % 3} ${
+              15 + index * 2
+            }s ease-in-out infinite`,
+          }}
+        />
       ))}
-      <style>{`
-        @keyframes drift0 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(30px,20px); } }
-        @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-25px,30px); } }
-        @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(20px,-25px); } }
-      `}</style>
+
+      <style>
+        {`
+          @keyframes qyvenDrift0 {
+            0%, 100% { transform: translate(0,0); }
+            50% { transform: translate(35px,20px); }
+          }
+
+          @keyframes qyvenDrift1 {
+            0%, 100% { transform: translate(0,0); }
+            50% { transform: translate(-30px,25px); }
+          }
+
+          @keyframes qyvenDrift2 {
+            0%, 100% { transform: translate(0,0); }
+            50% { transform: translate(20px,-25px); }
+          }
+
+          @media (max-width: 640px) {
+            .qyven-desktop-only {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
     </div>
   )
 }
 
-// ── Main Landing ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Data
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PILLARS = [
+  {
+    icon: '🥗',
+    label: 'Nutrition',
+    color: '#00E87A',
+    description: 'Food quality, protein, plants & hydration',
+  },
+  {
+    icon: '🏋️',
+    label: 'Fitness',
+    color: '#7F5AF0',
+    description: 'Movement, training & consistency',
+  },
+  {
+    icon: '💤',
+    label: 'Sleep',
+    color: '#4DA6FF',
+    description: 'Sleep, recovery & energy',
+  },
+  {
+    icon: '🎯',
+    label: 'Focus',
+    color: '#FFB830',
+    description: 'Deep work, reading & mindfulness',
+  },
+  {
+    icon: '🌿',
+    label: 'Longevity',
+    color: '#FF5C8A',
+    description: 'Habits that compound over time',
+  },
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Landing
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function Landing() {
   const { user, authReady } = useUserStore()
+
   const isLoggedIn = authReady && !!user
   const scrollY = useParallax()
 
   return (
-    <div style={{ background: '#0B0A14', color: '#F1EEF9', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", minHeight: '100vh', overflowX: 'hidden', position: 'relative' }}>
-
-      <FloatingBlobs scrollY={scrollY} />
-
-      {/* ── Nav ── */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 24px',
-        background: 'rgba(11,10,20,0.75)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-      }}>
-<span
-  style={{
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
-    fontSize: 25,
-    fontWeight: 800,
-    letterSpacing: "-0.07em",
-    color: "#F5F3FF",
-  }}
->
-  Qyven
-</span>
-        {isLoggedIn ? (
-          <Link to="/dashboard" style={{
-            background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-            color: '#fff', fontWeight: 700, fontSize: 13,
-            padding: '9px 20px', borderRadius: 99, textDecoration: 'none',
-            boxShadow: '0 0 24px rgba(127,90,240,0.35)',
-          }}>
-            Dashboard →
-          </Link>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            <Link to="/login" style={{ color: '#C4C6DD', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
-              Sign in
-            </Link>
-            <Link to="/get-started" style={{
-              background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-              color: '#fff', fontWeight: 700, fontSize: 13,
-              padding: '9px 20px', borderRadius: 99, textDecoration: 'none',
-              boxShadow: '0 0 24px rgba(127,90,240,0.35)',
-            }}>
-              Find My Score →
-            </Link>
-          </div>
-        )}
-      </nav>
-
-      {/* ── Hero ── */}
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '100px 24px 60px', textAlign: 'center',
-        position: 'relative', zIndex: 1,
-      }}>
-        <Reveal>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 99, padding: '6px 14px', marginBottom: 24,
-            fontSize: 11, fontWeight: 700,
-            background2: 'transparent',
-            color: '#00E8C6',
-            textTransform: 'uppercase', letterSpacing: '0.1em',
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'linear-gradient(135deg, #FF7AC6, #00E8C6)', display: 'inline-block' }} />
-            Future Self Scoring
-          </div>
-        </Reveal>
-        <Reveal delay={80}>
-  <h1
-    style={{
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      fontSize: 'clamp(40px, 7vw, 76px)',
-      fontWeight: 800,
-      lineHeight: 1.02,
-      letterSpacing: '-0.055em',
-      marginBottom: 20,
-      color: '#F5F3FF',
-    }}
-  >
-    What is your
-    <br />
-    <span
+    <div
       style={{
-        background:
-          'linear-gradient(110deg, #D8B4FE 0%, #A78BFA 45%, #67E8F9 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
+        minHeight: '100vh',
+        background: '#0B0A14',
+        color: '#F1EEF9',
+        fontFamily:
+          "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        overflowX: 'hidden',
+        position: 'relative',
       }}
     >
-      Future Self Score?
-    </span>
-  </h1>
-</Reveal>
+      <FloatingBlobs scrollY={scrollY} />
 
-        <Reveal delay={160}>
-          <p style={{
-            fontSize: 'clamp(15px, 2.5vw, 18px)', color: '#B4B7D4',
-            maxWidth: 480, lineHeight: 1.65, marginBottom: 36,
-          }}>
-            See how your daily habits are shaping the person you're becoming.
-            Log your day. Get your score. Watch yourself improve.
-          </p>
-        </Reveal>
+      {/* ───────────────── NAV ───────────────── */}
 
-        <Reveal delay={240}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 56 }}>
-            {isLoggedIn ? (
-              <Link to="/dashboard" style={{
-                background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-                color: '#fff', fontWeight: 700, fontSize: 16,
-                padding: '16px 32px', borderRadius: 99, textDecoration: 'none',
-                boxShadow: '0 4px 36px rgba(127,90,240,0.45)',
-              }}>
-                Go to my dashboard →
-              </Link>
-            ) : (
-              <>
-                <Link to="/get-started" style={{
-                  background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-                  color: '#fff', fontWeight: 700, fontSize: 16,
-                  padding: '16px 32px', borderRadius: 99, textDecoration: 'none',
-                  boxShadow: '0 4px 36px rgba(127,90,240,0.45)',
-                }}>
-                  Find My Score →
-                </Link>
-                <Link to="/login" style={{
-                  color: '#C4C6DD', fontSize: 15, fontWeight: 600,
-                  textDecoration: 'none', display: 'flex', alignItems: 'center',
-                  padding: '16px 24px', border: '1px solid rgba(255,255,255,0.14)',
-                  borderRadius: 99,
-                }}>
-                  Sign in
-                </Link>
-              </>
-            )}
-          </div>
-        </Reveal>
+      <nav
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          height: 64,
+          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(11,10,20,0.72)',
+          backdropFilter: 'blur(22px)',
+          WebkitBackdropFilter: 'blur(22px)',
+          borderBottom:
+            '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <Link
+          to="/"
+          style={{
+            textDecoration: 'none',
+            color: '#F5F3FF',
+            fontSize: 23,
+            fontWeight: 800,
+            letterSpacing: '-0.07em',
+          }}
+        >
+          Qyven
+        </Link>
 
-        <Reveal delay={320} scale>
-          <div style={{
-            background: 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%), rgba(20,18,32,0.9)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 28, padding: '28px 24px',
-            maxWidth: 340, width: '100%',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 70px rgba(127,90,240,0.15)',
-            position: 'relative',
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 24, right: 24, height: 2, background: 'linear-gradient(90deg, #FF7AC6, #7F5AF0, #00E8C6)', borderRadius: '0 0 99px 99px' }} />
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#8A8FA3', marginBottom: 20, textAlign: 'center' }}>
-              Future Self Score
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-              <ScoreRing score={67} size={150} strokeWidth={7} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {PILLARS_DEMO.map(p => <PillarBar key={p.label} {...p} />)}
-            </div>
-          </div>
-        </Reveal>
-
-        <p style={{ marginTop: 20, fontSize: 12, color: '#6E7290' }}>
-          Free · No credit card · 90 seconds
-        </p>
-      </div>
-
-      {/* ── How it works ── */}
-      <div id="how" style={{ padding: '80px 24px', maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <Reveal>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#00E8C6', marginBottom: 12 }}>
-              How it works
-            </p>
-            <h2 style={{ fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 800, letterSpacing: -1.5, lineHeight: 1.1, marginBottom: 12 }}>
-              Log once. Understand everything.
-            </h2>
-            <p style={{ fontSize: 16, color: '#B4B7D4', maxWidth: 440, margin: '0 auto', lineHeight: 1.65 }}>
-              A 90-second daily check-in produces a score that tells you exactly where you stand.
-            </p>
-          </div>
-        </Reveal>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-          {HOW_STEPS.map((s, i) => (
-            <Reveal key={s.title} delay={i * 100} scale>
-              <div style={{
-                background: `linear-gradient(160deg, ${s.color}14 0%, rgba(255,255,255,0.02) 100%)`,
-                border: `1px solid ${s.color}33`,
-                borderRadius: 20, padding: 24, height: '100%',
-                transition: 'transform 0.25s ease',
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 18,
+          }}
+        >
+          {!isLoggedIn && (
+            <Link
+              to="/login"
+              className="qyven-desktop-only"
+              style={{
+                color: '#AEB2CC',
+                textDecoration: 'none',
+                fontSize: 13,
+                fontWeight: 600,
               }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              Sign in
+            </Link>
+          )}
+
+          <Link
+            to={isLoggedIn ? '/dashboard' : '/get-started'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '9px 18px',
+              borderRadius: 999,
+              background:
+                'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+              color: '#fff',
+              textDecoration: 'none',
+              fontSize: 12,
+              fontWeight: 800,
+              boxShadow:
+                '0 0 26px rgba(127,90,240,0.3)',
+            }}
+          >
+            {isLoggedIn
+              ? 'Dashboard →'
+              : 'Find My Score →'}
+          </Link>
+        </div>
+      </nav>
+
+      {/* ───────────────── HERO ───────────────── */}
+
+      <section
+        style={{
+          minHeight: '100vh',
+          padding:
+            '125px 20px 70px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 1100,
+            display: 'grid',
+            gridTemplateColumns:
+              'minmax(0,1.05fr) minmax(300px,0.75fr)',
+            gap: 70,
+            alignItems: 'center',
+          }}
+        >
+          {/* Hero copy */}
+
+          <div>
+            <Reveal>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 13px',
+                  borderRadius: 999,
+                  background:
+                    'rgba(255,255,255,0.045)',
+                  border:
+                    '1px solid rgba(255,255,255,0.1)',
+                  color: '#8FEBDD',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: '0.13em',
+                  textTransform: 'uppercase',
+                  marginBottom: 22,
+                }}
               >
-                <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6E7290', marginBottom: 12 }}>
-                  Step {i + 1}
-                </p>
-                <span style={{ fontSize: 30, display: 'block', marginBottom: 10 }}>{s.icon}</span>
-                <p style={{ fontSize: 17, fontWeight: 700, color: '#F1EEF9', marginBottom: 8 }}>{s.title}</p>
-                <p style={{ fontSize: 14, color: '#B4B7D4', lineHeight: 1.6 }}>{s.desc}</p>
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: '#00E8C6',
+                    boxShadow:
+                      '0 0 10px rgba(0,232,198,0.8)',
+                  }}
+                />
+                Your habits. Your trajectory.
               </div>
             </Reveal>
-          ))}
-        </div>
-      </div>
 
-      {/* ── Trajectory / differentiator ── */}
-      <div style={{ padding: '60px 24px', maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <Reveal scale>
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(255,122,198,0.1) 0%, rgba(127,90,240,0.1) 50%, rgba(0,232,198,0.1) 100%)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 28, padding: '48px 36px', textAlign: 'center',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #FF7AC6, #7F5AF0, #00E8C6, #FFB830)' }} />
-            <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 800, letterSpacing: -1, lineHeight: 1.15, marginBottom: 14 }}>
-              Don&apos;t just track your habits.
-            </h2>
-            <p style={{
-              fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 800, letterSpacing: -0.5, marginBottom: 20,
-              background: 'linear-gradient(120deg, #FF7AC6, #00E8C6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>
-              See where they&apos;re taking you.
-            </p>
-            <p style={{ fontSize: 16, color: '#B4B7D4', maxWidth: 480, margin: '0 auto 32px', lineHeight: 1.65 }}>
-              Your habits become data. Your data becomes a pattern. Your pattern shows you where you&apos;re heading.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
-              {[
-                { label: 'Today',    value: 64, h: 64,  color: '#8A8FA3' },
-                { label: '30 days',  value: 70, h: 80,  color: '#00E8C6' },
-                { label: '6 months', value: 79, h: 100, color: '#7F5AF0' },
-                { label: '1 year',   value: 87, h: 120, color: '#FF7AC6' },
-              ].map((t) => (
-                <div key={t.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: t.color }}>{t.value}</span>
-                  <div style={{
-                    width: 44, height: t.h, borderRadius: 10,
-                    background: t.color === '#8A8FA3' ? 'rgba(255,255,255,0.08)' : t.color,
-                    boxShadow: t.color !== '#8A8FA3' ? `0 0 18px ${t.color}55` : 'none',
-                  }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6E7290', textAlign: 'center', lineHeight: 1.3 }}>{t.label}</span>
+            <Reveal delay={80}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize:
+                    'clamp(44px, 7vw, 76px)',
+                  lineHeight: 0.99,
+                  letterSpacing: '-0.065em',
+                  fontWeight: 800,
+                  maxWidth: 700,
+                }}
+              >
+                What is your
+                <br />
+                <span
+                  style={{
+                    background:
+                      'linear-gradient(110deg,#D8B4FE,#A78BFA 45%,#67E8F9)',
+                    WebkitBackgroundClip:
+                      'text',
+                    WebkitTextFillColor:
+                      'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  Future Self Score?
+                </span>
+              </h1>
+            </Reveal>
+
+            <Reveal delay={160}>
+              <p
+                style={{
+                  margin:
+                    '25px 0 0',
+                  maxWidth: 560,
+                  color: '#AEB2CC',
+                  fontSize:
+                    'clamp(16px,2.3vw,19px)',
+                  lineHeight: 1.65,
+                }}
+              >
+                A simple score that shows how your
+                everyday choices are shaping the
+                person you're becoming.
+              </p>
+            </Reveal>
+
+            <Reveal delay={230}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginTop: 32,
+                }}
+              >
+                <Link
+                  to={
+                    isLoggedIn
+                      ? '/dashboard'
+                      : '/get-started'
+                  }
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding:
+                      '16px 25px',
+                    borderRadius: 999,
+                    background:
+                      'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                    color: '#fff',
+                    textDecoration: 'none',
+                    fontSize: 15,
+                    fontWeight: 800,
+                    boxShadow:
+                      '0 8px 40px rgba(127,90,240,0.38)',
+                  }}
+                >
+                  {isLoggedIn
+                    ? 'Go to my dashboard →'
+                    : 'Find My Score →'}
+                </Link>
+
+                {!isLoggedIn && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: '#737891',
+                    }}
+                  >
+                    Takes about 60 seconds
+                  </span>
+                )}
+              </div>
+            </Reveal>
+
+            <Reveal delay={300}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 18,
+                  marginTop: 25,
+                  color: '#767B96',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
+              >
+                <span>✓ Free to start</span>
+                <span>✓ No credit card</span>
+                <span>✓ Built around your habits</span>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Score preview */}
+
+          <Reveal delay={180} scale>
+            <div
+              style={{
+                position: 'relative',
+                maxWidth: 390,
+                width: '100%',
+                margin:
+                  '0 auto',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: -40,
+                  borderRadius: '50%',
+                  background:
+                    'radial-gradient(circle,rgba(127,90,240,0.16),transparent 65%)',
+                  filter: 'blur(15px)',
+                  pointerEvents: 'none',
+                }}
+              />
+
+              <div
+                style={{
+                  position: 'relative',
+                  padding: 25,
+                  borderRadius: 30,
+                  background:
+                    'linear-gradient(155deg,rgba(255,255,255,0.075),rgba(255,255,255,0.025))',
+                  border:
+                    '1px solid rgba(255,255,255,0.11)',
+                  boxShadow:
+                    '0 30px 90px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 35,
+                    right: 35,
+                    height: 2,
+                    background:
+                      'linear-gradient(90deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: '#737891',
+                        textTransform:
+                          'uppercase',
+                        letterSpacing:
+                          '0.13em',
+                        fontWeight: 800,
+                      }}
+                    >
+                      Your Future Self
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 4,
+                        fontSize: 14,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Score preview
+                    </div>
+                  </div>
+
+                  <span
+                    style={{
+                      padding:
+                        '5px 9px',
+                      borderRadius: 999,
+                      background:
+                        'rgba(0,232,198,0.08)',
+                      border:
+                        '1px solid rgba(0,232,198,0.18)',
+                      color: '#00E8C6',
+                      fontSize: 9,
+                      fontWeight: 800,
+                    }}
+                  >
+                    LIVE
+                  </span>
                 </div>
-              ))}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'center',
+                    padding:
+                      '10px 0 22px',
+                  }}
+                >
+                  <ScoreRing
+                    score={67}
+                    size={175}
+                    strokeWidth={8}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection:
+                      'column',
+                    gap: 11,
+                  }}
+                >
+                  <PillarBar
+                    icon="🏋️"
+                    label="Fitness"
+                    value={74}
+                    color="#7F5AF0"
+                  />
+
+                  <PillarBar
+                    icon="🥗"
+                    label="Nutrition"
+                    value={61}
+                    color="#00E87A"
+                    delay={100}
+                  />
+
+                  <PillarBar
+                    icon="💤"
+                    label="Sleep"
+                    value={68}
+                    color="#4DA6FF"
+                    delay={200}
+                  />
+
+                  <PillarBar
+                    icon="🎯"
+                    label="Focus"
+                    value={59}
+                    color="#FFB830"
+                    delay={300}
+                  />
+
+                  <PillarBar
+                    icon="🌿"
+                    label="Longevity"
+                    value={81}
+                    color="#FF5C8A"
+                    delay={400}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 22,
+                    padding:
+                      '12px 14px',
+                    borderRadius: 14,
+                    background:
+                      'rgba(255,255,255,0.035)',
+                    border:
+                      '1px solid rgba(255,255,255,0.06)',
+                    display: 'flex',
+                    gap: 10,
+                    alignItems: 'center',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 16,
+                    }}
+                  >
+                    ↗
+                  </span>
+
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: '#F1EEF9',
+                      }}
+                    >
+                      Your score can change.
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: '#777C97',
+                        marginTop: 2,
+                      }}
+                    >
+                      Consistency is what moves it.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p style={{ fontSize: 11, color: '#6E7290', marginBottom: 28 }}>
-              Qyven progression estimate — based on consistency, not guaranteed
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ───────────────── SOCIAL PROOF / POSITIONING ───────────────── */}
+
+      <section
+        style={{
+          padding: '10px 24px 90px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Reveal>
+          <div
+            style={{
+              maxWidth: 900,
+              margin: '0 auto',
+              textAlign: 'center',
+            }}
+          >
+            <p
+              style={{
+                fontSize: 12,
+                color: '#676C86',
+                marginBottom: 16,
+              }}
+            >
+              Most habit trackers tell you what you did.
             </p>
-            {!isLoggedIn && (
-              <Link to="/get-started" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-                color: '#fff', fontWeight: 700, fontSize: 15,
-                padding: '14px 28px', borderRadius: 99, textDecoration: 'none',
-                boxShadow: '0 4px 28px rgba(127,90,240,0.4)',
-              }}>
-                See my trajectory →
-              </Link>
-            )}
+
+            <div
+              style={{
+                fontSize:
+                  'clamp(22px,4vw,34px)',
+                fontWeight: 800,
+                letterSpacing: '-0.04em',
+              }}
+            >
+              Qyven shows you
+              <span
+                style={{
+                  marginLeft: 8,
+                  background:
+                    'linear-gradient(110deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                  WebkitBackgroundClip:
+                    'text',
+                  WebkitTextFillColor:
+                    'transparent',
+                  backgroundClip:
+                    'text',
+                }}
+              >
+                where it's taking you.
+              </span>
+            </div>
           </div>
         </Reveal>
-      </div>
+      </section>
 
-      {/* ── Five pillars ── */}
-      <div style={{ padding: '60px 24px', maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      {/* ───────────────── HOW IT WORKS ───────────────── */}
+
+      <section
+        style={{
+          padding: '70px 24px 100px',
+          maxWidth: 1050,
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <Reveal>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#00E8C6', marginBottom: 12 }}>
-              Five pillars
-            </p>
-            <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: 800, letterSpacing: -1, lineHeight: 1.1 }}>
-              Every dimension of your best self.
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 48,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: '#00E8C6',
+                fontWeight: 800,
+                textTransform:
+                  'uppercase',
+                letterSpacing:
+                  '0.14em',
+                marginBottom: 12,
+              }}
+            >
+              Simple by design
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontSize:
+                  'clamp(28px,4.5vw,42px)',
+                letterSpacing:
+                  '-0.05em',
+                lineHeight: 1.08,
+              }}
+            >
+              Three steps.
+              <br />
+              One clearer direction.
             </h2>
           </div>
         </Reveal>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
-          {FIVE_PILLARS.map((p, i) => (
-            <Reveal key={p.label} delay={i * 70} scale>
-              <div style={{
-                background: `linear-gradient(160deg, ${p.glow} 0%, rgba(255,255,255,0.02) 100%)`,
-                border: `1px solid ${p.color}30`,
-                borderRadius: 18, padding: '20px 16px',
-                borderTop: `2px solid ${p.color}`,
-                transition: 'transform 0.2s', height: '100%',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'repeat(auto-fit,minmax(230px,1fr))',
+            gap: 16,
+          }}
+        >
+          {[
+            {
+              number: '01',
+              title: 'Check in',
+              text: 'Answer a few quick questions about your day.',
+              icon: '✓',
+              color: '#00E8C6',
+            },
+            {
+              number: '02',
+              title: 'Get your score',
+              text: 'Qyven turns your habits into one simple Future Self Score.',
+              icon: '◎',
+              color: '#7F5AF0',
+            },
+            {
+              number: '03',
+              title: 'See your trajectory',
+              text: 'Understand what is moving you forward and what needs attention.',
+              icon: '↗',
+              color: '#FF7AC6',
+            },
+          ].map((step, index) => (
+            <Reveal
+              key={step.number}
+              delay={index * 100}
+              scale
+            >
+              <div
+                style={{
+                  height: '100%',
+                  padding: 25,
+                  borderRadius: 22,
+                  background:
+                    `linear-gradient(145deg,${step.color}10,rgba(255,255,255,0.025))`,
+                  border:
+                    `1px solid ${step.color}25`,
+                  position: 'relative',
+                }}
               >
-                <span style={{ fontSize: 26, display: 'block', marginBottom: 10 }}>{p.icon}</span>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#F1EEF9', marginBottom: 4 }}>{p.label}</p>
-                <p style={{ fontSize: 12, color: '#B4B7D4', lineHeight: 1.5, marginBottom: 8 }}>{p.desc}</p>
-                <span style={{ fontSize: 12, fontWeight: 800, color: p.color }}>{p.weight} weight</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-between',
+                    alignItems: 'center',
+                    marginBottom: 28,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: step.color,
+                      letterSpacing:
+                        '0.1em',
+                    }}
+                  >
+                    {step.number}
+                  </span>
+
+                  <span
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      display: 'flex',
+                      alignItems:
+                        'center',
+                      justifyContent:
+                        'center',
+                      background:
+                        `${step.color}12`,
+                      color: step.color,
+                      fontSize: 18,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {step.icon}
+                  </span>
+                </div>
+
+                <h3
+                  style={{
+                    margin:
+                      '0 0 8px',
+                    fontSize: 18,
+                    fontWeight: 800,
+                  }}
+                >
+                  {step.title}
+                </h3>
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: '#9297B2',
+                    fontSize: 13,
+                    lineHeight: 1.65,
+                  }}
+                >
+                  {step.text}
+                </p>
               </div>
             </Reveal>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* ── Trust bar ── */}
-      <div style={{ padding: '40px 24px', maxWidth: 700, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <Reveal>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px 32px' }}>
-            {[
-              { t: 'Free forever', c: '#00E87A' },
-              { t: 'No credit card', c: '#4DA6FF' },
-              { t: '90-second daily log', c: '#7F5AF0' },
-              { t: 'Works on any device', c: '#FFB830' },
-              { t: 'No fake health claims', c: '#FF5C8A' },
-            ].map(t => (
-              <span key={t.t} style={{ fontSize: 13, fontWeight: 600, color: '#B4B7D4', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: t.c }}>✓</span> {t.t}
-              </span>
-            ))}
-          </div>
-        </Reveal>
-      </div>
+      {/* ───────────────── TRAJECTORY ───────────────── */}
 
-      {/* ── Final CTA ── */}
-      <div style={{ padding: '60px 24px 100px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+      <section
+        style={{
+          padding: '20px 24px 110px',
+          maxWidth: 1050,
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <Reveal scale>
-          <div style={{ maxWidth: 520, margin: '0 auto' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#00E8C6', marginBottom: 16 }}>
-              Ready?
-            </p>
-            <h2 style={{ fontSize: 'clamp(28px, 5vw, 50px)', fontWeight: 800, letterSpacing: -1.5, lineHeight: 1.1, marginBottom: 18 }}>
-              What&apos;s your<br />
-              <span style={{ background: 'linear-gradient(120deg, #FF7AC6, #7F5AF0, #00E8C6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                Future Self Score?
+          <div
+            style={{
+              borderRadius: 30,
+              padding:
+                '55px 30px 45px',
+              background:
+                'linear-gradient(135deg,rgba(255,122,198,0.09),rgba(127,90,240,0.1) 50%,rgba(0,232,198,0.08))',
+              border:
+                '1px solid rgba(255,255,255,0.1)',
+              position: 'relative',
+              overflow: 'hidden',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 2,
+                background:
+                  'linear-gradient(90deg,#FF7AC6,#7F5AF0,#00E8C6)',
+              }}
+            />
+
+            <div
+              style={{
+                fontSize: 10,
+                color: '#FF9FD4',
+                fontWeight: 800,
+                textTransform:
+                  'uppercase',
+                letterSpacing:
+                  '0.14em',
+                marginBottom: 13,
+              }}
+            >
+              Your trajectory
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontSize:
+                  'clamp(27px,4.5vw,43px)',
+                letterSpacing:
+                  '-0.05em',
+                lineHeight: 1.08,
+              }}
+            >
+              Small choices compound.
+              <br />
+              <span
+                style={{
+                  background:
+                    'linear-gradient(120deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                  WebkitBackgroundClip:
+                    'text',
+                  WebkitTextFillColor:
+                    'transparent',
+                  backgroundClip:
+                    'text',
+                }}
+              >
+                See the direction.
               </span>
             </h2>
-            <p style={{ fontSize: 16, color: '#B4B7D4', marginBottom: 32, lineHeight: 1.6 }}>
-              Answer 5 questions. Get your personalized score in 60 seconds.
+
+            <p
+              style={{
+                maxWidth: 520,
+                margin:
+                  '18px auto 40px',
+                color: '#A8ACC5',
+                fontSize: 14,
+                lineHeight: 1.7,
+              }}
+            >
+              Qyven helps turn your daily behavior
+              into a bigger picture — so you can
+              see whether you're moving toward the
+              person you want to become.
             </p>
-            {isLoggedIn ? (
-              <Link to="/dashboard" style={{
-                display: 'inline-flex', alignItems: 'center',
-                background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-                color: '#fff', fontWeight: 700, fontSize: 17,
-                padding: '18px 40px', borderRadius: 99, textDecoration: 'none',
-                boxShadow: '0 4px 36px rgba(127,90,240,0.45)',
-              }}>
-                Go to dashboard →
-              </Link>
-            ) : (
-              <Link to="/get-started" style={{
-                display: 'inline-flex', alignItems: 'center',
-                background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
-                color: '#fff', fontWeight: 700, fontSize: 17,
-                padding: '18px 40px', borderRadius: 99, textDecoration: 'none',
-                boxShadow: '0 4px 36px rgba(127,90,240,0.45)',
-              }}>
-                Find My Score →
+
+            {/* Trajectory chart */}
+
+            <div
+              style={{
+                maxWidth: 650,
+                margin: '0 auto',
+                position: 'relative',
+                height: 220,
+                padding:
+                  '20px 15px 40px',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: 40,
+                  height: 1,
+                  background:
+                    'rgba(255,255,255,0.08)',
+                }}
+              />
+
+              {[25, 50, 75].map((line) => (
+                <div
+                  key={line}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: `${100 - line}%`,
+                    borderTop:
+                      '1px dashed rgba(255,255,255,0.045)',
+                  }}
+                />
+              ))}
+
+              <svg
+                viewBox="0 0 700 180"
+                preserveAspectRatio="none"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  overflow: 'visible',
+                }}
+              >
+                <defs>
+                  <linearGradient
+                    id="trajectoryLine"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="0"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="#FF7AC6"
+                    />
+                    <stop
+                      offset="50%"
+                      stopColor="#7F5AF0"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="#00E8C6"
+                    />
+                  </linearGradient>
+
+                  <linearGradient
+                    id="trajectoryFill"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="#7F5AF0"
+                      stopOpacity="0.18"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="#7F5AF0"
+                      stopOpacity="0"
+                    />
+                  </linearGradient>
+                </defs>
+
+                <path
+                  d="M 0 140 C 80 138, 120 128, 175 132 C 230 136, 270 105, 325 112 C 390 120, 430 82, 480 89 C 535 95, 570 55, 620 58 C 650 60, 680 35, 700 22 L 700 180 L 0 180 Z"
+                  fill="url(#trajectoryFill)"
+                />
+
+                <path
+                  d="M 0 140 C 80 138, 120 128, 175 132 C 230 136, 270 105, 325 112 C 390 120, 430 82, 480 89 C 535 95, 570 55, 620 58 C 650 60, 680 35, 700 22"
+                  fill="none"
+                  stroke="url(#trajectoryLine)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+
+                <circle
+                  cx="0"
+                  cy="140"
+                  r="6"
+                  fill="#FF7AC6"
+                />
+
+                <circle
+                  cx="350"
+                  cy="111"
+                  r="6"
+                  fill="#7F5AF0"
+                />
+
+                <circle
+                  cx="700"
+                  cy="22"
+                  r="7"
+                  fill="#00E8C6"
+                />
+              </svg>
+
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 8,
+                  fontSize: 10,
+                  color: '#777C96',
+                }}
+              >
+                Today
+              </div>
+
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: 8,
+                  transform:
+                    'translateX(-50%)',
+                  fontSize: 10,
+                  color: '#777C96',
+                }}
+              >
+                6 months
+              </div>
+
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  bottom: 8,
+                  fontSize: 10,
+                  color: '#777C96',
+                }}
+              >
+                1 year
+              </div>
+            </div>
+
+            <p
+              style={{
+                margin:
+                  '0 auto 28px',
+                maxWidth: 500,
+                fontSize: 10,
+                color: '#656A83',
+              }}
+            >
+              Illustrative trajectory. Your actual
+              score is based on your check-ins and
+              consistency.
+            </p>
+
+            {!isLoggedIn && (
+              <Link
+                to="/get-started"
+                style={{
+                  display:
+                    'inline-flex',
+                  alignItems:
+                    'center',
+                  justifyContent:
+                    'center',
+                  padding:
+                    '14px 25px',
+                  borderRadius: 999,
+                  background:
+                    'rgba(255,255,255,0.08)',
+                  border:
+                    '1px solid rgba(255,255,255,0.13)',
+                  color: '#F1EEF9',
+                  textDecoration:
+                    'none',
+                  fontSize: 13,
+                  fontWeight: 800,
+                }}
+              >
+                See where I stand →
               </Link>
             )}
-            <p style={{ fontSize: 13, color: '#6E7290', marginTop: 16 }}>
-              Free · No credit card · 90 seconds
-            </p>
           </div>
         </Reveal>
-      </div>
+      </section>
 
-      {/* ── Footer ── */}
-      <footer style={{
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-        padding: '24px 32px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 12, position: 'relative', zIndex: 1,
-      }}>
-        <span style={{ fontWeight: 800, fontSize: 17 }}>
-          Qy<span style={{ background: 'linear-gradient(135deg, #FF7AC6, #00E8C6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ven</span>
-        </span>
-        <p style={{ fontSize: 13, color: '#6E7290' }}>
-          Built for people who take the long view.
+      {/* ───────────────── WHAT YOU'LL SEE ───────────────── */}
+
+      <section
+        style={{
+          padding: '20px 24px 100px',
+          maxWidth: 1050,
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Reveal>
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 45,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: '#00E8C6',
+                fontWeight: 800,
+                textTransform:
+                  'uppercase',
+                letterSpacing:
+                  '0.14em',
+                marginBottom: 12,
+              }}
+            >
+              Your results
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontSize:
+                  'clamp(27px,4.5vw,40px)',
+                letterSpacing:
+                  '-0.05em',
+              }}
+            >
+              More than a number.
+            </h2>
+          </div>
+        </Reveal>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'repeat(auto-fit,minmax(200px,1fr))',
+            gap: 14,
+          }}
+        >
+          {[
+            {
+              icon: '◎',
+              title: 'Your score',
+              text: 'A simple snapshot of how your habits are adding up.',
+              color: '#7F5AF0',
+            },
+            {
+              icon: '↑',
+              title: 'Your strongest area',
+              text: "See where you're already building momentum.",
+              color: '#00E8C6',
+            },
+            {
+              icon: '⚡',
+              title: 'Your opportunity',
+              text: 'Find the areas where one small change could matter most.',
+              color: '#FFB830',
+            },
+            {
+              icon: '↗',
+              title: 'Your trajectory',
+              text: 'Understand the direction your consistency is taking you.',
+              color: '#FF7AC6',
+            },
+          ].map((item, index) => (
+            <Reveal
+              key={item.title}
+              delay={index * 80}
+              scale
+            >
+              <div
+                style={{
+                  height: '100%',
+                  padding: 22,
+                  borderRadius: 20,
+                  background:
+                    'rgba(255,255,255,0.025)',
+                  border:
+                    '1px solid rgba(255,255,255,0.075)',
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 13,
+                    display: 'flex',
+                    alignItems:
+                      'center',
+                    justifyContent:
+                      'center',
+                    background:
+                      `${item.color}12`,
+                    color: item.color,
+                    fontSize: 19,
+                    fontWeight: 800,
+                    marginBottom: 18,
+                  }}
+                >
+                  {item.icon}
+                </div>
+
+                <h3
+                  style={{
+                    margin:
+                      '0 0 7px',
+                    fontSize: 15,
+                    fontWeight: 800,
+                  }}
+                >
+                  {item.title}
+                </h3>
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: '#888DA7',
+                    fontSize: 12,
+                    lineHeight: 1.65,
+                  }}
+                >
+                  {item.text}
+                </p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ───────────────── FIVE PILLARS ───────────────── */}
+
+      <section
+        style={{
+          padding: '20px 24px 100px',
+          maxWidth: 1050,
+          margin: '0 auto',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Reveal>
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 42,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: '#00E8C6',
+                fontWeight: 800,
+                textTransform:
+                  'uppercase',
+                letterSpacing:
+                  '0.14em',
+                marginBottom: 12,
+              }}
+            >
+              Five dimensions
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontSize:
+                  'clamp(26px,4.5vw,40px)',
+                letterSpacing:
+                  '-0.05em',
+              }}
+            >
+              Your whole self,
+              <br />
+              not just one habit.
+            </h2>
+          </div>
+        </Reveal>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'repeat(auto-fit,minmax(170px,1fr))',
+            gap: 12,
+          }}
+        >
+          {PILLARS.map((pillar, index) => (
+            <Reveal
+              key={pillar.label}
+              delay={index * 70}
+              scale
+            >
+              <div
+                style={{
+                  height: '100%',
+                  minHeight: 165,
+                  padding: 19,
+                  borderRadius: 18,
+                  background:
+                    `linear-gradient(150deg,${pillar.color}0D,rgba(255,255,255,0.018))`,
+                  border:
+                    `1px solid ${pillar.color}22`,
+                  borderTop:
+                    `2px solid ${pillar.color}`,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 25,
+                    marginBottom: 14,
+                  }}
+                >
+                  {pillar.icon}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    marginBottom: 6,
+                  }}
+                >
+                  {pillar.label}
+                </div>
+
+                <div
+                  style={{
+                    color: '#858AA4',
+                    fontSize: 11,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {pillar.description}
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ───────────────── FINAL CTA ───────────────── */}
+
+      <section
+        style={{
+          padding:
+            '70px 24px 120px',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Reveal scale>
+          <div
+            style={{
+              maxWidth: 650,
+              margin: '0 auto',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                color: '#00E8C6',
+                fontWeight: 800,
+                textTransform:
+                  'uppercase',
+                letterSpacing:
+                  '0.14em',
+                marginBottom: 15,
+              }}
+            >
+              Start with yourself
+            </div>
+
+            <h2
+              style={{
+                margin: 0,
+                fontSize:
+                  'clamp(34px,6vw,58px)',
+                lineHeight: 1.02,
+                letterSpacing:
+                  '-0.06em',
+                fontWeight: 800,
+              }}
+            >
+              You know what
+              <br />
+              <span
+                style={{
+                  background:
+                    'linear-gradient(120deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                  WebkitBackgroundClip:
+                    'text',
+                  WebkitTextFillColor:
+                    'transparent',
+                  backgroundClip:
+                    'text',
+                }}
+              >
+                you're capable of.
+              </span>
+            </h2>
+
+            <p
+              style={{
+                maxWidth: 460,
+                margin:
+                  '20px auto 30px',
+                color: '#989DB7',
+                fontSize: 15,
+                lineHeight: 1.65,
+              }}
+            >
+              Find out where you stand today —
+              then start building toward where you
+              want to be.
+            </p>
+
+            <Link
+              to={
+                isLoggedIn
+                  ? '/dashboard'
+                  : '/get-started'
+              }
+              style={{
+                display:
+                  'inline-flex',
+                alignItems:
+                  'center',
+                justifyContent:
+                  'center',
+                padding:
+                  '17px 32px',
+                borderRadius: 999,
+                background:
+                  'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                color: '#fff',
+                textDecoration:
+                  'none',
+                fontSize: 16,
+                fontWeight: 800,
+                boxShadow:
+                  '0 8px 45px rgba(127,90,240,0.4)',
+              }}
+            >
+              {isLoggedIn
+                ? 'Go to my dashboard →'
+                : 'Find My Future Self Score →'}
+            </Link>
+
+            <div
+              style={{
+                marginTop: 16,
+                color: '#656A83',
+                fontSize: 11,
+              }}
+            >
+              Free to start · Takes about 60 seconds
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ───────────────── FOOTER ───────────────── */}
+
+      <footer
+        style={{
+          borderTop:
+            '1px solid rgba(255,255,255,0.06)',
+          padding:
+            '24px 28px',
+          display: 'flex',
+          alignItems:
+            'center',
+          justifyContent:
+            'space-between',
+          gap: 15,
+          flexWrap: 'wrap',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <Link
+          to="/"
+          style={{
+            color: '#F1EEF9',
+            textDecoration:
+              'none',
+            fontWeight: 800,
+            fontSize: 17,
+            letterSpacing:
+              '-0.05em',
+          }}
+        >
+          Qyven
+        </Link>
+
+        <p
+          style={{
+            margin: 0,
+            color: '#5F647D',
+            fontSize: 11,
+          }}
+        >
+          Track what you do today. See where it takes you.
         </p>
+
         {!isLoggedIn && (
-          <Link to="/get-started" style={{ fontSize: 13, color: '#00E8C6', textDecoration: 'none', fontWeight: 600 }}>
+          <Link
+            to="/get-started"
+            style={{
+              color: '#00E8C6',
+              textDecoration:
+                'none',
+              fontSize: 11,
+              fontWeight: 700,
+            }}
+          >
             Find My Score →
           </Link>
         )}
       </footer>
+
+      {/* ───────────────── RESPONSIVE CSS ───────────────── */}
+
+      <style>
+        {`
+          @media (max-width: 780px) {
+            nav {
+              padding-left: 16px !important;
+              padding-right: 16px !important;
+            }
+          }
+
+          @media (max-width: 720px) {
+            section {
+              scroll-margin-top: 70px;
+            }
+          }
+
+          @media (max-width: 700px) {
+            .hero-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+
+          @media (max-width: 520px) {
+            h1 {
+              font-size: 43px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   )
 }
