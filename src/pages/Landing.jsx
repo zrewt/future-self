@@ -197,9 +197,17 @@ export default function Landing() {
         backdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
       }}>
-        <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: -0.5 }}>
-          Qy<span style={{ background: 'linear-gradient(135deg, #FF7AC6, #00E8C6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ven</span>
-        </span>
+<span
+  style={{
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    fontSize: 25,
+    fontWeight: 800,
+    letterSpacing: "-0.07em",
+    color: "#F5F3FF",
+  }}
+>
+  Qyven
+</span>
         {isLoggedIn ? (
           <Link to="/dashboard" style={{
             background: 'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
@@ -247,18 +255,33 @@ export default function Landing() {
             Future Self Scoring
           </div>
         </Reveal>
-
         <Reveal delay={80}>
-          <h1 style={{
-            fontSize: 'clamp(38px, 7vw, 72px)', fontWeight: 800,
-            lineHeight: 1.05, letterSpacing: -2, marginBottom: 20,
-          }}>
-            What is your<br />
-            <span style={{ background: 'linear-gradient(120deg, #FF7AC6, #7F5AF0 45%, #00E8C6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              Future Self Score?
-            </span>
-          </h1>
-        </Reveal>
+  <h1
+    style={{
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontSize: 'clamp(40px, 7vw, 76px)',
+      fontWeight: 800,
+      lineHeight: 1.02,
+      letterSpacing: '-0.055em',
+      marginBottom: 20,
+      color: '#F5F3FF',
+    }}
+  >
+    What is your
+    <br />
+    <span
+      style={{
+        background:
+          'linear-gradient(110deg, #D8B4FE 0%, #A78BFA 45%, #67E8F9 100%)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+      }}
+    >
+      Future Self Score?
+    </span>
+  </h1>
+</Reveal>
 
         <Reveal delay={160}>
           <p style={{
