@@ -143,7 +143,10 @@ export default function Onboarding() {
   }
 
   function continueFromStep1() {
-    if (!username.trim()) return
+    if (!username.trim()) {
+      setError('Please enter your name.')
+      return
+    }
 
     setError('')
     setStep(2)
@@ -234,50 +237,50 @@ export default function Onboarding() {
 
   return (
     <div
-      className="app-bg min-h-screen px-4 py-8 md:py-12"
+      className="min-h-screen px-4 py-7 text-white sm:py-9 md:py-12"
       style={{
         background:
-          'radial-gradient(circle at 50% 0%, rgba(127,90,240,0.10), transparent 35%), var(--app-bg, #f8fafc)',
+          'radial-gradient(circle at 50% -5%, rgba(127,90,240,0.20), transparent 32%), radial-gradient(circle at 100% 45%, rgba(0,232,198,0.06), transparent 30%), #08080d',
       }}
     >
-      <div className="max-w-xl mx-auto">
-        {/* ─────────────────────────────────────────
-            HEADER
-        ───────────────────────────────────────── */}
-
+      <div className="mx-auto w-full max-w-xl">
+        {/* HEADER */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-5">
+          <div className="mb-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary">
+              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#A78BFA]">
                 Qyven
               </p>
 
-              <p className="text-sm font-bold text-slate-900 mt-1">
+              <p className="mt-1 text-sm font-bold text-white">
                 Build your Future Self
               </p>
             </div>
 
             <div className="text-right">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
                 Step
               </p>
 
-              <p className="text-sm font-extrabold text-slate-700">
-                {step} <span className="text-slate-300">/</span> 3
+              <p className="text-sm font-extrabold text-zinc-300">
+                {step}{' '}
+                <span className="text-zinc-700">
+                  / 3
+                </span>
               </p>
             </div>
           </div>
 
           {/* Progress */}
           <div className="relative">
-            <div className="h-2 bg-slate-200/80 rounded-full overflow-hidden">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#FF7AC6] via-[#7F5AF0] to-[#00E8C6] transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
 
-            <div className="grid grid-cols-3 mt-3">
+            <div className="mt-3 grid grid-cols-3">
               {STEP_INFO.map((item, index) => {
                 const active = step >= index + 1
 
@@ -296,7 +299,7 @@ export default function Onboarding() {
                     <span
                       className={[
                         'text-[10px] font-extrabold',
-                        active ? 'text-primary' : 'text-slate-300',
+                        active ? 'text-[#A78BFA]' : 'text-zinc-700',
                       ].join(' ')}
                     >
                       {item.number}
@@ -304,8 +307,8 @@ export default function Onboarding() {
 
                     <span
                       className={[
-                        'text-[10px] font-bold hidden sm:inline',
-                        active ? 'text-slate-500' : 'text-slate-300',
+                        'hidden text-[10px] font-bold sm:inline',
+                        active ? 'text-zinc-400' : 'text-zinc-700',
                       ].join(' ')}
                     >
                       {item.title}
@@ -317,96 +320,96 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Error */}
+        {/* ERROR */}
         {error && (
-          <div className="mb-5 text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 font-medium animate-slide-up">
+          <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300">
             {error}
           </div>
         )}
 
-        {/* ─────────────────────────────────────────
-            STEP 1 — NAME
-        ───────────────────────────────────────── */}
-
+        {/* STEP 1 — NAME */}
         {step === 1 && (
           <div className="animate-slide-up">
-            <div className="glass-card p-6 md:p-8">
-              <div className="mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF7AC6]/20 to-[#7F5AF0]/20 border border-primary/10 flex items-center justify-center text-2xl mb-5">
+            <div className="px-1 sm:px-2">
+              <div className="mb-9">
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-400/20 bg-gradient-to-br from-pink-500/10 to-purple-500/15 text-2xl">
                   👋
                 </div>
 
-                <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-primary mb-2">
+                <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-[#A78BFA]">
                   Let&apos;s make this yours
                 </p>
 
-                <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+                <h1 className="mb-3 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl">
                   What should we call you?
                 </h1>
 
-                <p className="text-slate-500 text-sm md:text-base leading-relaxed font-medium">
-                  Your name will personalize your Qyven experience and
-                  appear on your dashboard.
+                <p className="max-w-lg text-sm font-medium leading-6 text-zinc-400 sm:text-base">
+                  Your name will personalize your Qyven experience and appear
+                  on your dashboard.
                 </p>
               </div>
 
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2">
-                Your name
-              </label>
+              <div>
+                <label
+                  htmlFor="username"
+                  className="mb-2 block text-xs font-extrabold uppercase tracking-[0.1em] text-zinc-400"
+                >
+                  Your name
+                </label>
 
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    continueFromStep1()
-                  }
-                }}
-                className="input-field mb-6"
-                placeholder="e.g. Benny"
-                autoFocus
-                maxLength={30}
-              />
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      continueFromStep1()
+                    }
+                  }}
+                  className="mb-5 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none transition-all placeholder:text-zinc-600 focus:border-purple-500/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-purple-500/10"
+                  placeholder="e.g. Benny"
+                  autoFocus
+                  maxLength={30}
+                />
 
-              <button
-                type="button"
-                onClick={continueFromStep1}
-                disabled={!username.trim()}
-                className="btn-primary w-full shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Continue →
-              </button>
+                <button
+                  type="button"
+                  onClick={continueFromStep1}
+                  disabled={!username.trim()}
+                  className="btn-primary w-full shadow-glow disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Continue →
+                </button>
 
-              <p className="text-center text-[11px] text-slate-400 font-medium mt-4">
-                You can change this later.
-              </p>
+                <p className="mt-4 text-center text-[11px] font-medium text-zinc-500">
+                  You can change this later.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* ─────────────────────────────────────────
-            STEP 2 — PATH
-        ───────────────────────────────────────── */}
-
+        {/* STEP 2 — PATH */}
         {step === 2 && (
           <div className="animate-slide-up">
             <div className="mb-6">
-              <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-primary mb-2">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#A78BFA]">
                 Your direction
               </p>
 
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+              <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-white md:text-3xl">
                 Who are you becoming?
               </h1>
 
-              <p className="text-slate-500 text-sm md:text-base leading-relaxed font-medium">
+              <p className="text-sm font-medium leading-relaxed text-zinc-400 md:text-base">
                 Choose the path that feels closest to the person you want to
                 become. This helps personalize your experience.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="mb-6 grid grid-cols-2 gap-3">
               {PATHS.map((path) => {
                 const selected = avatarClass === path.id
 
@@ -416,29 +419,27 @@ export default function Onboarding() {
                     type="button"
                     onClick={() => setAvatarClass(path.id)}
                     className={[
-                      'relative text-left rounded-3xl p-5 border transition-all duration-200',
-                      'focus:outline-none',
+                      'relative rounded-3xl border p-5 text-left transition-all duration-200 focus:outline-none',
                       selected
-                        ? 'bg-primary/10 border-primary ring-2 ring-primary shadow-card-hover scale-[1.015]'
-                        : 'bg-white/80 border-surface-border hover:border-primary/40 hover:shadow-card-hover',
+                        ? 'border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/40 shadow-[0_0_30px_rgba(127,90,240,0.10)]'
+                        : 'border-white/[0.08] bg-white/[0.035] hover:border-purple-500/30 hover:bg-white/[0.055]',
                     ].join(' ')}
                   >
-                    {/* Selected check */}
                     {selected && (
-                      <span className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-extrabold">
+                      <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#7F5AF0] text-xs font-extrabold text-white">
                         ✓
                       </span>
                     )}
 
-                    <span className="text-3xl block mb-4">
+                    <span className="mb-4 block text-3xl">
                       {path.icon}
                     </span>
 
-                    <p className="font-extrabold text-slate-900">
+                    <p className="font-extrabold text-white">
                       {path.label}
                     </p>
 
-                    <p className="text-xs text-slate-500 mt-1.5 font-medium leading-relaxed">
+                    <p className="mt-1.5 text-xs font-medium leading-relaxed text-zinc-500">
                       {path.desc}
                     </p>
                   </button>
@@ -446,23 +447,22 @@ export default function Onboarding() {
               })}
             </div>
 
-            {/* Current selection */}
-            <div className="glass-card p-4 mb-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-xl">
+            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-xl">
                 {selectedPath.icon}
               </div>
 
               <div className="flex-1">
-                <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-600">
                   Your path
                 </p>
 
-                <p className="text-sm font-extrabold text-slate-800">
+                <p className="text-sm font-extrabold text-zinc-200">
                   {selectedPath.label}
                 </p>
               </div>
 
-              <span className="text-primary text-xs font-extrabold">
+              <span className="text-xs font-extrabold text-[#A78BFA]">
                 Selected
               </span>
             </div>
@@ -487,42 +487,39 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* ─────────────────────────────────────────
-            STEP 3 — GOALS
-        ───────────────────────────────────────── */}
-
+        {/* STEP 3 — GOALS */}
         {step === 3 && (
           <div className="animate-slide-up">
             <div className="mb-6">
-              <div className="flex items-end justify-between gap-4 mb-3">
+              <div className="mb-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-primary mb-2">
+                  <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#A78BFA]">
                     Your priorities
                   </p>
 
-                  <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
                     What do you want to improve?
                   </h1>
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <p className="text-xs font-extrabold text-slate-400">
+                  <p className="text-xs font-extrabold text-zinc-400">
                     {goals.length}/3
                   </p>
 
-                  <p className="text-[10px] text-slate-400 font-medium">
+                  <p className="text-[10px] font-medium text-zinc-600">
                     selected
                   </p>
                 </div>
               </div>
 
-              <p className="text-slate-500 text-sm md:text-base leading-relaxed font-medium">
+              <p className="text-sm font-medium leading-relaxed text-zinc-400 md:text-base">
                 Pick up to 3. Your first choice becomes your main focus inside
                 Qyven.
               </p>
             </div>
 
-            <div className="space-y-2.5 mb-6">
+            <div className="mb-6 space-y-2.5">
               {GOALS.map((goal) => {
                 const selected = goals.includes(goal.label)
                 const isFirst = goals[0] === goal.label
@@ -533,50 +530,49 @@ export default function Onboarding() {
                     type="button"
                     onClick={() => toggleGoal(goal.label)}
                     className={[
-                      'w-full flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-200',
-                      'focus:outline-none',
+                      'flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-200 focus:outline-none',
                       selected
                         ? isFirst
-                          ? 'bg-primary/10 border-primary ring-2 ring-primary shadow-sm'
-                          : 'bg-primary/5 border-primary/40'
-                        : 'bg-white/80 border-surface-border hover:border-primary/30 hover:bg-primary/[0.02]',
+                          ? 'border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/30'
+                          : 'border-purple-500/30 bg-purple-500/[0.06]'
+                        : 'border-white/[0.08] bg-white/[0.035] hover:border-purple-500/25 hover:bg-white/[0.05]',
                     ].join(' ')}
                   >
                     <div
                       className={[
-                        'w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 transition-all',
+                        'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl transition-all',
                         selected
-                          ? 'bg-primary/15'
-                          : 'bg-slate-100',
+                          ? 'bg-purple-500/15'
+                          : 'bg-white/[0.05]',
                       ].join(' ')}
                     >
                       {goal.icon}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-extrabold text-slate-800">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-extrabold text-zinc-100">
                         {goal.label}
                       </p>
 
-                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      <p className="mt-0.5 text-[11px] font-medium text-zinc-500">
                         {goal.desc}
                       </p>
                     </div>
 
                     {isFirst && (
-                      <span className="text-[9px] font-extrabold text-primary bg-primary/10 px-2.5 py-1 rounded-full uppercase tracking-wide">
+                      <span className="rounded-full bg-purple-500/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#A78BFA]">
                         Main
                       </span>
                     )}
 
                     {!isFirst && selected && (
-                      <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-extrabold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7F5AF0] text-xs font-extrabold text-white">
                         ✓
                       </span>
                     )}
 
                     {!selected && goals.length < 3 && (
-                      <span className="w-6 h-6 rounded-full border border-slate-200 text-slate-300 flex items-center justify-center text-xs font-bold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-xs font-bold text-zinc-600">
                         +
                       </span>
                     )}
@@ -587,20 +583,20 @@ export default function Onboarding() {
 
             {/* Personalized preview */}
             {goals.length > 0 && (
-              <div className="rounded-3xl p-4 mb-5 bg-gradient-to-r from-primary/10 via-purple-500/5 to-cyan-500/10 border border-primary/10">
+              <div className="mb-5 rounded-3xl border border-purple-500/10 bg-gradient-to-r from-purple-500/10 via-purple-500/[0.03] to-cyan-500/[0.08] p-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-white/80 flex items-center justify-center text-lg shrink-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-lg">
                     🎯
                   </div>
 
                   <div>
-                    <p className="text-xs font-extrabold text-slate-800 mb-1">
+                    <p className="mb-1 text-xs font-extrabold text-zinc-200">
                       Your Qyven experience is taking shape
                     </p>
 
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                    <p className="text-[11px] font-medium leading-relaxed text-zinc-500">
                       Your main focus will be{' '}
-                      <span className="font-extrabold text-primary capitalize">
+                      <span className="font-extrabold capitalize text-[#A78BFA]">
                         {focusPillar}
                       </span>
                       . You&apos;ll still track all five pillars, but this one
@@ -612,28 +608,28 @@ export default function Onboarding() {
             )}
 
             {/* Summary */}
-            <div className="glass-card p-4 mb-6">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-slate-400 font-extrabold mb-3">
+            <div className="mb-6 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
+              <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-zinc-600">
                 Your setup
               </p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold">
+                  <p className="text-[10px] font-bold text-zinc-600">
                     Name
                   </p>
 
-                  <p className="text-sm font-extrabold text-slate-800 mt-0.5 truncate">
+                  <p className="mt-0.5 truncate text-sm font-extrabold text-zinc-200">
                     {username || '—'}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold">
+                  <p className="text-[10px] font-bold text-zinc-600">
                     Path
                   </p>
 
-                  <p className="text-sm font-extrabold text-slate-800 mt-0.5">
+                  <p className="mt-0.5 text-sm font-extrabold text-zinc-200">
                     {selectedPath.label}
                   </p>
                 </div>
@@ -654,21 +650,21 @@ export default function Onboarding() {
                 type="button"
                 onClick={finish}
                 disabled={loading || goals.length === 0}
-                className="btn-primary flex-[1.6] shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-primary flex-[1.6] shadow-glow disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {loading ? 'Setting up Qyven…' : 'Start my journey 🚀'}
               </button>
             </div>
 
-            <p className="text-center text-[10px] text-slate-400 font-medium mt-4">
+            <p className="mt-4 text-center text-[10px] font-medium text-zinc-600">
               You can change your goals and path anytime from your profile.
             </p>
           </div>
         )}
 
         {/* Bottom brand */}
-        <div className="text-center mt-10">
-          <p className="text-[11px] text-slate-400 font-medium">
+        <div className="mt-10 text-center">
+          <p className="text-[11px] font-medium text-zinc-600">
             Qyven · Become your Future Self
           </p>
         </div>
