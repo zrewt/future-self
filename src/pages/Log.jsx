@@ -112,7 +112,6 @@ function computeStreak(profile, today, isUpdateSameDay) {
   const gapResult = evaluateStreakGap(profile, today)
 
   if (gapResult.type === 'grace_available') {
-    // Pause here — caller must ask the user yes/no before we touch the streak
     return { graceAvailable: gapResult.missedDate }
   }
 
@@ -148,11 +147,9 @@ function computeStreak(profile, today, isUpdateSameDay) {
   }
 }
 
-// Force a normal increment/break, skipping the grace pause — used once the
-// user has answered the grace-window yes/no prompt.
 function computeStreakForced(profile, today, graceAccepted) {
   if (graceAccepted) {
-    const streak = (profile.current_streak || 0) + 1 // missed day "filled in", chain continues
+    const streak = (profile.current_streak || 0) + 1
     const newLongest = Math.max(profile.longest_streak || 0, streak)
     const shieldCheck = checkNewShieldEarned(profile, streak)
     return {
@@ -167,7 +164,6 @@ function computeStreakForced(profile, today, graceAccepted) {
       graceAvailable: null,
     }
   }
-  // Declined — streak breaks normally
   return {
     current_streak: 1,
     longest_streak: profile.longest_streak || 0,
@@ -190,6 +186,7 @@ function getDefaultForm(recentLogs, todayLog) {
       exercise_type: 'rest', workout_duration_min: 0,
       sleep_hours: 7, sleep_quality: 5, water_ml: 1500,
       focus_minutes: 0, reading_minutes: 0, meditation_minutes: 0, mood: 5,
+      screen_time_minutes: 0,
     }
   }
   return {
@@ -200,6 +197,7 @@ function getDefaultForm(recentLogs, todayLog) {
     sleep_quality:       yesterday.sleep_quality ?? 5,
     water_ml:            yesterday.water_ml ?? 1500,
     focus_minutes: 0, reading_minutes: 0, meditation_minutes: 0, mood: 5,
+    screen_time_minutes: 0,
   }
 }
 
@@ -382,7 +380,7 @@ export default function Log() {
   const [savedWorkouts, setSavedWorkouts]   = useState([])
   const [workoutLibTab, setWorkoutLibTab]   = useState('presets')
   const [lowMoodPrompt, setLowMoodPrompt]   = useState(false)
-  const [gracePrompt, setGracePrompt]       = useState(null) // missedDate string, or null
+  const [gracePrompt, setGracePrompt]       = useState(null)
 
   const isUpdate = Boolean(todayLog)
 
@@ -406,11 +404,11 @@ export default function Log() {
       reading_minutes:      todayLog.reading_minutes      ?? 0,
       meditation_minutes:   todayLog.meditation_minutes   ?? 0,
       mood:                 todayLog.mood                 ?? 5,
+      screen_time_minutes:  todayLog.screen_time_minutes  ?? 0,
     })
     setDetails(parseLogDetails(todayLog.log_details))
   }, [todayLog])
 
-  // Habit streaks — consecutive days each habit was met
   const habitStreaks = useMemo(() => {
     const logs = recentLogs || []
     return {
@@ -485,6 +483,13 @@ export default function Log() {
 
   const glasses = Math.min(8, Math.floor(form.water_ml / 250))
 
+  function formatScreenTime(mins) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    if (h === 0) return `${m}m`
+    return `${h}h ${m}m`
+  }
+
   // ── Build DB row ──────────────────────────────────────────────────────────
   function buildRow(userId, today, scores, xp_earned, is_perfect_day, mergedDetails) {
     return {
@@ -505,6 +510,7 @@ export default function Log() {
       reading_minutes:      form.reading_minutes,
       meditation_minutes:   form.meditation_minutes,
       mood:                 form.mood,
+      screen_time_minutes:  form.screen_time_minutes,
       log_details:          mergedDetails,
       ...scores,
       xp_earned,
@@ -516,7 +522,7 @@ export default function Log() {
   async function finalizeSubmit(streakUpdate) {
     const today = localDateISO()
     const foods          = details.foods || []
-    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours) }
+    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours), screen_time_target_minutes: profile.screen_time_target_minutes }
     const scores         = buildAllScores(logPayload, streakUpdate.current_streak, foods)
     const is_perfect_day = isPerfectDay(logPayload, foods)
     const prevQuests     = getCompletedQuestIds(todayLog)
@@ -591,7 +597,7 @@ export default function Log() {
     const streakForCalc = isUpdateSameDay ? profile.current_streak : profile.current_streak
 
     const foods          = details.foods || []
-    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours) }
+    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours), screen_time_target_minutes: profile.screen_time_target_minutes }
     const scores         = buildAllScores(logPayload, streakForCalc, foods)
     const is_perfect_day = isPerfectDay(logPayload, foods)
     const prevQuests     = getCompletedQuestIds(todayLog)
@@ -618,7 +624,6 @@ export default function Log() {
     const streakUpdate = computeStreak(profile, today, isUpdateSameDay)
 
     if (streakUpdate.graceAvailable) {
-      // Pause submission — ask the user about the missed day first
       setLoading(false)
       setGracePrompt(streakUpdate.graceAvailable)
       return
@@ -961,6 +966,35 @@ export default function Log() {
           <DetailToggle label="Style" badge={details.meditation.style ? 1 : 0}>
             <SelectField label="Type" value={details.meditation.style} onChange={(v) => patchDetails('meditation', { style: v })} options={MEDITATION_STYLES} />
           </DetailToggle>
+        </div>
+
+        {/* ── Screen time ── */}
+        <div className="glass-card p-5">
+          <div className="flex items-center mb-2">
+            <label className="label-text mb-0">Screen time</label>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={600}
+            step={15}
+            value={form.screen_time_minutes}
+            onChange={(e) => updateField('screen_time_minutes', Number(e.target.value))}
+            className="w-full"
+          />
+          <div className="flex flex-wrap gap-2 mt-2">
+            {[60, 120, 180, 240, 360, 480].map((mins) => (
+              <button
+                key={mins}
+                type="button"
+                onClick={() => updateField('screen_time_minutes', mins)}
+                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.screen_time_minutes === mins ? 'bg-primary text-white' : 'bg-slate-100'}`}
+              >
+                {formatScreenTime(mins)}
+              </button>
+            ))}
+          </div>
+          <p className="text-sm mt-2 text-slate-500 font-medium">{formatScreenTime(form.screen_time_minutes)} today</p>
         </div>
 
         {/* ── Mood ── */}

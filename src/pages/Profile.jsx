@@ -11,9 +11,20 @@ import XPBar from '../components/XPBar'
 import Spinner from '../components/ui/Spinner'
 import { getLevelName } from '../utils/scoring'
 
+const SCREEN_TIME_MIN = 30
+const SCREEN_TIME_MAX = 720
+
+function formatScreenTime(mins) {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
 export default function Profile() {
   const navigate = useNavigate()
-  const { user, profile, reset } = useUserStore()
+  const { user, profile, setProfile, reset } = useUserStore()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -21,6 +32,16 @@ export default function Profile() {
   const [stats, setStats]             = useState(null)
   const [loading, setLoading]         = useState(true)
   const [shareStatus, setShareStatus] = useState(null)
+
+  const [screenTimeTarget, setScreenTimeTarget] = useState(180)
+  const [savingTarget, setSavingTarget]          = useState(false)
+  const [targetSavedAt, setTargetSavedAt]        = useState(null)
+
+  useEffect(() => {
+    if (profile?.screen_time_target_minutes != null) {
+      setScreenTimeTarget(profile.screen_time_target_minutes)
+    }
+  }, [profile?.screen_time_target_minutes])
 
   useEffect(() => {
     if (!user) return
@@ -78,6 +99,21 @@ export default function Profile() {
     setTimeout(() => setShareStatus(null), 2000)
   }
 
+  async function handleSaveScreenTimeTarget() {
+    if (!user) return
+    setSavingTarget(true)
+    const { error } = await supabase
+      .from('users_profile')
+      .update({ screen_time_target_minutes: screenTimeTarget })
+      .eq('id', user.id)
+    if (!error) {
+      setProfile({ ...profile, screen_time_target_minutes: screenTimeTarget })
+      setTargetSavedAt(new Date())
+    }
+    setSavingTarget(false)
+    setTimeout(() => setTargetSavedAt(null), 2500)
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     reset()
@@ -92,7 +128,6 @@ export default function Profile() {
   const levelName = getLevelName(profile.level)
   const publicURL = `${window.location.origin}/u/${profile.username}`
 
-  // Chart colors that work in both modes
   const tooltipStyle = {
     background: isDark ? '#161C0F' : '#fff',
     border: `1px solid ${isDark ? 'rgba(0,232,122,0.15)' : '#e2e8f0'}`,
@@ -108,18 +143,15 @@ export default function Profile() {
     { label: 'Personal best', value: stats?.bestFSS       ?? 0, icon: '🏆' },
   ]
 
-  // Primary color per mode
-  const primaryHex  = isDark ? '#00E87A' : '#7F5AF0'
-  const primaryRgba = isDark ? 'rgba(0,232,122,' : 'rgba(127,90,240,'
+  const primaryHex   = isDark ? '#00E87A' : '#7F5AF0'
+  const targetDirty  = screenTimeTarget !== (profile.screen_time_target_minutes ?? 180)
 
   return (
     <div className="max-w-lg mx-auto space-y-4 animate-slide-up pb-10">
 
-      {/* ── Profile hero — clean, no circle gradients ── */}
       <div className="glass-card overflow-hidden">
         <div className="p-5 pb-4">
           <div className="flex items-center gap-4">
-            {/* Avatar — flat pill, no gradient blobs */}
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-extrabold text-white shrink-0"
               style={{
@@ -154,17 +186,19 @@ export default function Profile() {
             </div>
 
             <a
-              href={publicURL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] font-bold px-2.5 py-1.5 rounded-full shrink-0"
-              style={{
-                color: primaryHex,
-                background: isDark ? 'rgba(0,232,122,0.1)' : 'rgba(127,90,240,0.1)',
-              }}
-            >
-              View public →
-            </a>
+  href={publicURL}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-[10px] font-bold px-2.5 py-1.5 rounded-full shrink-0"
+  style={{
+    color: primaryHex,
+    background: isDark
+      ? 'rgba(0,232,122,0.1)'
+      : 'rgba(127,90,240,0.1)',
+  }}
+>
+  View public →
+</a>
           </div>
         </div>
         <div className="px-5 pb-5">
@@ -172,7 +206,6 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── Stats grid ── */}
       <div className="grid grid-cols-2 gap-3">
         {statItems.map((s) => (
           <div key={s.label} className="glass-card p-4">
@@ -180,17 +213,13 @@ export default function Profile() {
               <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">{s.label}</p>
               <span className="text-base">{s.icon}</span>
             </div>
-            <p
-              className="text-3xl font-extrabold tabular-nums"
-              style={{ color: primaryHex }}
-            >
+            <p className="text-3xl font-extrabold tabular-nums" style={{ color: primaryHex }}>
               {s.value}
             </p>
           </div>
         ))}
       </div>
 
-      {/* ── Share public profile ── */}
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">🌐</span>
@@ -201,33 +230,75 @@ export default function Profile() {
           Anyone with the link sees your streak, score, level, and achievements.
         </p>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="btn-primary flex-1 !py-2.5 text-sm"
-          >
+          <button type="button" onClick={handleShare} className="btn-primary flex-1 !py-2.5 text-sm">
             {shareStatus === 'shared' ? '✓ Shared!' : shareStatus === 'copied' ? '✓ Copied!' : '↗ Share profile'}
           </button>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="btn-secondary !py-2.5 !px-3 text-sm"
-            title="Copy link"
-          >
+          <button type="button" onClick={handleCopyLink} className="btn-secondary !py-2.5 !px-3 text-sm" title="Copy link">
             {shareStatus === 'link' ? '✓' : '🔗'}
           </button>
-          <a
-            href={publicURL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary !py-2.5 !px-3 text-sm inline-flex items-center"
-          >
+          <a href={publicURL} target="_blank" rel="noopener noreferrer" className="btn-secondary !py-2.5 !px-3 text-sm inline-flex items-center">
             👁
           </a>
         </div>
       </div>
 
-      {/* ── Score history chart ── */}
+      <div className="glass-card p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-lg">📵</span>
+          <p className="font-extrabold text-slate-900 dark:text-[#E8F0E0] text-sm">Screen time goal</p>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-[#5A7050] font-medium leading-relaxed mb-4">
+          Stay under this on your daily log to complete the Unplugged quest and build toward the Digital Minimalist achievements.
+        </p>
+
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Target</span>
+          <span className="text-lg font-extrabold tabular-nums" style={{ color: primaryHex }}>
+            {formatScreenTime(screenTimeTarget)}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={SCREEN_TIME_MIN}
+          max={SCREEN_TIME_MAX}
+          step={15}
+          value={screenTimeTarget}
+          onChange={(e) => setScreenTimeTarget(Number(e.target.value))}
+          className="w-full"
+          style={{ accentColor: primaryHex }}
+        />
+        <div className="flex justify-between text-[10px] font-semibold text-slate-400 dark:text-[#5A7050] mt-1 mb-3">
+          <span>30m</span>
+          <span>12h</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[60, 120, 180, 240, 360].map((mins) => (
+            <button
+              key={mins}
+              type="button"
+              onClick={() => setScreenTimeTarget(mins)}
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+              style={{
+                background: screenTimeTarget === mins ? primaryHex : (isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'),
+                color: screenTimeTarget === mins ? '#fff' : (isDark ? '#9DB890' : '#475569'),
+              }}
+            >
+              {formatScreenTime(mins)}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSaveScreenTimeTarget}
+          disabled={savingTarget || !targetDirty}
+          className="btn-primary w-full !py-2.5 text-sm disabled:opacity-50"
+        >
+          {savingTarget ? 'Saving…' : targetSavedAt ? '✓ Saved' : 'Save target'}
+        </button>
+      </div>
+
       <div className="glass-card p-5">
         <p className="section-title mb-1">Score history</p>
         <p className="text-xs text-slate-400 dark:text-[#5A7050] font-medium mb-4">Last 30 days — Future Self Score</p>
@@ -250,31 +321,15 @@ export default function Profile() {
                       <stop offset="100%" stopColor={primaryHex} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 9, fill: isDark ? '#5A7050' : '#94a3b8' }}
-                    axisLine={false} tickLine={false} interval={6}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'} vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: isDark ? '#5A7050' : '#94a3b8' }} axisLine={false} tickLine={false} interval={6} />
                   <YAxis domain={[0, 100]} hide />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    formatter={(v) => [v, 'Future Self']}
-                  />
-                  <Area
-                    type="monotone" dataKey="fss"
-                    stroke={primaryHex} strokeWidth={2}
-                    fill="url(#fssGrad)" dot={false}
-                  />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [v, 'Future Self']} />
+                  <Area type="monotone" dataKey="fss" stroke={primaryHex} strokeWidth={2} fill="url(#fssGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Pillar mini-chart */}
             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/6">
               <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide mb-3">
                 Pillar breakdown — last 30 days
@@ -282,11 +337,7 @@ export default function Profile() {
               <div style={{ width: '100%', height: 120 }}>
                 <ResponsiveContainer>
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 9, fill: isDark ? '#5A7050' : '#94a3b8' }}
-                      axisLine={false} tickLine={false} interval={6}
-                    />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: isDark ? '#5A7050' : '#94a3b8' }} axisLine={false} tickLine={false} interval={6} />
                     <YAxis domain={[0, 100]} hide />
                     <Tooltip contentStyle={tooltipStyle} />
                     {[
@@ -295,16 +346,7 @@ export default function Profile() {
                       { key: 'nrg', color: '#4DA6FF', label: 'Energy' },
                       { key: 'foc', color: '#FFB830', label: 'Focus' },
                     ].map((l) => (
-                      <Area
-                        key={l.key}
-                        type="monotone"
-                        dataKey={l.key}
-                        name={l.label}
-                        stroke={l.color}
-                        strokeWidth={1.5}
-                        fill="none"
-                        dot={false}
-                      />
+                      <Area key={l.key} type="monotone" dataKey={l.key} name={l.label} stroke={l.color} strokeWidth={1.5} fill="none" dot={false} />
                     ))}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -314,7 +356,6 @@ export default function Profile() {
         )}
       </div>
 
-      {/* ── Quick links ── */}
       <div className="grid grid-cols-2 gap-3">
         <Link to="/achievements" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
           <span className="text-2xl block mb-2">🏆</span>
@@ -338,7 +379,6 @@ export default function Profile() {
         </Link>
       </div>
 
-      {/* ── Sign out ── */}
       <button
         type="button"
         onClick={handleSignOut}

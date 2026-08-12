@@ -1,8 +1,19 @@
 import { Link } from 'react-router-dom'
 import { evaluateQuests } from '../../data/quests'
+import { useUserStore } from '../../store/useUserStore'
 
 export default function DailyQuests({ todayLog }) {
-  const quests = evaluateQuests(todayLog)
+  const { profile } = useUserStore()
+
+  // evaluateQuests reads screen_time_target_minutes off the log object itself
+  // (see quests.js), but that value actually lives on the profile — merge it
+  // in here so the Unplugged quest checks against the user's real saved target
+  // instead of always falling back to the 180-minute default.
+  const logForQuests = todayLog
+    ? { ...todayLog, screen_time_target_minutes: profile?.screen_time_target_minutes }
+    : todayLog
+
+  const quests = evaluateQuests(logForQuests)
   const done = quests.filter((q) => q.done).length
 
   return (
@@ -48,4 +59,4 @@ export default function DailyQuests({ todayLog }) {
       )}
     </div>
   )
-}
+} 
