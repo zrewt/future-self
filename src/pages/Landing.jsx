@@ -408,6 +408,97 @@ function FloatingBlobs({ scrollY }) {
   )
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ambient trajectory scene
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AmbientTrajectory({ scrollY }) {
+  const particles = [
+    [8, 18, 2, 18, 0], [18, 68, 1.5, 22, 2], [31, 28, 1.2, 19, 4],
+    [44, 82, 2, 24, 1], [57, 16, 1.4, 21, 5], [68, 58, 1.6, 20, 3],
+    [79, 25, 1.2, 23, 6], [91, 72, 2, 25, 2], [96, 39, 1.3, 18, 7],
+    [12, 45, 1.1, 26, 4], [73, 88, 1.2, 22, 1], [38, 58, 1, 27, 5],
+  ]
+
+  return (
+    <div className="qyven-ambient-scene" aria-hidden="true">
+      <div className="qyven-ambient-grid" />
+
+      <div
+        className="qyven-hero-orbit orbit-one"
+        style={{ transform: `translate3d(0, ${scrollY * -0.035}px, 0)` }}
+      />
+      <div
+        className="qyven-hero-orbit orbit-two"
+        style={{ transform: `translate3d(0, ${scrollY * -0.055}px, 0)` }}
+      />
+
+      <svg
+        className="qyven-hero-trajectory"
+        viewBox="0 0 1200 720"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="heroTrajectoryGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FF7AC6" stopOpacity="0" />
+            <stop offset="35%" stopColor="#7F5AF0" stopOpacity="0.24" />
+            <stop offset="72%" stopColor="#67E8F9" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#00E8C6" stopOpacity="0" />
+          </linearGradient>
+          <filter id="heroTrajectoryGlow">
+            <feGaussianBlur stdDeviation="7" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <path
+          className="qyven-hero-trajectory-glow"
+          d="M-40 625 C170 575 215 455 390 495 C570 535 580 355 760 390 C920 420 925 210 1240 120"
+          fill="none"
+          stroke="url(#heroTrajectoryGradient)"
+          strokeWidth="18"
+          strokeLinecap="round"
+          filter="url(#heroTrajectoryGlow)"
+        />
+        <path
+          className="qyven-hero-trajectory-line"
+          d="M-40 625 C170 575 215 455 390 495 C570 535 580 355 760 390 C920 420 925 210 1240 120"
+          fill="none"
+          stroke="url(#heroTrajectoryGradient)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <circle className="qyven-trajectory-node node-one" cx="390" cy="495" r="3" />
+        <circle className="qyven-trajectory-node node-two" cx="760" cy="390" r="3.5" />
+        <circle className="qyven-trajectory-node node-three" cx="1110" cy="165" r="4" />
+      </svg>
+
+      <div className="qyven-particle-field">
+        {particles.map(([left, top, size, duration, delay], index) => (
+          <span
+            key={index}
+            className="qyven-particle"
+            style={{
+              left: `${left}%`,
+              top: `${top}%`,
+              width: size,
+              height: size,
+              animationDuration: `${duration}s`,
+              animationDelay: `${delay}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="qyven-ambient-vignette" />
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Data
 // ─────────────────────────────────────────────────────────────────────────────
@@ -471,8 +562,9 @@ export default function Landing() {
       }}
     >
       <FloatingBlobs scrollY={scrollY} />
+      <AmbientTrajectory scrollY={scrollY} />
 
-      {/* ───────────────── NAV ───────────────── */}
+      {/* ───────────────── NAV ───────────────── */
 
 <nav
   className="qyven-nav"
@@ -533,7 +625,7 @@ export default function Landing() {
 
     <Link
       to={isLoggedIn ? '/dashboard' : '/get-started'}
-      className="qyven-nav-cta"
+      className="qyven-nav-cta qyven-interactive-button"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -558,11 +650,11 @@ export default function Landing() {
     </Link>
   </div>
 </nav>
-
+}
       {/* ───────────────── HERO ───────────────── */}
 
       <section
-        className="qyven-hero"
+        className="qyven-hero qyven-hero-enhanced"
         style={{
           minHeight: '100vh',
           padding: '125px 20px 70px',
@@ -689,7 +781,7 @@ export default function Landing() {
                       ? '/dashboard'
                       : '/get-started'
                   }
-                  className="qyven-main-cta"
+                  className="qyven-main-cta qyven-interactive-button"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -849,6 +941,11 @@ export default function Landing() {
                   >
                     LIVE
                   </span>
+                </div>
+
+                <div className="qyven-score-card-signal">
+                  <span className="qyven-signal-dot" />
+                  <span>Tracking your trajectory</span>
                 </div>
 
                 <div
@@ -1386,6 +1483,7 @@ export default function Landing() {
                 />
 
                 <path
+                  className="qyven-chart-line"
                   d="M 0 140 C 80 138, 120 128, 175 132 C 230 136, 270 105, 325 112 C 390 120, 430 82, 480 89 C 535 95, 570 55, 620 58 C 650 60, 680 35, 700 22"
                   fill="none"
                   stroke="url(#trajectoryLine)"
@@ -1843,7 +1941,7 @@ export default function Landing() {
                   ? '/dashboard'
                   : '/get-started'
               }
-              className="qyven-final-button"
+              className="qyven-final-button qyven-interactive-button"
               style={{
                 display:
                   'inline-flex',
@@ -2202,6 +2300,279 @@ export default function Landing() {
 
             .qyven-trust-points {
               font-size: 9px !important;
+            }
+          }
+
+
+          /* ─────────────────────────────────────────────────────────────
+             Enhanced motion / ambient hero
+             ───────────────────────────────────────────────────────────── */
+
+          .qyven-ambient-scene {
+            position: absolute;
+            inset: 0;
+            min-height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+          }
+
+          .qyven-ambient-grid {
+            position: absolute;
+            inset: 0;
+            opacity: 0.22;
+            background-image:
+              linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 80px 80px;
+            mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
+          }
+
+          .qyven-hero-enhanced::before,
+          .qyven-hero-enhanced::after {
+            content: '';
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            filter: blur(2px);
+          }
+
+          .qyven-hero-enhanced::before {
+            width: 620px;
+            height: 620px;
+            left: -210px;
+            top: 70px;
+            background: radial-gradient(circle, rgba(127,90,240,0.14), transparent 68%);
+            animation: qyvenHeroGlowOne 16s ease-in-out infinite;
+          }
+
+          .qyven-hero-enhanced::after {
+            width: 520px;
+            height: 520px;
+            right: -180px;
+            top: 80px;
+            background: radial-gradient(circle, rgba(0,232,198,0.11), rgba(255,122,198,0.06) 38%, transparent 70%);
+            animation: qyvenHeroGlowTwo 19s ease-in-out infinite;
+          }
+
+          .qyven-hero-trajectory {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: min(100%, 760px);
+            opacity: 0.9;
+          }
+
+          .qyven-hero-trajectory-line {
+            stroke-dasharray: 120 18;
+            animation: qyvenTrajectoryFlow 13s linear infinite;
+          }
+
+          .qyven-hero-trajectory-glow {
+            opacity: 0.18;
+            stroke-dasharray: 85 35;
+            animation: qyvenTrajectoryFlow 13s linear infinite reverse;
+          }
+
+          .qyven-trajectory-node {
+            fill: #67E8F9;
+            filter: drop-shadow(0 0 8px rgba(103,232,249,0.8));
+            animation: qyvenNodePulse 3.5s ease-in-out infinite;
+          }
+
+          .node-two { animation-delay: 0.8s; }
+          .node-three { animation-delay: 1.6s; }
+
+          .qyven-particle-field {
+            position: absolute;
+            inset: 0;
+          }
+
+          .qyven-particle {
+            position: absolute;
+            display: block;
+            border-radius: 50%;
+            background: rgba(190, 240, 255, 0.65);
+            box-shadow: 0 0 9px rgba(103,232,249,0.45);
+            opacity: 0.32;
+            animation-name: qyvenParticleFloat;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+          }
+
+          .qyven-ambient-vignette {
+            position: absolute;
+            inset: 0;
+            background:
+              radial-gradient(ellipse at 50% 38%, transparent 0%, rgba(11,10,20,0.08) 48%, rgba(11,10,20,0.72) 100%);
+          }
+
+          .qyven-floating-card {
+            animation: qyvenCardFloat 7s ease-in-out infinite;
+            transform-origin: center center;
+          }
+
+          .qyven-floating-card::after {
+            content: '';
+            position: absolute;
+            width: 70%;
+            height: 45%;
+            left: 15%;
+            bottom: -28%;
+            background: radial-gradient(ellipse, rgba(127,90,240,0.24), transparent 70%);
+            filter: blur(18px);
+            z-index: -1;
+            animation: qyvenCardShadow 7s ease-in-out infinite;
+          }
+
+          .qyven-score-card-signal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            margin: 0 auto 3px;
+            width: fit-content;
+            padding: 5px 9px;
+            border: 1px solid rgba(103,232,249,0.1);
+            border-radius: 999px;
+            background: rgba(103,232,249,0.035);
+            color: #656A83;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+          }
+
+          .qyven-signal-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #00E8C6;
+            box-shadow: 0 0 8px rgba(0,232,198,0.8);
+            animation: qyvenSignalPulse 2s ease-in-out infinite;
+          }
+
+          .qyven-interactive-button {
+            transition:
+              transform 220ms cubic-bezier(0.16,1,0.3,1),
+              box-shadow 220ms ease,
+              filter 220ms ease;
+          }
+
+          .qyven-interactive-button:hover {
+            transform: translateY(-2px) scale(1.015);
+            filter: brightness(1.06);
+          }
+
+          .qyven-interactive-button:active {
+            transform: translateY(0) scale(0.99);
+          }
+
+          .qyven-chart-line {
+            stroke-dasharray: 900;
+            stroke-dashoffset: 900;
+            animation: qyvenChartDraw 2.4s 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+          }
+
+          @keyframes qyvenHeroGlowOne {
+            0%, 100% { transform: translate3d(0,0,0) scale(1); opacity: 0.85; }
+            50% { transform: translate3d(70px,35px,0) scale(1.12); opacity: 1; }
+          }
+
+          @keyframes qyvenHeroGlowTwo {
+            0%, 100% { transform: translate3d(0,0,0) scale(1); opacity: 0.8; }
+            50% { transform: translate3d(-55px,50px,0) scale(1.1); opacity: 1; }
+          }
+
+          @keyframes qyvenTrajectoryFlow {
+            to { stroke-dashoffset: -138; }
+          }
+
+          @keyframes qyvenNodePulse {
+            0%, 100% { transform: scale(1); opacity: 0.65; }
+            50% { transform: scale(1.55); opacity: 1; }
+          }
+
+          @keyframes qyvenParticleFloat {
+            0%, 100% { transform: translate3d(0,0,0); opacity: 0.18; }
+            50% { transform: translate3d(12px,-18px,0); opacity: 0.62; }
+          }
+
+          @keyframes qyvenCardFloat {
+            0%, 100% { transform: translate3d(0,0,0) rotate(0deg); }
+            50% { transform: translate3d(0,-7px,0) rotate(0.25deg); }
+          }
+
+          @keyframes qyvenCardShadow {
+            0%, 100% { transform: scale(0.92); opacity: 0.65; }
+            50% { transform: scale(1.05); opacity: 1; }
+          }
+
+          @keyframes qyvenSignalPulse {
+            0%, 100% { opacity: 0.45; transform: scale(0.85); }
+            50% { opacity: 1; transform: scale(1.15); }
+          }
+
+          @keyframes qyvenChartDraw {
+            to { stroke-dashoffset: 0; }
+          }
+
+
+          @media (max-width: 780px) {
+            .qyven-ambient-grid {
+              background-size: 58px 58px;
+              opacity: 0.14;
+            }
+
+            .qyven-hero-trajectory {
+              height: 650px;
+              opacity: 0.55;
+            }
+
+            .qyven-hero-enhanced::before {
+              width: 430px;
+              height: 430px;
+              left: -230px;
+              top: 30px;
+            }
+
+            .qyven-hero-enhanced::after {
+              width: 390px;
+              height: 390px;
+              right: -220px;
+              top: 390px;
+            }
+
+            .qyven-particle {
+              opacity: 0.22;
+            }
+
+            .qyven-floating-card {
+              animation-duration: 8s;
+            }
+
+            .qyven-score-card-signal {
+              font-size: 7.5px;
+              padding: 4px 8px;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .qyven-hero-trajectory {
+              height: 620px;
+              opacity: 0.38;
+            }
+
+            .qyven-ambient-grid {
+              opacity: 0.1;
+            }
+
+            .qyven-floating-card {
+              animation-duration: 9s;
+            }
+
+            .qyven-score-card-signal {
+              margin-bottom: 0;
             }
           }
 
