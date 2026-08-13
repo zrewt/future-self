@@ -99,7 +99,7 @@ function ScoreRing({
     let frame
     let start = null
 
-    const duration = 1500
+    const duration = 9500
 
     const animate = (timestamp) => {
       if (!start) start = timestamp
