@@ -91,24 +91,47 @@ function ScoreRing({
 }) {
   const [displayed, setDisplayed] = useState(0)
 
-  const radius = size / 2 - strokeWidth
+  // Responsive size
+  const [ringSize, setRingSize] = useState(size)
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (window.innerWidth <= 380) {
+        setRingSize(Math.min(size, 132))
+      } else if (window.innerWidth <= 600) {
+        setRingSize(Math.min(size, 145))
+      } else {
+        setRingSize(size)
+      }
+    }
+
+    updateSize()
+    window.addEventListener('resize', updateSize)
+
+    return () => window.removeEventListener('resize', updateSize)
+  }, [size])
+
+  const radius = ringSize / 2 - strokeWidth
   const circumference = 2 * Math.PI * radius
-  const dash = (displayed / 100) * circumference
+
+  const progress = displayed / 100
+  const dashOffset = circumference * (1 - progress)
 
   useEffect(() => {
     let frame
     let start = null
 
-    const duration = 9500
+    // Slower, smoother animation
+    const duration = 5500
+    const delay = 500
 
     const animate = (timestamp) => {
       if (!start) start = timestamp
 
-      const progress = Math.min(
-        (timestamp - start) / duration,
-        1
-      )
+      const elapsed = timestamp - start
+      const progress = Math.min(elapsed / duration, 1)
 
+      // Smooth ease-out
       const eased = 1 - Math.pow(1 - progress, 3)
 
       setDisplayed(Math.round(eased * score))
@@ -120,7 +143,7 @@ function ScoreRing({
 
     const timeout = setTimeout(() => {
       frame = requestAnimationFrame(animate)
-    }, 400)
+    }, delay)
 
     return () => {
       clearTimeout(timeout)
@@ -131,21 +154,24 @@ function ScoreRing({
   return (
     <div
       style={{
-        width: size,
-        height: size,
+        width: ringSize,
+        height: ringSize,
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        flexShrink: 0,
       }}
     >
       <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
+        width={ringSize}
+        height={ringSize}
+        viewBox={`0 0 ${ringSize} ${ringSize}`}
         style={{
           position: 'absolute',
+          inset: 0,
           transform: 'rotate(-90deg)',
+          overflow: 'visible',
         }}
       >
         <defs>
@@ -162,41 +188,49 @@ function ScoreRing({
           </linearGradient>
         </defs>
 
+        {/* Background ring */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={ringSize / 2}
+          cy={ringSize / 2}
           r={radius}
           fill="none"
           stroke="rgba(255,255,255,0.07)"
           strokeWidth={strokeWidth}
         />
 
+        {/* Animated score ring */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={ringSize / 2}
+          cy={ringSize / 2}
           r={radius}
           fill="none"
           stroke="url(#landingScoreGradient)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          strokeDasharray={`${dash} ${circumference}`}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
           style={{
-            filter: 'drop-shadow(0 0 12px rgba(127,90,240,0.45))',
-            transition: 'stroke-dasharray 0.08s linear',
+            filter: 'drop-shadow(0 0 10px rgba(127,90,240,0.4))',
+            transition: 'stroke-dashoffset 0.08s linear',
           }}
         />
       </svg>
 
+      {/* Center content */}
       <div
         style={{
           position: 'relative',
           zIndex: 2,
           textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <div
           style={{
-            fontSize: size * 0.3,
+            fontSize: ringSize * 0.30,
             lineHeight: 0.95,
             fontWeight: 800,
             letterSpacing: '-0.06em',
@@ -212,8 +246,8 @@ function ScoreRing({
 
         <div
           style={{
-            marginTop: 7,
-            fontSize: size * 0.06,
+            marginTop: ringSize < 145 ? 5 : 7,
+            fontSize: Math.max(9, ringSize * 0.06),
             fontWeight: 800,
             color: '#858AA5',
             letterSpacing: '0.13em',
