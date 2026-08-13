@@ -360,6 +360,7 @@ function FloatingBlobs({ scrollY }) {
       {blobs.map((blob, index) => (
         <div
           key={index}
+          className="qyven-mobile-blob"
           style={{
             position: 'absolute',
             top: blob.top - scrollY * blob.speed,
@@ -393,7 +394,10 @@ function FloatingBlobs({ scrollY }) {
             50% { transform: translate(20px,-25px); }
           }
 
-          @media (max-width: 640px) {
+          /* Unified with the main mobile breakpoint below (780px) instead of
+             a separate 640px cutoff — one "is this mobile" threshold for the
+             whole page, not two disagreeing ones. */
+          @media (max-width: 780px) {
             .qyven-mobile-blob {
               display: none !important;
             }
@@ -470,88 +474,90 @@ export default function Landing() {
 
       {/* ───────────────── NAV ───────────────── */}
 
-      <nav
-        className="qyven-nav"
+<nav
+  className="qyven-nav"
+  style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    height: 64,
+    padding: '0 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    background: 'rgba(11,10,20,0.72)',
+    backdropFilter: 'blur(22px)',
+    WebkitBackdropFilter: 'blur(22px)',
+    borderBottom:
+      '1px solid rgba(255,255,255,0.06)',
+  }}
+>
+  <Link
+    to="/"
+    style={{
+      textDecoration: 'none',
+      color: '#F5F3FF',
+      fontSize: 23,
+      fontWeight: 800,
+      letterSpacing: '-0.07em',
+    }}
+  >
+    Qyven
+  </Link>
+
+  <div
+    className="qyven-nav-right"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 18,
+    }}
+  >
+    {!isLoggedIn && (
+      <Link
+        to="/login"
+        className="qyven-nav-signin"
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          height: 64,
-          padding: '0 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'rgba(11,10,20,0.72)',
-          backdropFilter: 'blur(22px)',
-          WebkitBackdropFilter: 'blur(22px)',
-          borderBottom:
-            '1px solid rgba(255,255,255,0.06)',
+          color: '#AEB2CC',
+          textDecoration: 'none',
+          fontSize: 13,
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
         }}
       >
-        <Link
-          to="/"
-          style={{
-            textDecoration: 'none',
-            color: '#F5F3FF',
-            fontSize: 23,
-            fontWeight: 800,
-            letterSpacing: '-0.07em',
-          }}
-        >
-          Qyven
-        </Link>
+        Sign in
+      </Link>
+    )}
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 18,
-          }}
-        >
-          {!isLoggedIn && (
-            <Link
-              to="/login"
-              className="qyven-desktop-only"
-              style={{
-                color: '#AEB2CC',
-                textDecoration: 'none',
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              Sign in
-            </Link>
-          )}
-
-          <Link
-            to={isLoggedIn ? '/dashboard' : '/get-started'}
-            className="qyven-nav-cta"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '9px 18px',
-              minHeight: 40,
-              borderRadius: 999,
-              background:
-                'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
-              color: '#fff',
-              textDecoration: 'none',
-              fontSize: 12,
-              fontWeight: 800,
-              boxShadow:
-                '0 0 26px rgba(127,90,240,0.3)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {isLoggedIn
-              ? 'Dashboard →'
-              : 'Find My Score →'}
-          </Link>
-        </div>
-      </nav>
+    <Link
+      to={isLoggedIn ? '/dashboard' : '/get-started'}
+      className="qyven-nav-cta"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '9px 18px',
+        minHeight: 40,
+        borderRadius: 999,
+        background:
+          'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+        color: '#fff',
+        textDecoration: 'none',
+        fontSize: 12,
+        fontWeight: 800,
+        boxShadow:
+          '0 0 26px rgba(127,90,240,0.3)',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {isLoggedIn
+        ? 'Dashboard →'
+        : 'Find My Score →'}
+    </Link>
+  </div>
+</nav>
 
       {/* ───────────────── HERO ───────────────── */}
 
@@ -1969,15 +1975,19 @@ export default function Landing() {
               font-size: 21px !important;
             }
 
-            .qyven-nav-cta {
-              padding: 8px 14px !important;
-              min-height: 38px !important;
-              font-size: 11px !important;
-            }
+.qyven-nav-right {
+  gap: 10px !important;
+}
 
-            .qyven-desktop-only {
-              display: none !important;
-            }
+.qyven-nav-signin {
+  font-size: 11px !important;
+}
+
+.qyven-nav-cta {
+  padding: 8px 14px !important;
+  min-height: 38px !important;
+  font-size: 11px !important;
+}
 
             .qyven-hero {
               min-height: auto !important;
