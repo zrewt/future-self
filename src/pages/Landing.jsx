@@ -564,93 +564,93 @@ export default function Landing() {
       <FloatingBlobs scrollY={scrollY} />
       <AmbientTrajectory scrollY={scrollY} />
 
-      {/* ───────────────── NAV ───────────────── */
+      {/* ───────────────── NAV ───────────────── */}
 
-<nav
-  className="qyven-nav"
-  style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    height: 64,
-    padding: '0 24px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    background: 'rgba(11,10,20,0.72)',
-    backdropFilter: 'blur(22px)',
-    WebkitBackdropFilter: 'blur(22px)',
-    borderBottom:
-      '1px solid rgba(255,255,255,0.06)',
-  }}
->
-  <Link
-    to="/"
-    style={{
-      textDecoration: 'none',
-      color: '#F5F3FF',
-      fontSize: 23,
-      fontWeight: 800,
-      letterSpacing: '-0.07em',
-    }}
-  >
-    Qyven
-  </Link>
-
-  <div
-    className="qyven-nav-right"
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 18,
-    }}
-  >
-    {!isLoggedIn && (
-      <Link
-        to="/login"
-        className="qyven-nav-signin"
+      <nav
+        className="qyven-nav"
         style={{
-          color: '#AEB2CC',
-          textDecoration: 'none',
-          fontSize: 13,
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          height: 64,
+          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(11,10,20,0.72)',
+          backdropFilter: 'blur(22px)',
+          WebkitBackdropFilter: 'blur(22px)',
+          borderBottom:
+            '1px solid rgba(255,255,255,0.06)',
         }}
       >
-        Sign in
-      </Link>
-    )}
+        <Link
+          to="/"
+          style={{
+            textDecoration: 'none',
+            color: '#F5F3FF',
+            fontSize: 23,
+            fontWeight: 800,
+            letterSpacing: '-0.07em',
+          }}
+        >
+          Qyven
+        </Link>
 
-    <Link
-      to={isLoggedIn ? '/dashboard' : '/get-started'}
-      className="qyven-nav-cta qyven-interactive-button"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '9px 18px',
-        minHeight: 40,
-        borderRadius: 999,
-        background:
-          'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
-        color: '#fff',
-        textDecoration: 'none',
-        fontSize: 12,
-        fontWeight: 800,
-        boxShadow:
-          '0 0 26px rgba(127,90,240,0.3)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {isLoggedIn
-        ? 'Dashboard →'
-        : 'Find My Score →'}
-    </Link>
-  </div>
-</nav>
-}
+        <div
+          className="qyven-nav-right"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 18,
+          }}
+        >
+          {!isLoggedIn && (
+            <Link
+              to="/login"
+              className="qyven-nav-signin"
+              style={{
+                color: '#AEB2CC',
+                textDecoration: 'none',
+                fontSize: 13,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Sign in
+            </Link>
+          )}
+
+          <Link
+            to={isLoggedIn ? '/dashboard' : '/get-started'}
+            className="qyven-nav-cta qyven-interactive-button"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '9px 18px',
+              minHeight: 40,
+              borderRadius: 999,
+              background:
+                'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+              color: '#fff',
+              textDecoration: 'none',
+              fontSize: 12,
+              fontWeight: 800,
+              boxShadow:
+                '0 0 26px rgba(127,90,240,0.3)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isLoggedIn
+              ? 'Dashboard →'
+              : 'Find My Score →'}
+          </Link>
+        </div>
+      </nav>
+
       {/* ───────────────── HERO ───────────────── */}
 
       <section
@@ -758,9 +758,11 @@ export default function Landing() {
                   lineHeight: 1.65,
                 }}
               >
-                A simple score that shows how your
-                everyday choices are shaping the
-                person you're becoming.
+                Every small choice you make today is
+                quietly deciding who you become.
+                Qyven turns that invisible math into
+                one number you can actually see —
+                and change.
               </p>
             </Reveal>
 
@@ -2073,60 +2075,75 @@ export default function Landing() {
               font-size: 21px !important;
             }
 
-.qyven-nav-right {
-  gap: 10px !important;
-}
+            .qyven-nav-right {
+              gap: 10px !important;
+            }
 
-.qyven-nav-signin {
-  font-size: 11px !important;
-}
+            .qyven-nav-signin {
+              font-size: 11px !important;
+            }
 
-.qyven-nav-cta {
-  padding: 8px 14px !important;
-  min-height: 38px !important;
-  font-size: 11px !important;
-}
+            .qyven-nav-cta {
+              padding: 8px 14px !important;
+              min-height: 38px !important;
+              font-size: 11px !important;
+            }
 
             .qyven-hero {
               min-height: auto !important;
               padding:
-                105px 18px 55px !important;
+                84px 18px 50px !important;
               display: block !important;
             }
 
+            /* Text leads on mobile — headline first, then the score
+               card as visual proof underneath it. */
             .qyven-hero-grid {
               display: flex !important;
               flex-direction: column !important;
-              gap: 42px !important;
+              gap: 24px !important;
               align-items: stretch !important;
             }
 
             .qyven-hero-copy {
               width: 100% !important;
-              text-align: left !important;
+              text-align: center !important;
+              margin-top: 6px !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: center !important;
+            }
+
+            .qyven-hero-copy > div:first-child {
+              margin-left: auto !important;
+              margin-right: auto !important;
             }
 
             .qyven-hero-title {
               font-size:
-                clamp(42px, 11vw, 56px) !important;
-              line-height: 0.98 !important;
-              letter-spacing: -0.065em !important;
+                clamp(36px, 9.5vw, 48px) !important;
+              line-height: 1.04 !important;
+              letter-spacing: -0.055em !important;
               max-width: 100% !important;
+              margin-left: auto !important;
+              margin-right: auto !important;
             }
 
             .qyven-hero-description {
               font-size: 16px !important;
-              line-height: 1.6 !important;
-              max-width: 100% !important;
-              margin-top: 20px !important;
+              line-height: 1.62 !important;
+              max-width: 380px !important;
+              margin: 18px auto 0 !important;
+              text-align: center !important;
             }
 
             .qyven-hero-actions {
-              margin-top: 25px !important;
+              margin-top: 24px !important;
               display: flex !important;
               flex-direction: column !important;
-              align-items: stretch !important;
+              align-items: center !important;
               gap: 10px !important;
+              width: 100% !important;
             }
 
             .qyven-main-cta {
@@ -2146,33 +2163,44 @@ export default function Landing() {
             .qyven-trust-points {
               justify-content: center !important;
               gap: 8px 14px !important;
-              margin-top: 19px !important;
+              margin-top: 16px !important;
               font-size: 10px !important;
               line-height: 1.5 !important;
             }
 
             .qyven-score-preview-wrapper {
-              max-width: 100% !important;
+              max-width: 290px !important;
               width: 100% !important;
               margin: 0 auto !important;
             }
 
             .qyven-score-glow {
-              inset: -20px !important;
+              inset: -14px !important;
             }
 
             .qyven-score-card {
-              padding: 20px !important;
-              border-radius: 24px !important;
+              padding: 16px !important;
+              border-radius: 22px !important;
             }
 
             .qyven-score-ring-container {
               padding:
-                8px 0 20px !important;
+                2px 0 8px !important;
             }
 
             .qyven-score-ring-container > div {
-              transform: scale(0.9);
+              transform: scale(0.68);
+            }
+
+            /* pillar bar list — 5th direct child of the card */
+            .qyven-score-card > div:nth-child(5) {
+              gap: 6px !important;
+            }
+
+            /* "your score can change" note — 6th direct child */
+            .qyven-score-card > div:nth-child(6) {
+              margin-top: 10px !important;
+              padding: 8px 10px !important;
             }
 
             .qyven-section {
@@ -2233,16 +2261,16 @@ export default function Landing() {
           @media (max-width: 480px) {
             .qyven-hero {
               padding:
-                96px 16px 48px !important;
+                72px 16px 44px !important;
             }
 
             .qyven-hero-grid {
-              gap: 34px !important;
+              gap: 20px !important;
             }
 
             .qyven-hero-title {
               font-size:
-                clamp(39px, 11.5vw, 51px) !important;
+                clamp(34px, 10vw, 44px) !important;
             }
 
             .qyven-hero-copy > div:first-child {
@@ -2251,20 +2279,24 @@ export default function Landing() {
                 6px 10px !important;
               letter-spacing:
                 0.1em !important;
-              margin-bottom: 18px !important;
+              margin-bottom: 16px !important;
+            }
+
+            .qyven-score-preview-wrapper {
+              max-width: 260px !important;
             }
 
             .qyven-score-card {
-              padding: 18px !important;
-              border-radius: 22px !important;
+              padding: 14px !important;
+              border-radius: 20px !important;
             }
 
             .qyven-score-ring-container > div {
-              transform: scale(0.82);
+              transform: scale(0.62);
             }
 
             .qyven-score-ring-container {
-              height: 168px !important;
+              height: auto !important;
               align-items: center !important;
             }
 
@@ -2291,7 +2323,11 @@ export default function Landing() {
             }
 
             .qyven-hero-title {
-              font-size: 38px !important;
+              font-size: 34px !important;
+            }
+
+            .qyven-score-preview-wrapper {
+              max-width: 235px !important;
             }
 
             .qyven-score-card {
