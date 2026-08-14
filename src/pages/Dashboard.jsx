@@ -370,6 +370,11 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── Your focus pillar (goal-driven personalization) ── */}
+      {focusPillar && (
+        <FocusPillarCard pillar={focusPillar} todayLog={todayLog} />
+      )}
+
       {/* ── vs Best Week ── */}
       {recentScores.length >= 7 && <WeekPaceCard recentScores={recentScores} />}
 

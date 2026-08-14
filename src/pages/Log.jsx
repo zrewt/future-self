@@ -332,6 +332,17 @@ function StreakBadge({ count }) {
   )
 }
 
+// ── Focus pillar badge — shown on whichever section matches the user's
+//    onboarding goal (profile.focus_pillar). Longevity is a special case
+//    (see below near FoodDetailSection) since it has no dedicated section. ──
+function FocusBadge() {
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-primary bg-primary/10 rounded-full px-2 py-0.5 ml-2">
+      🎯 Your focus
+    </span>
+  )
+}
+
 // ── Section score pill ────────────────────────────────────────────────────────
 function ScorePill({ score, label }) {
   const color = score >= 70
@@ -353,6 +364,8 @@ export default function Log() {
     user, profile, todayLog, recentLogs,
     earnedAchievements, loadUserData, setTodayLog, setProfile,
   } = useUserStore()
+
+  const focusPillar = profile?.focus_pillar || null
 
   const defaultForm = useMemo(
     () => getDefaultForm(recentLogs, todayLog),
@@ -522,7 +535,7 @@ export default function Log() {
   async function finalizeSubmit(streakUpdate) {
     const today = localDateISO()
     const foods          = details.foods || []
-    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours), screen_time_target_minutes: profile.screen_time_target_minutes }
+    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours), screen_time_target_minutes: profile.screen_time_target_minutes, _foodsLoggedToday: foods.length }
     const scores         = buildAllScores(logPayload, streakUpdate.current_streak, foods)
     const is_perfect_day = isPerfectDay(logPayload, foods)
     const prevQuests     = getCompletedQuestIds(todayLog)
@@ -597,7 +610,7 @@ export default function Log() {
     const streakForCalc = isUpdateSameDay ? profile.current_streak : profile.current_streak
 
     const foods          = details.foods || []
-    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours), screen_time_target_minutes: profile.screen_time_target_minutes }
+    const logPayload     = { ...form, sleep_hours: Number(form.sleep_hours), screen_time_target_minutes: profile.screen_time_target_minutes, _foodsLoggedToday: foods.length }
     const scores         = buildAllScores(logPayload, streakForCalc, foods)
     const is_perfect_day = isPerfectDay(logPayload, foods)
     const prevQuests     = getCompletedQuestIds(todayLog)
@@ -748,17 +761,28 @@ export default function Log() {
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* ── Nutrition ── */}
-        <div className="glass-card p-5">
+        <div className={`glass-card p-5 ${focusPillar === 'nutrition' ? 'ring-2 ring-primary/40' : ''}`}>
           <div className="flex items-center mb-1">
             <label className="label-text mb-0">Nutrition — today&apos;s servings</label>
             <StreakBadge count={habitStreaks.nutrition} />
+            {focusPillar === 'nutrition' && <FocusBadge />}
             <ScorePill score={nutritionPreview} label="Score" />
           </div>
           <ServingStepper label="Fruit"      emoji="🍎" value={form.fruit_servings}     onChange={(v) => updateField('fruit_servings', v)} />
           <ServingStepper label="Vegetables" emoji="🥬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
           <ServingStepper label="Protein"    emoji="🥩" value={form.protein_servings}   onChange={(v) => updateField('protein_servings', v)} />
           <ServingStepper label="Processed"  emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
-          <DetailToggle label="Search specific foods" badge={details.foods.length}>
+          <DetailToggle
+            label={focusPillar === 'longevity' ? '🎯 Search specific foods — your focus' : 'Search specific foods'}
+            badge={details.foods.length}
+            forceOpen={focusPillar === 'longevity'}
+          >
+            {focusPillar === 'longevity' && (
+              <p className="text-[11px] text-primary font-semibold mb-2 leading-relaxed">
+                Longevity doesn't have its own section — it's a composite of sleep, fitness, nutrition, and hydration.
+                Logging specific foods here is your single best lever for it, and it boosts your nutrition score too.
+              </p>
+            )}
             <FoodDetailSection
               foods={details.foods}
               onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
@@ -769,10 +793,11 @@ export default function Log() {
         </div>
 
         {/* ── Workout ── */}
-        <div className="glass-card p-5">
+        <div className={`glass-card p-5 ${focusPillar === 'fitness' ? 'ring-2 ring-primary/40' : ''}`}>
           <div className="flex items-center mb-3">
             <label className="label-text mb-0">Workout</label>
             <StreakBadge count={habitStreaks.workout} />
+            {focusPillar === 'fitness' && <FocusBadge />}
             <ScorePill score={fitnessPreview} label="Score" />
           </div>
           <button
@@ -846,10 +871,11 @@ export default function Log() {
         </div>
 
         {/* ── Sleep ── */}
-        <div className="glass-card p-5">
+        <div className={`glass-card p-5 ${focusPillar === 'energy' ? 'ring-2 ring-primary/40' : ''}`}>
           <div className="flex items-center mb-3">
             <label className="label-text mb-0">Sleep</label>
             <StreakBadge count={habitStreaks.sleep} />
+            {focusPillar === 'energy' && <FocusBadge />}
             <ScorePill score={sleepPreview} label="Score" />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -911,10 +937,11 @@ export default function Log() {
         </div>
 
         {/* ── Focus ── */}
-        <div className="glass-card p-5">
+        <div className={`glass-card p-5 ${focusPillar === 'focus' ? 'ring-2 ring-primary/40' : ''}`}>
           <div className="flex items-center mb-2">
             <label className="label-text mb-0">Focus (min)</label>
             <StreakBadge count={habitStreaks.focus} />
+            {focusPillar === 'focus' && <FocusBadge />}
             <ScorePill score={focusPreview} label="Score" />
           </div>
           <input
