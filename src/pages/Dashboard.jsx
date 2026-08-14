@@ -8,6 +8,7 @@ import EmptyHome from '../components/home/EmptyHome'
 import TrendChart from '../components/home/TrendChart'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
+import { getPathConfig } from '../data/paths'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -274,6 +275,7 @@ export default function Dashboard() {
   const focusPillar = profile.focus_pillar || null
   const focusScoreKey = focusPillar ? PILLAR_CONFIG[focusPillar]?.scoreKey : null
   const allQuestsDone = habitsDone === quests.length && quests.length > 0
+  const pathConfig = getPathConfig(profile.avatar_class)
 
   const pillars = [
     { icon: '🥗', label: 'Nutrition', value: log.nutrition_score ?? 0, scoreKey: 'nutrition_score' },
@@ -291,6 +293,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5 animate-slide-up max-w-2xl mx-auto">
+
+      {/* ── Path-toned greeting (avatar_class personalization) ── */}
+      <p className="px-1 text-sm font-semibold text-slate-500 dark:text-[#9DB890]">
+        {pathConfig.tone.greeting}, {profile.username}.
+      </p>
 
       {/* ── Hero card ── */}
       <div className="glass-card overflow-hidden">

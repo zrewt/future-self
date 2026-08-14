@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { evaluateQuests } from '../../data/quests'
 import { useUserStore } from '../../store/useUserStore'
+import { getPathConfig } from '../../data/paths'
 
 export default function DailyQuests({ todayLog }) {
   const { profile } = useUserStore()
+  const pathConfig = getPathConfig(profile?.avatar_class)
 
   // evaluateQuests reads screen_time_target_minutes off the log object itself
   // (see quests.js), but that value actually lives on the profile — merge it
@@ -18,12 +20,15 @@ export default function DailyQuests({ todayLog }) {
 
   return (
     <div className="glass-card p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <p className="section-title">Daily quests</p>
         <span className="pill bg-amber/15 text-amber-800 dark:text-amber text-[10px]">
           {done}/{quests.length}
         </span>
       </div>
+      <p className="text-[11px] font-semibold text-slate-400 dark:text-[#5A7050] mb-2">
+        {pathConfig.tone.questPrefix}
+      </p>
       <ul className="space-y-2">
         {quests.map((q) => (
           <li
@@ -59,4 +64,4 @@ export default function DailyQuests({ todayLog }) {
       )}
     </div>
   )
-} 
+}

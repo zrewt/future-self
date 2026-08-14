@@ -5,6 +5,7 @@ import { useUserStore } from '../store/useUserStore'
 import { useTheme } from '../hooks/useTheme'
 import { fetchAchievementStats } from '../utils/achievementStats'
 import Spinner from '../components/ui/Spinner'
+import { getPathConfig } from '../data/paths'
 
 // Explicit tier configs — no bg-clip-text, no Tailwind dark variants that get purged
 const TIER_LIGHT = {
@@ -33,10 +34,11 @@ const CATEGORY_LABELS = {
 }
 
 export default function Achievements() {
-  const { user, earnedAchievements } = useUserStore()
+  const { user, profile, earnedAchievements } = useUserStore()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const tierCfg = isDark ? TIER_DARK : TIER_LIGHT
+  const pathConfig = getPathConfig(profile?.avatar_class)
 
   const [earnedDetails, setEarnedDetails] = useState({})
   const [stats, setStats]                 = useState(null)
@@ -81,6 +83,9 @@ export default function Achievements() {
         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-[#E8F0E0]">Achievements</h1>
         <p className="text-sm text-slate-500 dark:text-[#5A7050] font-medium mt-1">
           {earnedCount} / {ACHIEVEMENTS.length} unlocked
+        </p>
+        <p className="text-xs text-slate-400 dark:text-[#5A7050] font-semibold mt-0.5">
+          {pathConfig.tone.achievementPrefix}
         </p>
         <div className="h-2 bg-slate-100 dark:bg-white/8 rounded-full mt-3 overflow-hidden">
           <div

@@ -27,87 +27,86 @@
  */
 
 export const PATHS = {
-    athlete: {
-      label: 'Athlete',
-      icon: '🏋️',
-  
-      // Recovery-framed: leans into sleep's effect on training, and streak
-      // as a training-log narrative — regardless of which pillar the user's
-      // goal points to.
-      priorityQuestionIds: ['sleep_fitness', 'streak_story', 'consistency'],
-  
-      emptyStateCopy:
-        "Not enough training data yet to show recovery patterns. Log workouts and sleep for about 2 weeks and this will start showing you what actually moves your performance.",
-  
-      tone: {
-        greetingPrefix: 'Ready to put in the work today?',
-        questionFraming: 'Recovery check',
-        achievementTone: 'earned, not given',
-      },
+  athlete: {
+    label: 'Athlete',
+    icon: '🏋️',
+
+    // Recovery-framed: leans into sleep's effect on training, and streak
+    // as a training-log narrative — regardless of which pillar the user's
+    // goal points to.
+    priorityQuestionIds: ['sleep_fitness', 'streak_story', 'consistency'],
+
+    emptyStateCopy:
+      "Not enough training data yet to show recovery patterns. Log workouts and sleep for about 2 weeks and this will start showing you what actually moves your performance.",
+
+    tone: {
+      greetingPrefix: 'Ready to put in the work today?',
+      questionFraming: 'Recovery check',
+      achievementTone: 'earned, not given',
     },
-  
-    scholar: {
-      label: 'Scholar',
-      icon: '📚',
-  
-      // Consistency- and mood-framed, read through a focus/knowledge lens.
-      priorityQuestionIds: ['consistency', 'mood_factors', 'month_comparison'],
-  
-      emptyStateCopy:
-        "Not enough sessions logged yet to see what's shaping your focus. Keep logging for about 2 weeks and this will start surfacing what actually moves your concentration and mood.",
-  
-      tone: {
-        greetingPrefix: 'What are you building toward today?',
-        questionFraming: 'What the data shows',
-        achievementTone: 'measured, precise',
-      },
+  },
+
+  scholar: {
+    label: 'Scholar',
+    icon: '📚',
+
+    // Consistency- and mood-framed, read through a focus/knowledge lens.
+    priorityQuestionIds: ['consistency', 'mood_factors', 'month_comparison'],
+
+    emptyStateCopy:
+      "Not enough sessions logged yet to see what's shaping your focus. Keep logging for about 2 weeks and this will start surfacing what actually moves your concentration and mood.",
+
+    tone: {
+      greetingPrefix: 'What are you building toward today?',
+      questionFraming: 'What the data shows',
+      achievementTone: 'measured, precise',
     },
-  
-    builder: {
-      label: 'Builder',
-      icon: '🔧',
-  
-      // Systems-framed: streak as an uptime story, month-over-month as a
-      // system-performance readout.
-      priorityQuestionIds: ['streak_story', 'month_comparison', 'weekday_weekend'],
-  
-      emptyStateCopy:
-        "Not enough history yet to show your system at work. Keep logging for about 2 weeks and this will start showing what's actually holding your streak up — and what's breaking it.",
-  
-      tone: {
-        greetingPrefix: 'What are you maintaining today?',
-        questionFraming: 'System status',
-        achievementTone: 'built, brick by brick',
-      },
+  },
+
+  builder: {
+    label: 'Builder',
+    icon: '🔧',
+
+    // Systems-framed: streak as an uptime story, month-over-month as a
+    // system-performance readout.
+    priorityQuestionIds: ['streak_story', 'month_comparison', 'weekday_weekend'],
+
+    emptyStateCopy:
+      "Not enough history yet to show your system at work. Keep logging for about 2 weeks and this will start showing what's actually holding your streak up — and what's breaking it.",
+
+    tone: {
+      greetingPrefix: 'What are you maintaining today?',
+      questionFraming: 'System status',
+      achievementTone: 'built, brick by brick',
     },
-  
-    balanced: {
-      label: 'Balanced',
-      icon: '⚖️',
-  
-      // Generalist framing: no single lever — weekday/weekend rhythm, worst-day
-      // causes, and month trend, so nothing pillar gets over-emphasized.
-      priorityQuestionIds: ['weekday_weekend', 'what_drags_down', 'month_comparison'],
-  
-      emptyStateCopy:
-        "Not enough days logged yet to see your overall rhythm. Keep logging for about 2 weeks and this will start showing what's actually driving your good days vs your rough ones.",
-  
-      tone: {
-        greetingPrefix: 'How\'s today shaping up?',
-        questionFraming: 'Worth noticing',
-        achievementTone: 'steady, well-rounded',
-      },
+  },
+
+  balanced: {
+    label: 'Balanced',
+    icon: '⚖️',
+
+    // Generalist framing: no single lever — weekday/weekend rhythm, worst-day
+    // causes, and month trend, so nothing pillar gets over-emphasized.
+    priorityQuestionIds: ['weekday_weekend', 'what_drags_down', 'month_comparison'],
+
+    emptyStateCopy:
+      "Not enough days logged yet to see your overall rhythm. Keep logging for about 2 weeks and this will start showing what's actually driving your good days vs your rough ones.",
+
+    tone: {
+      greetingPrefix: 'How\'s today shaping up?',
+      questionFraming: 'Worth noticing',
+      achievementTone: 'steady, well-rounded',
     },
-  }
-  
-  export const DEFAULT_PATH = 'balanced'
-  
-  /**
-   * Always returns a valid path config — falls back to DEFAULT_PATH for a
-   * missing/unrecognized avatar_class rather than throwing, since
-   * avatar_class is optional on older accounts.
-   */
-  export function getPathConfig(avatarClass) {
-    return PATHS[avatarClass] || PATHS[DEFAULT_PATH]
-  }
-  
+  },
+}
+
+export const DEFAULT_PATH = 'balanced'
+
+/**
+ * Always returns a valid path config — falls back to DEFAULT_PATH for a
+ * missing/unrecognized avatar_class rather than throwing, since
+ * avatar_class is optional on older accounts.
+ */
+export function getPathConfig(avatarClass) {
+  return PATHS[avatarClass] || PATHS[DEFAULT_PATH]
+}
