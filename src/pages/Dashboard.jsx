@@ -31,11 +31,11 @@ function getCurrentWeekAvg(recentScores) {
 
 // Per-pillar colors — fixed semantic meaning in both modes
 const PILLAR_COLORS = {
-  nutrition_score: { bar: 'bg-[#0F9F88]',  text: 'text-[#0F9F88]',  glow: 'rgba(15,159,136,0.5)'  },
-  fitness_score:   { bar: 'bg-[#4F46E5]',  text: 'text-[#4F46E5]',  glow: 'rgba(79,70,229,0.5)'   },
-  energy_score:    { bar: 'bg-[#2684C7]',  text: 'text-[#2684C7]',  glow: 'rgba(38,132,199,0.5)'  },
-  focus_score:     { bar: 'bg-[#C47A12]',  text: 'text-[#C47A12]',  glow: 'rgba(196,122,18,0.5)'  },
-  longevity_score: { bar: 'bg-[#D94E4E]',  text: 'text-[#D94E4E]',  glow: 'rgba(217,78,78,0.5)'   },
+  nutrition_score: { bar: 'bg-[#00b8a0]',  text: 'text-[#00a591]',  glow: 'rgba(0,184,160,0.5)'   },
+  fitness_score:   { bar: 'bg-[#7c3aed]',  text: 'text-[#7c3aed]',  glow: 'rgba(124,58,237,0.5)'  },
+  energy_score:    { bar: 'bg-[#3b82c4]',  text: 'text-[#3b82c4]',  glow: 'rgba(59,130,196,0.5)'  },
+  focus_score:     { bar: 'bg-[#d97706]',  text: 'text-[#d97706]',  glow: 'rgba(217,119,6,0.5)'   },
+  longevity_score: { bar: 'bg-[#e0527a]',  text: 'text-[#e0527a]',  glow: 'rgba(224,82,122,0.5)'  },
 }
 
 const PILLAR_CONFIG = {
@@ -94,21 +94,28 @@ function ScoreRing({ score }) {
   const circumference = 2 * Math.PI * radius
   const progress = (score / 100) * circumference
 
-  // Light mode: purple scale. Dark mode: green scale.
+  // Light mode: brand teal/purple/pink scale. Dark mode: green scale.
   const scoreColor = theme === 'dark'
     ? score >= 70 ? '#00E8C6' : score >= 45 ? '#FFB830' : '#FF7AC6'
-    : score >= 70 ? '#4F46E5' : score >= 45 ? '#4F46E5' : '#E05252'
+    : score >= 70 ? '#00cdb4' : score >= 45 ? '#7c3aed' : '#e0527a'
 
-  const trackColor = theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#F1F5F9'
+  const trackColor = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(109,40,217,0.08)'
 
   return (
     <div className="relative w-28 h-28 flex items-center justify-center">
       <svg className="absolute inset-0 -rotate-90" width="112" height="112" viewBox="0 0 112 112">
+        <defs>
+          <linearGradient id="dashScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ff7ac6" />
+            <stop offset="50%" stopColor="#7c3aed" />
+            <stop offset="100%" stopColor="#00cdb4" />
+          </linearGradient>
+        </defs>
         <circle cx="56" cy="56" r={radius} fill="none" stroke={trackColor} strokeWidth="6" />
-        <circle cx="56" cy="56" r={radius} fill="none" stroke={scoreColor}
+        <circle cx="56" cy="56" r={radius} fill="none" stroke={theme === 'dark' ? scoreColor : 'url(#dashScoreGradient)'}
           strokeWidth="6" strokeLinecap="round"
           strokeDasharray={`${progress} ${circumference}`}
-          style={{ transition: 'stroke-dasharray 1s ease', filter: `drop-shadow(0 0 8px ${scoreColor}88)` }} />
+          style={{ transition: 'stroke-dasharray 1s ease', filter: `drop-shadow(0 0 8px ${scoreColor}77)` }} />
       </svg>
       <div className="text-center z-10">
         <p className="text-3xl font-extrabold tabular-nums leading-none" style={{ color: scoreColor }}>{score}</p>
@@ -121,7 +128,7 @@ function ScoreRing({ score }) {
 function PillarBar({ label, value, icon, scoreKey, highlight }) {
   const colors = PILLAR_COLORS[scoreKey] || { bar: 'bg-slate-300', text: 'text-slate-500' }
   return (
-    <div className={`flex-1 min-w-0 rounded-lg px-1 py-0.5 transition-all ${highlight ? 'ring-1 ring-[#7F5AF0]/30 dark:ring-[#00E8C6]/30 bg-[#7F5AF0]/5 dark:bg-[#00E8C6]/5' : ''}`}>
+    <div className={`flex-1 min-w-0 rounded-lg px-1 py-0.5 transition-all ${highlight ? 'ring-1 ring-[#7c3aed]/30 dark:ring-[#00E8C6]/30 bg-[#7c3aed]/5 dark:bg-[#00E8C6]/5' : ''}`}>
       <div className="flex items-center justify-between mb-1">
         <span className="text-[11px] leading-none">{icon}</span>
         <p className={`text-[10px] font-extrabold tabular-nums ${colors.text}`}>{value}</p>
@@ -141,7 +148,8 @@ function FocusPillarCard({ pillar, todayLog }) {
   const tip = config.tips[Math.floor(Math.random() * config.tips.length)]
 
   return (
-    <div className="glass-card p-4 border border-slate-100 dark:border-white/8">
+    <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4">
+      <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-lg">{config.icon}</span>
@@ -156,7 +164,7 @@ function FocusPillarCard({ pillar, todayLog }) {
             <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050]">today</p>
           </div>
         ) : (
-          <Link to="/log" className="text-xs font-bold text-[#7F5AF0] dark:text-[#00E87A] bg-[#7F5AF0]/10 dark:bg-[#00E87A]/10 px-3 py-1.5 rounded-xl">
+          <Link to="/log" className="text-xs font-bold text-[#7c3aed] dark:text-[#00E87A] bg-[#7c3aed]/10 dark:bg-[#00E87A]/10 px-3 py-1.5 rounded-xl">
             Log now →
           </Link>
         )}
@@ -166,7 +174,7 @@ function FocusPillarCard({ pillar, todayLog }) {
       </p>
       {score !== null && score < 50 && (
         <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/8">
-          <p className="text-[11px] font-bold text-[#FF5C5C]">Below target — {tip}</p>
+          <p className="text-[11px] font-bold text-[#e0527a]">Below target — {tip}</p>
         </div>
       )}
       {score !== null && score >= 70 && (
@@ -188,8 +196,8 @@ function WeekPaceCard({ recentScores }) {
 
   return (
     <div className={`rounded-2xl px-4 py-3 flex items-center justify-between border ${
-      ahead   ? 'bg-[#0F9F88]/5 dark:bg-[#141220] border-[#0F9F88]/20 dark:border-[#3B3560]'
-      : onPace ? 'bg-indigo-50/60 dark:bg-[#141220] border-indigo-200/70 dark:border-[#29263B]'
+      ahead   ? 'bg-[#00cdb4]/[0.06] dark:bg-[#141220] border-[#00cdb4]/25 dark:border-[#3B3560]'
+      : onPace ? 'bg-[#7c3aed]/[0.05] dark:bg-[#141220] border-[#7c3aed]/20 dark:border-[#29263B]'
               : 'bg-slate-50 dark:bg-[#141220] border-slate-200 dark:border-[#29263B]'
     }`}>
       <div>
@@ -197,8 +205,8 @@ function WeekPaceCard({ recentScores }) {
           vs your best week
         </p>
         <p className={`text-sm font-extrabold ${
-          ahead   ? 'text-[#00C466]'
-          : onPace ? 'text-[#7F5AF0] dark:text-[#00E8C6]'
+          ahead   ? 'text-[#00a591]'
+          : onPace ? 'text-[#7c3aed] dark:text-[#00E8C6]'
                   : 'text-slate-500 dark:text-[#9DB890]'
         }`}>
           {ahead
@@ -222,11 +230,11 @@ function LogCTA({ todayLog }) {
   return (
     <div className={`rounded-2xl p-4 border ${
       isUrgent
-        ? 'bg-[#FF5C5C]/8 border-[#FF5C5C]/20'
-        : 'bg-indigo-50/70 dark:bg-[#7F5AF0]/10 border-indigo-200/70 dark:border-[#7F5AF0]/25'
+        ? 'bg-[#e0527a]/[0.06] border-[#e0527a]/20'
+        : 'bg-[#7c3aed]/[0.05] dark:bg-[#7F5AF0]/10 border-[#7c3aed]/15 dark:border-[#7F5AF0]/25'
     }`}>
       <p className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-        isUrgent ? 'text-[#FF5C5C]' : 'text-indigo-600 dark:text-green'
+        isUrgent ? 'text-[#e0527a]' : 'text-[#7c3aed] dark:text-green'
       }`}>
         {isUrgent ? '⚡ Log before midnight' : '📋 Daily check-in'}
       </p>
@@ -237,11 +245,15 @@ function LogCTA({ todayLog }) {
       </p>
       <Link
         to="/log"
-        className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-white transition-all ${
-          isUrgent
-            ? 'bg-[#FF5C5C] hover:bg-[#FF5C5C]/90'
-            : 'bg-slate-900 hover:bg-slate-800 dark:bg-[#7F5AF0] dark:hover:bg-[#8B6EF3]'
-        }`}
+        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:brightness-105"
+        style={{
+          background: isUrgent
+            ? '#e0527a'
+            : 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+          boxShadow: isUrgent
+            ? '0 4px 14px rgba(224,82,122,0.3)'
+            : '0 4px 18px rgba(124,58,237,0.28)',
+        }}
       >
         {isUrgent ? 'Log now — save your streak 🔥' : "Start today's log →"}
       </Link>
@@ -286,9 +298,9 @@ export default function Dashboard() {
   ]
 
   const insightColors = {
-    good:      'text-[#00C466] dark:text-[#00E8C6]',
-    neutral:   'text-[#7F5AF0] dark:text-[#C4B5FD]',
-    attention: 'text-[#FF5C5C]',
+    good:      'text-[#00a591] dark:text-[#00E8C6]',
+    neutral:   'text-[#7c3aed] dark:text-[#C4B5FD]',
+    attention: 'text-[#e0527a]',
   }
 
   return (
@@ -300,11 +312,15 @@ export default function Dashboard() {
       </p>
 
       {/* ── Hero card ── */}
-      <div className="glass-card overflow-hidden">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
+        <div className="absolute top-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-white/6">
           <Link to="/profile" className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full text-white flex items-center justify-center text-base font-bold shrink-0 bg-slate-900 dark:bg-[#7F5AF0]">
+            <div
+              className="w-10 h-10 rounded-full text-white flex items-center justify-center text-base font-bold shrink-0"
+              style={{ background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)' }}
+            >
               {initial}
             </div>
             <div className="min-w-0">
@@ -330,7 +346,7 @@ export default function Dashboard() {
             {(profile.streak_shields ?? 0) > 0 && (
               <div className="text-right">
                 <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Shields</p>
-                <p className="text-base font-extrabold tabular-nums text-[#7F5AF0] dark:text-[#00E8C6]">
+                <p className="text-base font-extrabold tabular-nums text-[#7c3aed] dark:text-[#00E8C6]">
                   🛡️ {profile.streak_shields}
                 </p>
               </div>
@@ -353,20 +369,20 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 mt-4 rounded-xl bg-slate-50/80 dark:bg-[#141220] border border-slate-200 dark:border-[#29263B] px-3 py-2.5">
               {allQuestsDone ? (
                 <div className="flex-1 flex items-center gap-2">
-                  <span className="text-[#00C466] dark:text-[#00E8C6] text-sm">✓</span>
-                  <p className="text-xs font-bold text-[#00C466] dark:text-[#00E8C6]">Daily checklist complete</p>
+                  <span className="text-[#00a591] dark:text-[#00E8C6] text-sm">✓</span>
+                  <p className="text-xs font-bold text-[#00a591] dark:text-[#00E8C6]">Daily checklist complete</p>
                 </div>
               ) : (
                 <div className="flex-1 flex items-center gap-2">
                   <div className="flex gap-0.5">
                     {quests.map((q, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#0F9F88] dark:bg-[#00E8C6]' : 'bg-slate-200 dark:bg-white/15'}`} />
+                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#00b8a0] dark:bg-[#00E8C6]' : 'bg-slate-200 dark:bg-white/15'}`} />
                     ))}
                   </div>
                   <p className="text-xs font-bold text-slate-600 dark:text-[#9DB890]">{habitsDone} of {quests.length} daily actions complete</p>
                 </div>
               )}
-              <Link to="/log" className="text-xs font-bold text-primary dark:text-green shrink-0">Edit log</Link>
+              <Link to="/log" className="text-xs font-bold text-[#7c3aed] dark:text-green shrink-0">Edit log</Link>
             </div>
           )}
         </div>
@@ -390,10 +406,10 @@ export default function Dashboard() {
 
       {/* ── Today's focus ── */}
       {todayLog && (
-        <div className="glass-card p-4">
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="section-title mb-1">Today&apos;s focus</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#7c3aed] dark:text-[#00E87A] mb-1">Today&apos;s focus</p>
               <p className={`text-[10px] font-extrabold uppercase tracking-wide mb-1 ${insightColors[dailyEdge.type]}`}>
                 {dailyEdge.label}
               </p>
@@ -415,17 +431,17 @@ export default function Dashboard() {
         userChallenges={userChallenges}
       />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_14px_rgba(15,23,42,0.03)] dark:border-[#29263B] dark:bg-[#141220]">
+      <section className="rounded-3xl border border-[rgba(109,40,217,0.10)] bg-white p-4 shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:border-[#29263B] dark:bg-[#141220]">
         <div className="mb-3">
           <p className="text-sm font-bold text-slate-800 dark:text-[#E8F0E0]">Explore your progress</p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-[#9DB890]">Review patterns and turn your recent activity into useful next steps.</p>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Link to="/weekly" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#302D45] dark:bg-[#11101C] dark:hover:border-[#4A4270] dark:hover:bg-[#1B1929]">
+          <Link to="/weekly" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-[#7c3aed]/30 hover:bg-[#7c3aed]/5 dark:border-[#302D45] dark:bg-[#11101C] dark:hover:border-[#4A4270] dark:hover:bg-[#1B1929]">
             <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">Weekly review</p>
             <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-[#9DB890]">Your week at a glance <span className="transition-transform group-hover:translate-x-0.5 inline-block">→</span></p>
           </Link>
-          <Link to="/insights" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-[#302D45] dark:bg-[#11101C] dark:hover:border-[#4A4270] dark:hover:bg-[#1B1929]">
+          <Link to="/insights" className="group rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition-colors hover:border-[#7c3aed]/30 hover:bg-[#7c3aed]/5 dark:border-[#302D45] dark:bg-[#11101C] dark:hover:border-[#4A4270] dark:hover:bg-[#1B1929]">
             <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">Data insights</p>
             <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-[#9DB890]">What your logs show <span className="transition-transform group-hover:translate-x-0.5 inline-block">→</span></p>
           </Link>
