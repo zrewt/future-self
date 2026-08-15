@@ -89,6 +89,82 @@ function pickFocusPillar(selectedGoals) {
   return first?.pillar || 'fitness'
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AMBIENT BACKGROUND
+// Soft drifting brand-color blobs, matching Landing.jsx's ambient treatment.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AmbientBackground() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    >
+      <div
+        className="qyven-onb-blob"
+        style={{
+          top: -120,
+          left: '-14%',
+          width: 460,
+          height: 460,
+          background:
+            'radial-gradient(circle, rgba(255,122,198,0.30) 0%, transparent 70%)',
+          animationDelay: '0s',
+        }}
+      />
+      <div
+        className="qyven-onb-blob"
+        style={{
+          top: 120,
+          right: '-16%',
+          width: 420,
+          height: 420,
+          background:
+            'radial-gradient(circle, rgba(124,58,237,0.26) 0%, transparent 70%)',
+          animationDelay: '3s',
+        }}
+      />
+      <div
+        className="qyven-onb-blob"
+        style={{
+          bottom: -120,
+          left: '14%',
+          width: 400,
+          height: 400,
+          background:
+            'radial-gradient(circle, rgba(0,205,180,0.26) 0%, transparent 70%)',
+          animationDelay: '6s',
+        }}
+      />
+
+      <style>{`
+        .qyven-onb-blob {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(18px);
+          animation: qyvenOnbDrift 15s ease-in-out infinite;
+        }
+        @keyframes qyvenOnbDrift {
+          0%, 100% { transform: translate3d(0,0,0) scale(1); }
+          50% { transform: translate3d(28px,-32px,0) scale(1.1); }
+        }
+        @media (max-width: 640px) {
+          .qyven-onb-blob { filter: blur(14px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .qyven-onb-blob { animation: none !important; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 const STEP_INFO = [
   {
     number: '01',
@@ -237,34 +313,35 @@ export default function Onboarding() {
 
   return (
     <div
-      className="min-h-screen px-4 py-7 text-white sm:py-9 md:py-12"
+      className="min-h-screen px-4 py-7 text-[#12111e] sm:py-9 md:py-12 relative overflow-hidden"
       style={{
         background:
-          'radial-gradient(circle at 50% -5%, rgba(127,90,240,0.20), transparent 32%), radial-gradient(circle at 100% 45%, rgba(0,232,198,0.06), transparent 30%), #08080d',
+          'radial-gradient(circle at 50% -5%, rgba(124,58,237,0.10), transparent 32%), radial-gradient(circle at 100% 45%, rgba(0,205,180,0.06), transparent 30%), #f5f3ff',
       }}
     >
-      <div className="mx-auto w-full max-w-xl">
+      <AmbientBackground />
+      <div className="mx-auto w-full max-w-xl relative z-10">
         {/* HEADER */}
         <div className="mb-8">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#A78BFA]">
+              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#7c3aed]">
                 Qyven
               </p>
 
-              <p className="mt-1 text-sm font-bold text-white">
+              <p className="mt-1 text-sm font-bold text-[#12111e]">
                 Build your Future Self
               </p>
             </div>
 
             <div className="text-right">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 Step
               </p>
 
-              <p className="text-sm font-extrabold text-zinc-300">
+              <p className="text-sm font-extrabold text-slate-600">
                 {step}{' '}
-                <span className="text-zinc-700">
+                <span className="text-slate-300">
                   / 3
                 </span>
               </p>
@@ -273,9 +350,9 @@ export default function Onboarding() {
 
           {/* Progress */}
           <div className="relative">
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+            <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(109,40,217,0.08)]">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-[#FF7AC6] via-[#7F5AF0] to-[#00E8C6] transition-all duration-500 ease-out"
+                className="h-full rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -299,7 +376,7 @@ export default function Onboarding() {
                     <span
                       className={[
                         'text-[10px] font-extrabold',
-                        active ? 'text-[#A78BFA]' : 'text-zinc-700',
+                        active ? 'text-[#7c3aed]' : 'text-slate-300',
                       ].join(' ')}
                     >
                       {item.number}
@@ -308,7 +385,7 @@ export default function Onboarding() {
                     <span
                       className={[
                         'hidden text-[10px] font-bold sm:inline',
-                        active ? 'text-zinc-400' : 'text-zinc-700',
+                        active ? 'text-slate-500' : 'text-slate-300',
                       ].join(' ')}
                     >
                       {item.title}
@@ -322,7 +399,7 @@ export default function Onboarding() {
 
         {/* ERROR */}
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-300">
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
@@ -332,19 +409,19 @@ export default function Onboarding() {
           <div className="animate-slide-up">
             <div className="px-1 sm:px-2">
               <div className="mb-9">
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-400/20 bg-gradient-to-br from-pink-500/10 to-purple-500/15 text-2xl">
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-200 bg-gradient-to-br from-pink-100 to-purple-100 text-2xl">
                   👋
                 </div>
 
-                <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-[#A78BFA]">
+                <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.14em] text-[#7c3aed]">
                   Let&apos;s make this yours
                 </p>
 
-                <h1 className="mb-3 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl">
+                <h1 className="mb-3 text-3xl font-extrabold leading-tight tracking-tight text-[#12111e] sm:text-4xl">
                   What should we call you?
                 </h1>
 
-                <p className="max-w-lg text-sm font-medium leading-6 text-zinc-400 sm:text-base">
+                <p className="max-w-lg text-sm font-medium leading-6 text-slate-500 sm:text-base">
                   Your name will personalize your Qyven experience and appear
                   on your dashboard.
                 </p>
@@ -353,7 +430,7 @@ export default function Onboarding() {
               <div>
                 <label
                   htmlFor="username"
-                  className="mb-2 block text-xs font-extrabold uppercase tracking-[0.1em] text-zinc-400"
+                  className="mb-2 block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500"
                 >
                   Your name
                 </label>
@@ -368,7 +445,7 @@ export default function Onboarding() {
                       continueFromStep1()
                     }
                   }}
-                  className="mb-5 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none transition-all placeholder:text-zinc-600 focus:border-purple-500/60 focus:bg-white/[0.07] focus:ring-2 focus:ring-purple-500/10"
+                  className="mb-5 w-full rounded-2xl border border-[rgba(109,40,217,0.14)] bg-white px-4 py-4 text-[#12111e] outline-none transition-all placeholder:text-slate-400 focus:border-purple-400 focus:bg-white focus:ring-2 focus:ring-purple-200"
                   placeholder="e.g. Benny"
                   autoFocus
                   maxLength={30}
@@ -383,7 +460,7 @@ export default function Onboarding() {
                   Continue →
                 </button>
 
-                <p className="mt-4 text-center text-[11px] font-medium text-zinc-500">
+                <p className="mt-4 text-center text-[11px] font-medium text-slate-400">
                   You can change this later.
                 </p>
               </div>
@@ -395,15 +472,15 @@ export default function Onboarding() {
         {step === 2 && (
           <div className="animate-slide-up">
             <div className="mb-6">
-              <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#A78BFA]">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#7c3aed]">
                 Your direction
               </p>
 
-              <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+              <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-[#12111e] md:text-3xl">
                 Who are you becoming?
               </h1>
 
-              <p className="text-sm font-medium leading-relaxed text-zinc-400 md:text-base">
+              <p className="text-sm font-medium leading-relaxed text-slate-500 md:text-base">
                 Choose the path that feels closest to the person you want to
                 become. This helps personalize your experience.
               </p>
@@ -421,12 +498,12 @@ export default function Onboarding() {
                     className={[
                       'relative rounded-3xl border p-5 text-left transition-all duration-200 focus:outline-none',
                       selected
-                        ? 'border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/40 shadow-[0_0_30px_rgba(127,90,240,0.10)]'
-                        : 'border-white/[0.08] bg-white/[0.035] hover:border-purple-500/30 hover:bg-white/[0.055]',
+                        ? 'border-purple-400 bg-purple-50 ring-1 ring-purple-300 shadow-[0_0_30px_rgba(124,58,237,0.10)]'
+                        : 'border-[rgba(109,40,217,0.18)] shadow-[0_2px_8px_rgba(109,40,217,0.06)] bg-white hover:border-purple-300 hover:bg-purple-50/40',
                     ].join(' ')}
                   >
                     {selected && (
-                      <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#7F5AF0] text-xs font-extrabold text-white">
+                      <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#7c3aed] text-xs font-extrabold text-white">
                         ✓
                       </span>
                     )}
@@ -435,11 +512,11 @@ export default function Onboarding() {
                       {path.icon}
                     </span>
 
-                    <p className="font-extrabold text-white">
+                    <p className="font-extrabold text-[#12111e]">
                       {path.label}
                     </p>
 
-                    <p className="mt-1.5 text-xs font-medium leading-relaxed text-zinc-500">
+                    <p className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500">
                       {path.desc}
                     </p>
                   </button>
@@ -447,22 +524,22 @@ export default function Onboarding() {
               })}
             </div>
 
-            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-xl">
+            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-[rgba(109,40,217,0.18)] shadow-[0_2px_8px_rgba(109,40,217,0.06)] bg-white p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-xl">
                 {selectedPath.icon}
               </div>
 
               <div className="flex-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-600">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                   Your path
                 </p>
 
-                <p className="text-sm font-extrabold text-zinc-200">
+                <p className="text-sm font-extrabold text-slate-700">
                   {selectedPath.label}
                 </p>
               </div>
 
-              <span className="text-xs font-extrabold text-[#A78BFA]">
+              <span className="text-xs font-extrabold text-[#7c3aed]">
                 Selected
               </span>
             </div>
@@ -493,27 +570,27 @@ export default function Onboarding() {
             <div className="mb-6">
               <div className="mb-3 flex items-end justify-between gap-4">
                 <div>
-                  <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#A78BFA]">
+                  <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#7c3aed]">
                     Your priorities
                   </p>
 
-                  <h1 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-[#12111e] md:text-3xl">
                     What do you want to improve?
                   </h1>
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <p className="text-xs font-extrabold text-zinc-400">
+                  <p className="text-xs font-extrabold text-slate-500">
                     {goals.length}/3
                   </p>
 
-                  <p className="text-[10px] font-medium text-zinc-600">
+                  <p className="text-[10px] font-medium text-slate-400">
                     selected
                   </p>
                 </div>
               </div>
 
-              <p className="text-sm font-medium leading-relaxed text-zinc-400 md:text-base">
+              <p className="text-sm font-medium leading-relaxed text-slate-500 md:text-base">
                 Pick up to 3. Your first choice becomes your main focus inside
                 Qyven.
               </p>
@@ -533,46 +610,46 @@ export default function Onboarding() {
                       'flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-200 focus:outline-none',
                       selected
                         ? isFirst
-                          ? 'border-purple-500/60 bg-purple-500/10 ring-1 ring-purple-500/30'
-                          : 'border-purple-500/30 bg-purple-500/[0.06]'
-                        : 'border-white/[0.08] bg-white/[0.035] hover:border-purple-500/25 hover:bg-white/[0.05]',
+                          ? 'border-purple-400 bg-purple-50 ring-1 ring-purple-300'
+                          : 'border-purple-200 bg-purple-50/60'
+                        : 'border-[rgba(109,40,217,0.18)] shadow-[0_2px_8px_rgba(109,40,217,0.06)] bg-white hover:border-purple-200 hover:bg-purple-50/40',
                     ].join(' ')}
                   >
                     <div
                       className={[
                         'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl transition-all',
                         selected
-                          ? 'bg-purple-500/15'
-                          : 'bg-white/[0.05]',
+                          ? 'bg-purple-100'
+                          : 'bg-slate-50',
                       ].join(' ')}
                     >
                       {goal.icon}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-extrabold text-zinc-100">
+                      <p className="text-sm font-extrabold text-slate-800">
                         {goal.label}
                       </p>
 
-                      <p className="mt-0.5 text-[11px] font-medium text-zinc-500">
+                      <p className="mt-0.5 text-[11px] font-medium text-slate-500">
                         {goal.desc}
                       </p>
                     </div>
 
                     {isFirst && (
-                      <span className="rounded-full bg-purple-500/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#A78BFA]">
+                      <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#7c3aed]">
                         Main
                       </span>
                     )}
 
                     {!isFirst && selected && (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7F5AF0] text-xs font-extrabold text-white">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7c3aed] text-xs font-extrabold text-white">
                         ✓
                       </span>
                     )}
 
                     {!selected && goals.length < 3 && (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-xs font-bold text-zinc-600">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full border border-[rgba(109,40,217,0.16)] text-xs font-bold text-slate-400">
                         +
                       </span>
                     )}
@@ -583,20 +660,20 @@ export default function Onboarding() {
 
             {/* Personalized preview */}
             {goals.length > 0 && (
-              <div className="mb-5 rounded-3xl border border-purple-500/10 bg-gradient-to-r from-purple-500/10 via-purple-500/[0.03] to-cyan-500/[0.08] p-4">
+              <div className="mb-5 rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 via-white to-teal-50 p-4">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-lg">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-lg">
                     🎯
                   </div>
 
                   <div>
-                    <p className="mb-1 text-xs font-extrabold text-zinc-200">
+                    <p className="mb-1 text-xs font-extrabold text-slate-700">
                       Your Qyven experience is taking shape
                     </p>
 
-                    <p className="text-[11px] font-medium leading-relaxed text-zinc-500">
+                    <p className="text-[11px] font-medium leading-relaxed text-slate-500">
                       Your main focus will be{' '}
-                      <span className="font-extrabold capitalize text-[#A78BFA]">
+                      <span className="font-extrabold capitalize text-[#7c3aed]">
                         {focusPillar}
                       </span>
                       . You&apos;ll still track all five pillars, but this one
@@ -608,28 +685,28 @@ export default function Onboarding() {
             )}
 
             {/* Summary */}
-            <div className="mb-6 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4">
-              <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-zinc-600">
+            <div className="mb-6 rounded-2xl border border-[rgba(109,40,217,0.18)] shadow-[0_2px_8px_rgba(109,40,217,0.06)] bg-white p-4">
+              <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400">
                 Your setup
               </p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] font-bold text-zinc-600">
+                  <p className="text-[10px] font-bold text-slate-400">
                     Name
                   </p>
 
-                  <p className="mt-0.5 truncate text-sm font-extrabold text-zinc-200">
+                  <p className="mt-0.5 truncate text-sm font-extrabold text-slate-700">
                     {username || '—'}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-bold text-zinc-600">
+                  <p className="text-[10px] font-bold text-slate-400">
                     Path
                   </p>
 
-                  <p className="mt-0.5 text-sm font-extrabold text-zinc-200">
+                  <p className="mt-0.5 text-sm font-extrabold text-slate-700">
                     {selectedPath.label}
                   </p>
                 </div>
@@ -656,7 +733,7 @@ export default function Onboarding() {
               </button>
             </div>
 
-            <p className="mt-4 text-center text-[10px] font-medium text-zinc-600">
+            <p className="mt-4 text-center text-[10px] font-medium text-slate-400">
               You can change your goals and path anytime from your profile.
             </p>
           </div>
@@ -664,7 +741,7 @@ export default function Onboarding() {
 
         {/* Bottom brand */}
         <div className="mt-10 text-center">
-          <p className="text-[11px] font-medium text-zinc-600">
+          <p className="text-[11px] font-medium text-slate-400">
             Qyven · Become your Future Self
           </p>
         </div>

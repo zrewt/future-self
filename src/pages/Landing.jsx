@@ -182,9 +182,9 @@ function ScoreRing({
             x2="100%"
             y2="100%"
           >
-            <stop offset="0%" stopColor="#FF7AC6" />
-            <stop offset="50%" stopColor="#7F5AF0" />
-            <stop offset="100%" stopColor="#00E8C6" />
+            <stop offset="0%" stopColor="#ff7ac6" />
+            <stop offset="50%" stopColor="#7c3aed" />
+            <stop offset="100%" stopColor="#00cdb4" />
           </linearGradient>
         </defs>
 
@@ -194,7 +194,7 @@ function ScoreRing({
           cy={ringSize / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgba(109,40,217,0.10)"
           strokeWidth={strokeWidth}
         />
 
@@ -235,7 +235,7 @@ function ScoreRing({
             fontWeight: 800,
             letterSpacing: '-0.06em',
             background:
-              'linear-gradient(135deg, #FF7AC6, #7F5AF0, #00E8C6)',
+              'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -249,7 +249,7 @@ function ScoreRing({
             marginTop: ringSize < 145 ? 5 : 7,
             fontSize: Math.max(9, ringSize * 0.06),
             fontWeight: 800,
-            color: '#858AA5',
+            color: '#6b7280',
             letterSpacing: '0.13em',
           }}
         >
@@ -296,7 +296,7 @@ function PillarBar({
         style={{
           fontSize: 10,
           fontWeight: 700,
-          color: '#9499B5',
+          color: '#6b7280',
         }}
       >
         {label}
@@ -305,7 +305,7 @@ function PillarBar({
       <div
         style={{
           height: 5,
-          background: 'rgba(255,255,255,0.06)',
+          background: 'rgba(109,40,217,0.08)',
           borderRadius: 999,
           overflow: 'hidden',
         }}
@@ -343,41 +343,12 @@ function PillarBar({
 
 function FloatingBlobs({ scrollY }) {
   const blobs = [
-    {
-      top: -120,
-      left: '4%',
-      size: 430,
-      color: 'rgba(127,90,240,0.24)',
-      speed: 0.12,
-    },
-    {
-      top: 240,
-      left: '78%',
-      size: 340,
-      color: 'rgba(255,122,198,0.18)',
-      speed: 0.22,
-    },
-    {
-      top: 820,
-      left: '-4%',
-      size: 320,
-      color: 'rgba(0,232,198,0.14)',
-      speed: 0.16,
-    },
-    {
-      top: 1500,
-      left: '76%',
-      size: 390,
-      color: 'rgba(255,184,48,0.12)',
-      speed: 0.2,
-    },
-    {
-      top: 2200,
-      left: '8%',
-      size: 340,
-      color: 'rgba(0,232,122,0.13)',
-      speed: 0.14,
-    },
+    { top: -150, left: '2%', size: 560, color: 'rgba(167,139,250,0.22)', speed: 0.08, duration: 27 },
+    { top: 180, left: '72%', size: 470, color: 'rgba(251,113,133,0.16)', speed: 0.12, duration: 31 },
+    { top: 720, left: '-8%', size: 520, color: 'rgba(52,211,153,0.13)', speed: 0.09, duration: 24 },
+    { top: 1320, left: '76%', size: 620, color: 'rgba(96,165,250,0.13)', speed: 0.11, duration: 35 },
+    { top: 1940, left: '8%', size: 450, color: 'rgba(251,191,36,0.11)', speed: 0.07, duration: 29 },
+    { top: 2600, left: '66%', size: 500, color: 'rgba(196,181,253,0.18)', speed: 0.10, duration: 33 },
   ]
 
   return (
@@ -404,9 +375,7 @@ function FloatingBlobs({ scrollY }) {
             borderRadius: '50%',
             background: `radial-gradient(circle, ${blob.color} 0%, transparent 70%)`,
             filter: 'blur(20px)',
-            animation: `qyvenDrift${index % 3} ${
-              15 + index * 2
-            }s ease-in-out infinite`,
+            animation: `qyvenDrift${index % 3} ${blob.duration}s ease-in-out infinite`,
           }}
         />
       ))}
@@ -432,9 +401,7 @@ function FloatingBlobs({ scrollY }) {
              a separate 640px cutoff — one "is this mobile" threshold for the
              whole page, not two disagreeing ones. */
           @media (max-width: 780px) {
-            .qyven-mobile-blob {
-              display: none !important;
-            }
+            .qyven-mobile-blob { display: block !important; }
           }
         `}
       </style>
@@ -475,10 +442,10 @@ function AmbientTrajectory({ scrollY }) {
       >
         <defs>
           <linearGradient id="heroTrajectoryGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FF7AC6" stopOpacity="0" />
-            <stop offset="35%" stopColor="#7F5AF0" stopOpacity="0.24" />
+            <stop offset="0%" stopColor="#ff7ac6" stopOpacity="0" />
+            <stop offset="35%" stopColor="#7c3aed" stopOpacity="0.24" />
             <stop offset="72%" stopColor="#67E8F9" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#00E8C6" stopOpacity="0" />
+            <stop offset="100%" stopColor="#00cdb4" stopOpacity="0" />
           </linearGradient>
           <filter id="heroTrajectoryGlow">
             <feGaussianBlur stdDeviation="7" result="blur" />
@@ -547,7 +514,7 @@ const PILLARS = [
   {
     icon: '🏋️',
     label: 'Fitness',
-    color: '#7F5AF0',
+    color: '#7c3aed',
     description: 'Movement, training & consistency',
   },
   {
@@ -585,8 +552,8 @@ export default function Landing() {
       className="qyven-landing"
       style={{
         minHeight: '100vh',
-        background: '#0B0A14',
-        color: '#F1EEF9',
+        background: '#f5f3ff',
+        color: '#12111e',
         fontFamily:
           "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         overflowX: 'hidden',
@@ -613,18 +580,18 @@ export default function Landing() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'rgba(11,10,20,0.72)',
+          background: 'rgba(255,255,255,0.72)',
           backdropFilter: 'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
           borderBottom:
-            '1px solid rgba(255,255,255,0.06)',
+            '1px solid rgba(109,40,217,0.08)',
         }}
       >
         <Link
           to="/"
           style={{
             textDecoration: 'none',
-            color: '#F5F3FF',
+            color: '#12111e',
             fontSize: 23,
             fontWeight: 800,
             letterSpacing: '-0.07em',
@@ -646,7 +613,7 @@ export default function Landing() {
               to="/login"
               className="qyven-nav-signin"
               style={{
-                color: '#AEB2CC',
+                color: '#6b7280',
                 textDecoration: 'none',
                 fontSize: 13,
                 fontWeight: 600,
@@ -668,7 +635,7 @@ export default function Landing() {
               minHeight: 40,
               borderRadius: 999,
               background:
-                'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                'linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)',
               color: '#fff',
               textDecoration: 'none',
               fontSize: 12,
@@ -739,7 +706,7 @@ export default function Landing() {
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    background: '#00E8C6',
+                    background: '#00cdb4',
                     boxShadow:
                       '0 0 10px rgba(0,232,198,0.8)',
                   }}
@@ -766,7 +733,7 @@ export default function Landing() {
                 <span
                   style={{
                     background:
-                      'linear-gradient(110deg,#D8B4FE,#A78BFA 45%,#67E8F9)',
+                      'linear-gradient(110deg,#8b5cf6,#7c3aed 45%,#67E8F9)',
                     WebkitBackgroundClip:
                       'text',
                     WebkitTextFillColor:
@@ -786,7 +753,7 @@ export default function Landing() {
                   margin:
                     '25px 0 0',
                   maxWidth: 560,
-                  color: '#AEB2CC',
+                  color: '#6b7280',
                   fontSize:
                     'clamp(16px,2.3vw,19px)',
                   lineHeight: 1.65,
@@ -827,7 +794,7 @@ export default function Landing() {
                     minHeight: 52,
                     borderRadius: 999,
                     background:
-                      'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                      'linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)',
                     color: '#fff',
                     textDecoration: 'none',
                     fontSize: 15,
@@ -845,7 +812,7 @@ export default function Landing() {
                   <span
                     style={{
                       fontSize: 12,
-                      color: '#737891',
+                      color: '#9ca3af',
                     }}
                   >
                     Takes about 60 seconds
@@ -862,7 +829,7 @@ export default function Landing() {
                   flexWrap: 'wrap',
                   gap: 18,
                   marginTop: 25,
-                  color: '#767B96',
+                  color: '#9ca3af',
                   fontSize: 11,
                   fontWeight: 600,
                 }}
@@ -900,17 +867,17 @@ export default function Landing() {
               />
 
               <div
-                className="qyven-score-card"
+                className="qyven-score-card qCard"
                 style={{
                   position: 'relative',
                   padding: 25,
                   borderRadius: 30,
                   background:
-                    'linear-gradient(155deg,rgba(255,255,255,0.075),rgba(255,255,255,0.025))',
+                    'linear-gradient(155deg,#ffffff,#ffffff)',
                   border:
-                    '1px solid rgba(255,255,255,0.11)',
+                    '1px solid rgba(109,40,217,0.12)',
                   boxShadow:
-                    '0 30px 90px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
+                    '0 30px 90px rgba(76,29,149,0.12), inset 0 1px 0 rgba(109,40,217,0.06)',
                   overflow: 'hidden',
                 }}
               >
@@ -922,7 +889,7 @@ export default function Landing() {
                     right: 35,
                     height: 2,
                     background:
-                      'linear-gradient(90deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                      'linear-gradient(90deg,#ff7ac6,#7c3aed,#00cdb4)',
                   }}
                 />
 
@@ -939,7 +906,7 @@ export default function Landing() {
                     <div
                       style={{
                         fontSize: 10,
-                        color: '#737891',
+                        color: '#9ca3af',
                         textTransform:
                           'uppercase',
                         letterSpacing:
@@ -970,7 +937,7 @@ export default function Landing() {
                         'rgba(0,232,198,0.08)',
                       border:
                         '1px solid rgba(0,232,198,0.18)',
-                      color: '#00E8C6',
+                      color: '#00cdb4',
                       fontSize: 9,
                       fontWeight: 800,
                     }}
@@ -1013,7 +980,7 @@ export default function Landing() {
                     icon="🏋️"
                     label="Fitness"
                     value={74}
-                    color="#7F5AF0"
+                    color="#7c3aed"
                   />
 
                   <PillarBar
@@ -1058,7 +1025,7 @@ export default function Landing() {
                     background:
                       'rgba(255,255,255,0.035)',
                     border:
-                      '1px solid rgba(255,255,255,0.06)',
+                      '1px solid rgba(109,40,217,0.08)',
                     display: 'flex',
                     gap: 10,
                     alignItems: 'center',
@@ -1077,7 +1044,7 @@ export default function Landing() {
                       style={{
                         fontSize: 11,
                         fontWeight: 800,
-                        color: '#F1EEF9',
+                        color: '#12111e',
                       }}
                     >
                       Your score can change.
@@ -1140,7 +1107,7 @@ export default function Landing() {
                 style={{
                   marginLeft: 8,
                   background:
-                    'linear-gradient(110deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                    'linear-gradient(110deg,#ff7ac6,#7c3aed,#00cdb4)',
                   WebkitBackgroundClip:
                     'text',
                   WebkitTextFillColor:
@@ -1178,7 +1145,7 @@ export default function Landing() {
             <div
               style={{
                 fontSize: 10,
-                color: '#00E8C6',
+                color: '#00cdb4',
                 fontWeight: 800,
                 textTransform:
                   'uppercase',
@@ -1221,21 +1188,21 @@ export default function Landing() {
               title: 'Check in',
               text: 'Answer a few quick questions about your day.',
               icon: '✓',
-              color: '#00E8C6',
+              color: '#00cdb4',
             },
             {
               number: '02',
               title: 'Get your score',
               text: 'Qyven turns your habits into one simple Future Self Score.',
               icon: '◎',
-              color: '#7F5AF0',
+              color: '#7c3aed',
             },
             {
               number: '03',
               title: 'See your trajectory',
               text: 'Understand what is moving you forward and what needs attention.',
               icon: '↗',
-              color: '#FF7AC6',
+              color: '#ff7ac6',
             },
           ].map((step, index) => (
             <Reveal
@@ -1249,7 +1216,7 @@ export default function Landing() {
                   padding: 25,
                   borderRadius: 22,
                   background:
-                    `linear-gradient(145deg,${step.color}10,rgba(255,255,255,0.025))`,
+                    `linear-gradient(145deg,${step.color}10,#ffffff)`,
                   border:
                     `1px solid ${step.color}25`,
                   position: 'relative',
@@ -1338,7 +1305,7 @@ export default function Landing() {
       >
         <Reveal scale>
           <div
-            className="qyven-trajectory-card"
+            className="qyven-trajectory-card qCard"
             style={{
               borderRadius: 30,
               padding:
@@ -1360,7 +1327,7 @@ export default function Landing() {
                 right: 0,
                 height: 2,
                 background:
-                  'linear-gradient(90deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                  'linear-gradient(90deg,#ff7ac6,#7c3aed,#00cdb4)',
               }}
             />
 
@@ -1394,7 +1361,7 @@ export default function Landing() {
               <span
                 style={{
                   background:
-                    'linear-gradient(120deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                    'linear-gradient(120deg,#ff7ac6,#7c3aed,#00cdb4)',
                   WebkitBackgroundClip:
                     'text',
                   WebkitTextFillColor:
@@ -1444,7 +1411,7 @@ export default function Landing() {
                   bottom: 40,
                   height: 1,
                   background:
-                    'rgba(255,255,255,0.08)',
+                    'rgba(109,40,217,0.06)',
                 }}
               />
 
@@ -1481,15 +1448,15 @@ export default function Landing() {
                   >
                     <stop
                       offset="0%"
-                      stopColor="#FF7AC6"
+                      stopColor="#ff7ac6"
                     />
                     <stop
                       offset="50%"
-                      stopColor="#7F5AF0"
+                      stopColor="#7c3aed"
                     />
                     <stop
                       offset="100%"
-                      stopColor="#00E8C6"
+                      stopColor="#00cdb4"
                     />
                   </linearGradient>
 
@@ -1502,12 +1469,12 @@ export default function Landing() {
                   >
                     <stop
                       offset="0%"
-                      stopColor="#7F5AF0"
+                      stopColor="#7c3aed"
                       stopOpacity="0.18"
                     />
                     <stop
                       offset="100%"
-                      stopColor="#7F5AF0"
+                      stopColor="#7c3aed"
                       stopOpacity="0"
                     />
                   </linearGradient>
@@ -1531,21 +1498,21 @@ export default function Landing() {
                   cx="0"
                   cy="140"
                   r="6"
-                  fill="#FF7AC6"
+                  fill="#ff7ac6"
                 />
 
                 <circle
                   cx="350"
                   cy="111"
                   r="6"
-                  fill="#7F5AF0"
+                  fill="#7c3aed"
                 />
 
                 <circle
                   cx="700"
                   cy="22"
                   r="7"
-                  fill="#00E8C6"
+                  fill="#00cdb4"
                 />
               </svg>
 
@@ -1594,7 +1561,7 @@ export default function Landing() {
                   '0 auto 28px',
                 maxWidth: 500,
                 fontSize: 10,
-                color: '#656A83',
+                color: '#9ca3af',
               }}
             >
               Illustrative trajectory. Your actual
@@ -1618,10 +1585,10 @@ export default function Landing() {
                   minHeight: 48,
                   borderRadius: 999,
                   background:
-                    'rgba(255,255,255,0.08)',
+                    'rgba(109,40,217,0.06)',
                   border:
                     '1px solid rgba(255,255,255,0.13)',
-                  color: '#F1EEF9',
+                  color: '#12111e',
                   textDecoration:
                     'none',
                   fontSize: 13,
@@ -1657,7 +1624,7 @@ export default function Landing() {
             <div
               style={{
                 fontSize: 10,
-                color: '#00E8C6',
+                color: '#00cdb4',
                 fontWeight: 800,
                 textTransform:
                   'uppercase',
@@ -1696,13 +1663,13 @@ export default function Landing() {
               icon: '◎',
               title: 'Your score',
               text: 'A simple snapshot of how your habits are adding up.',
-              color: '#7F5AF0',
+              color: '#7c3aed',
             },
             {
               icon: '↑',
               title: 'Your strongest area',
               text: "See where you're already building momentum.",
-              color: '#00E8C6',
+              color: '#00cdb4',
             },
             {
               icon: '⚡',
@@ -1714,7 +1681,7 @@ export default function Landing() {
               icon: '↗',
               title: 'Your trajectory',
               text: 'Understand the direction your consistency is taking you.',
-              color: '#FF7AC6',
+              color: '#ff7ac6',
             },
           ].map((item, index) => (
             <Reveal
@@ -1728,9 +1695,9 @@ export default function Landing() {
                   padding: 22,
                   borderRadius: 20,
                   background:
-                    'rgba(255,255,255,0.025)',
+                    '#ffffff',
                   border:
-                    '1px solid rgba(255,255,255,0.075)',
+                    '1px solid #ffffff',
                 }}
               >
                 <div
@@ -1803,7 +1770,7 @@ export default function Landing() {
             <div
               style={{
                 fontSize: 10,
-                color: '#00E8C6',
+                color: '#00cdb4',
                 fontWeight: 800,
                 textTransform:
                   'uppercase',
@@ -1915,7 +1882,7 @@ export default function Landing() {
             <div
               style={{
                 fontSize: 10,
-                color: '#00E8C6',
+                color: '#00cdb4',
                 fontWeight: 800,
                 textTransform:
                   'uppercase',
@@ -1943,7 +1910,7 @@ export default function Landing() {
               <span
                 style={{
                   background:
-                    'linear-gradient(120deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                    'linear-gradient(120deg,#ff7ac6,#7c3aed,#00cdb4)',
                   WebkitBackgroundClip:
                     'text',
                   WebkitTextFillColor:
@@ -1990,7 +1957,7 @@ export default function Landing() {
                 minHeight: 54,
                 borderRadius: 999,
                 background:
-                  'linear-gradient(135deg,#FF7AC6,#7F5AF0,#00E8C6)',
+                  'linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)',
                 color: '#fff',
                 textDecoration:
                   'none',
@@ -2008,7 +1975,7 @@ export default function Landing() {
             <div
               style={{
                 marginTop: 16,
-                color: '#656A83',
+                color: '#9ca3af',
                 fontSize: 11,
               }}
             >
@@ -2024,7 +1991,7 @@ export default function Landing() {
         className="qyven-footer"
         style={{
           borderTop:
-            '1px solid rgba(255,255,255,0.06)',
+            '1px solid rgba(109,40,217,0.08)',
           padding:
             '24px 28px',
           display: 'flex',
@@ -2041,7 +2008,7 @@ export default function Landing() {
         <Link
           to="/"
           style={{
-            color: '#F1EEF9',
+            color: '#12111e',
             textDecoration:
               'none',
             fontWeight: 800,
@@ -2056,7 +2023,7 @@ export default function Landing() {
         <p
           style={{
             margin: 0,
-            color: '#5F647D',
+            color: '#9ca3af',
             fontSize: 11,
           }}
         >
@@ -2067,7 +2034,7 @@ export default function Landing() {
           <Link
             to="/get-started"
             style={{
-              color: '#00E8C6',
+              color: '#00cdb4',
               textDecoration:
                 'none',
               fontSize: 11,
@@ -2083,6 +2050,97 @@ export default function Landing() {
 
       <style>
         {`
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+
+          .qyven-landing {
+            background: #f5f3ff !important;
+            color: #12111e !important;
+          }
+
+          .qyven-nav {
+            background: rgba(255,255,255,0.76) !important;
+            border-bottom: 1px solid rgba(109,40,217,0.10) !important;
+            box-shadow: 0 10px 30px rgba(109,40,217,0.06) !important;
+          }
+
+          .qyven-score-card, .qCard {
+            background: #ffffff !important;
+            border: 1px solid rgba(109,40,217,0.10) !important;
+            box-shadow: 0 18px 50px rgba(109,40,217,0.10) !important;
+            transition: transform 260ms cubic-bezier(0.16,1,0.3,1), box-shadow 260ms ease;
+          }
+
+          .qCard:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 60px rgba(109,40,217,0.16) !important;
+          }
+
+          .qyven-score-card {
+            animation: qyvenScoreFloat 8s ease-in-out infinite;
+            transform-origin: center bottom;
+          }
+
+          .qyven-score-card::after {
+            content: '';
+            position: absolute;
+            left: 12%; right: 12%; bottom: -28px;
+            height: 34px;
+            border-radius: 50%;
+            background: rgba(109,40,217,0.16);
+            filter: blur(18px);
+            transform: scaleX(0.86);
+            z-index: -1;
+            animation: qyvenScoreShadow 8s ease-in-out infinite;
+          }
+
+          .qyven-ambient-grid {
+            background-image: radial-gradient(circle, rgba(109,40,217,0.20) 1px, transparent 1.5px) !important;
+            background-size: 34px 34px !important;
+            opacity: 0.42 !important;
+            -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 76%);
+            mask-image: radial-gradient(ellipse at center, black 20%, transparent 76%);
+          }
+
+          .qyven-hero-trajectory-line {
+            stroke-width: 2 !important;
+            stroke-dasharray: 12 12;
+            animation: qyvenTrajectoryFlow 9s linear infinite;
+          }
+
+          .qyven-hero-trajectory-glow { opacity: 0.55 !important; }
+          .qyven-trajectory-node { transform-box: fill-box; transform-origin: center; animation: qyvenNodePulse 2.8s ease-in-out infinite; }
+          .node-two { animation-delay: .7s; }
+          .node-three { animation-delay: 1.4s; }
+
+          .qyven-particle:nth-child(3n+1) { background: #7c3aed !important; }
+          .qyven-particle:nth-child(3n+2) { background: #fb7185 !important; }
+          .qyven-particle:nth-child(3n) { background: #14b8a6 !important; }
+
+          @keyframes qyvenScoreFloat {
+            0%,100% { transform: translate3d(0,0,0); }
+            50% { transform: translate3d(0,-7px,0); }
+          }
+          @keyframes qyvenScoreShadow {
+            0%,100% { opacity:.55; transform:scaleX(.86); }
+            50% { opacity:.82; transform:scaleX(1); }
+          }
+
+          @keyframes qyvenDrift0 {
+            0%,100% { transform:translate3d(0,0,0) scale(1); }
+            35% { transform:translate3d(55px,-25px,0) scale(1.08); }
+            70% { transform:translate3d(-30px,45px,0) scale(.96); }
+          }
+          @keyframes qyvenDrift1 {
+            0%,100% { transform:translate3d(0,0,0) scale(1); }
+            40% { transform:translate3d(-60px,35px,0) scale(1.06); }
+            75% { transform:translate3d(35px,-40px,0) scale(.94); }
+          }
+          @keyframes qyvenDrift2 {
+            0%,100% { transform:translate3d(0,0,0) scale(1); }
+            30% { transform:translate3d(35px,50px,0) scale(.95); }
+            68% { transform:translate3d(-55px,-30px,0) scale(1.1); }
+          }
+
           * {
             box-sizing: border-box;
           }
@@ -2392,8 +2450,8 @@ export default function Landing() {
             inset: 0;
             opacity: 0.22;
             background-image:
-              linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+              linear-gradient(#ffffff 1px, transparent 1px),
+              linear-gradient(90deg, #ffffff 1px, transparent 1px);
             background-size: 80px 80px;
             mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
             -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 72%);
@@ -2475,7 +2533,7 @@ export default function Landing() {
             position: absolute;
             inset: 0;
             background:
-              radial-gradient(ellipse at 50% 38%, transparent 0%, rgba(11,10,20,0.08) 48%, rgba(11,10,20,0.72) 100%);
+              radial-gradient(ellipse at 50% 38%, transparent 0%, rgba(109,40,217,0.025) 48%, rgba(245,243,255,0.72) 100%);
           }
 
           .qyven-floating-card {
@@ -2517,7 +2575,7 @@ export default function Landing() {
             width: 5px;
             height: 5px;
             border-radius: 50%;
-            background: #00E8C6;
+            background: #00cdb4;
             box-shadow: 0 0 8px rgba(0,232,198,0.8);
             animation: qyvenSignalPulse 2s ease-in-out infinite;
           }

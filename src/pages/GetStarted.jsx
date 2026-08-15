@@ -296,22 +296,22 @@ const QUESTIONS = [
       {
         label: 'Not really',
         emoji: '📱',
-        value: false,
+        value: 0,
       },
       {
         label: 'Sometimes',
         emoji: '📖',
-        value: true,
+        value: 1,
       },
       {
         label: 'Almost every day',
         emoji: '🧠',
-        value: true,
+        value: 2,
       },
       {
         label: 'It is a major priority',
         emoji: '🚀',
-        value: true,
+        value: 3,
       },
     ],
   },
@@ -426,13 +426,92 @@ function PulseLine({ color = '#00E87A' }) {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AMBIENT BACKGROUND
+// Soft drifting brand-color blobs, matching Landing.jsx's ambient treatment.
+// Drop as the first child of any `position: relative; overflow: hidden`
+// wrapper; content after it needs `position: relative; z-index: 1` to sit
+// above it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AmbientBackground() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    >
+      <div
+        className="qyven-onb-blob"
+        style={{
+          top: -120,
+          left: '-14%',
+          width: 460,
+          height: 460,
+          background:
+            'radial-gradient(circle, rgba(255,122,198,0.30) 0%, transparent 70%)',
+          animationDelay: '0s',
+        }}
+      />
+      <div
+        className="qyven-onb-blob"
+        style={{
+          top: 120,
+          right: '-16%',
+          width: 420,
+          height: 420,
+          background:
+            'radial-gradient(circle, rgba(124,58,237,0.26) 0%, transparent 70%)',
+          animationDelay: '3s',
+        }}
+      />
+      <div
+        className="qyven-onb-blob"
+        style={{
+          bottom: -120,
+          left: '14%',
+          width: 400,
+          height: 400,
+          background:
+            'radial-gradient(circle, rgba(0,205,180,0.26) 0%, transparent 70%)',
+          animationDelay: '6s',
+        }}
+      />
+
+      <style>{`
+        .qyven-onb-blob {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(18px);
+          animation: qyvenOnbDrift 15s ease-in-out infinite;
+        }
+        @keyframes qyvenOnbDrift {
+          0%, 100% { transform: translate3d(0,0,0) scale(1); }
+          50% { transform: translate3d(28px,-32px,0) scale(1.1); }
+        }
+        @media (max-width: 640px) {
+          .qyven-onb-blob { filter: blur(14px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .qyven-onb-blob { animation: none !important; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 function CheckIcon() {
   return (
     <span
       className="flex items-center justify-center w-5 h-5 rounded-full shrink-0"
       style={{
-        background: 'rgba(0,232,122,0.15)',
-        color: '#00E87A',
+        background: 'rgba(0,205,180,0.14)',
+        color: '#00cdb4',
       }}
     >
       ✓
@@ -682,29 +761,30 @@ export default function GetStarted() {
 
   if (phase === 'calculating') {
     return (
-      <div className="app-bg min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-full max-w-sm">
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+        <AmbientBackground />
+        <div className="w-full max-w-sm relative z-10">
           <div
             className="mx-auto mb-7 w-20 h-20 rounded-3xl flex items-center justify-center text-4xl"
             style={{
               background:
-                'linear-gradient(135deg, rgba(0,232,122,0.15), rgba(127,90,240,0.15))',
-              border: '1px solid rgba(0,232,122,0.2)',
+                'linear-gradient(135deg, rgba(0,205,180,0.14), rgba(124,58,237,0.14))',
+              border: '1px solid rgba(0,205,180,0.22)',
               animation: 'pulseGlow 2s ease-in-out infinite',
             }}
           >
             🧬
           </div>
 
-          <p className="text-xs font-bold uppercase tracking-widest text-[#00E87A] mb-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4] mb-2">
             Almost there
           </p>
 
-          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-[#E8F0E0] mb-3">
+          <h2 className="text-3xl font-extrabold text-slate-900 mb-3">
             Building your Future Self
           </h2>
 
-          <p className="text-sm text-slate-500 dark:text-[#5A7050] mb-8">
+          <p className="text-sm text-slate-500 mb-8">
             Turning your answers into a personal starting point.
           </p>
 
@@ -717,7 +797,7 @@ export default function GetStarted() {
             ].map((item, index) => (
               <div
                 key={item}
-                className="flex items-center gap-3 text-sm font-semibold text-slate-600 dark:text-[#9DB890]"
+                className="flex items-center gap-3 text-sm font-semibold text-slate-600"
                 style={{
                   animation: `fadeIn 0.5s ${index * 0.35}s both`,
                 }}
@@ -744,11 +824,11 @@ export default function GetStarted() {
           @keyframes pulseGlow {
             0%, 100% {
               transform: scale(1);
-              box-shadow: 0 0 0 rgba(0,232,122,0);
+              box-shadow: 0 0 0 rgba(0,205,180,0);
             }
             50% {
               transform: scale(1.04);
-              box-shadow: 0 0 35px rgba(0,232,122,0.18);
+              box-shadow: 0 0 35px rgba(0,205,180,0.18);
             }
           }
         `}</style>
@@ -762,18 +842,19 @@ export default function GetStarted() {
 
   if (phase === 'reveal') {
     return (
-      <div className="app-bg min-h-screen px-4 py-8">
-        <div className="max-w-md mx-auto space-y-5">
+      <div className="min-h-screen px-4 py-8 relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+        <AmbientBackground />
+        <div className="max-w-md mx-auto space-y-5 relative z-10">
           <div className="text-center pt-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00E87A] mb-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4] mb-2">
               Your baseline
             </p>
 
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-[#E8F0E0]">
+            <h1 className="text-3xl font-extrabold text-slate-900">
               Meet your Future Self Score
             </h1>
 
-            <p className="text-sm text-slate-500 dark:text-[#5A7050] mt-2">
+            <p className="text-sm text-slate-500 mt-2">
               This is your starting point — not a final destination.
             </p>
           </div>
@@ -781,22 +862,21 @@ export default function GetStarted() {
           <div
             className="rounded-[28px] p-7 text-center relative overflow-hidden"
             style={{
-              background:
-                'linear-gradient(145deg, #0A0D08 0%, #151C11 55%, #10150D 100%)',
-              border: '1px solid rgba(0,232,122,0.18)',
+              background: '#ffffff',
+              border: '1px solid rgba(109,40,217,0.10)',
               boxShadow:
-                '0 0 70px rgba(0,232,122,0.12), 0 25px 70px rgba(0,0,0,0.35)',
+                '0 20px 60px rgba(109,40,217,0.12), 0 8px 24px rgba(109,40,217,0.06)',
             }}
           >
             <div
               className="absolute top-0 left-0 right-0 h-[2px]"
               style={{
                 background:
-                  'linear-gradient(90deg, #7F5AF0, #00E87A)',
+                  'linear-gradient(90deg, #ff7ac6, #7c3aed, #00cdb4)',
               }}
             />
 
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#5A7050] mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9ca3af] mb-3">
               Starting point
             </p>
 
@@ -804,7 +884,7 @@ export default function GetStarted() {
               className="text-[92px] font-black tabular-nums leading-none"
               style={{
                 background:
-                  'linear-gradient(135deg, #00E87A, #7F5AF0)',
+                  'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -813,12 +893,12 @@ export default function GetStarted() {
               <CountUp target={scores.fss} />
             </div>
 
-            <p className="text-[#9DB890] font-semibold text-sm mt-2">
+            <p className="text-[#6b7280] font-semibold text-sm mt-2">
               Future Self Score
             </p>
 
             <div className="mt-5">
-              <PulseLine />
+              <PulseLine color="#7c3aed" />
             </div>
 
             <div className="mt-5 space-y-3">
@@ -831,11 +911,11 @@ export default function GetStarted() {
                     {pillar.icon}
                   </span>
 
-                  <span className="w-16 text-left text-[11px] font-bold text-[#71836A]">
+                  <span className="w-16 text-left text-[11px] font-bold text-[#6b7280]">
                     {pillar.label}
                   </span>
 
-                  <div className="flex-1 h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                  <div className="flex-1 h-1.5 rounded-full bg-[rgba(109,40,217,0.08)] overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -858,12 +938,12 @@ export default function GetStarted() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="glass-card rounded-2xl p-4">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-[#00C466] mb-2">
+            <div className="rounded-2xl p-4" style={{ background: "#ffffff", border: "1px solid rgba(109,40,217,0.10)", boxShadow: "0 4px 14px rgba(109,40,217,0.06)" }}>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-[#00cdb4] mb-2">
                 Strongest
               </p>
 
-              <p className="font-extrabold text-lg text-slate-900 dark:text-[#E8F0E0]">
+              <p className="font-extrabold text-lg text-slate-900">
                 {strongest?.icon} {strongest?.label}
               </p>
 
@@ -875,12 +955,12 @@ export default function GetStarted() {
               </p>
             </div>
 
-            <div className="glass-card rounded-2xl p-4">
+            <div className="rounded-2xl p-4" style={{ background: "#ffffff", border: "1px solid rgba(109,40,217,0.10)", boxShadow: "0 4px 14px rgba(109,40,217,0.06)" }}>
               <p className="text-[10px] uppercase tracking-widest font-bold text-[#FFB830] mb-2">
                 Biggest opportunity
               </p>
 
-              <p className="font-extrabold text-lg text-slate-900 dark:text-[#E8F0E0]">
+              <p className="font-extrabold text-lg text-slate-900">
                 {weakest?.icon} {weakest?.label}
               </p>
 
@@ -894,10 +974,10 @@ export default function GetStarted() {
           </div>
 
           <div
-            className="rounded-2xl p-4 text-sm leading-relaxed text-[#8FA084]"
+            className="rounded-2xl p-4 text-sm leading-relaxed text-[#6b7280]"
             style={{
-              background: 'rgba(255,255,255,0.025)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'rgba(109,40,217,0.035)',
+              border: '1px solid rgba(109,40,217,0.08)',
             }}
           >
             Your score is simply a snapshot of where you are today.
@@ -910,15 +990,15 @@ export default function GetStarted() {
             className="w-full py-4 rounded-2xl font-bold text-sm text-white"
             style={{
               background:
-                'linear-gradient(135deg, #00E87A, #7F5AF0)',
+                'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
               boxShadow:
-                '0 8px 30px rgba(0,232,122,0.22)',
+                '0 8px 30px rgba(124,58,237,0.28)',
             }}
           >
             See where you're heading →
           </button>
 
-          <p className="text-center text-[11px] text-slate-400 dark:text-[#53624E]">
+          <p className="text-center text-[11px] text-slate-400">
             Based on your answers. Not medical advice.
           </p>
         </div>
@@ -934,18 +1014,19 @@ export default function GetStarted() {
     const maxVal = Math.max(...trajectory.map((item) => item.value))
 
     return (
-      <div className="app-bg min-h-screen px-4 py-8">
-        <div className="max-w-md mx-auto space-y-5">
+      <div className="min-h-screen px-4 py-8 relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+        <AmbientBackground />
+        <div className="max-w-md mx-auto space-y-5 relative z-10">
           <div className="text-center pt-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00E87A] mb-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4] mb-2">
               Your trajectory
             </p>
 
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-[#E8F0E0]">
+            <h1 className="text-3xl font-extrabold text-slate-900">
               You have room to grow.
             </h1>
 
-            <p className="text-sm text-slate-500 dark:text-[#5A7050] mt-2">
+            <p className="text-sm text-slate-500 mt-2">
               Consistency is what changes the trajectory.
             </p>
           </div>
@@ -953,9 +1034,9 @@ export default function GetStarted() {
           <div
             className="rounded-[28px] p-6"
             style={{
-              background:
-                'linear-gradient(145deg, #0A0D08, #161D11)',
-              border: '1px solid rgba(0,232,122,0.15)',
+              background: '#ffffff',
+              border: '1px solid rgba(109,40,217,0.10)',
+              boxShadow: '0 20px 50px rgba(109,40,217,0.10)',
             }}
           >
             <div className="flex items-end justify-between gap-3 h-48">
@@ -968,7 +1049,7 @@ export default function GetStarted() {
                     className="text-lg font-black tabular-nums"
                     style={{
                       color:
-                        index === 0 ? '#9DB890' : '#00E87A',
+                        index === 0 ? '#9ca3af' : '#00cdb4',
                     }}
                   >
                     {item.value}
@@ -983,16 +1064,16 @@ export default function GetStarted() {
                       )}px`,
                       background:
                         index === 0
-                          ? 'rgba(255,255,255,0.1)'
-                          : 'linear-gradient(180deg, #00E87A, #7F5AF0)',
+                          ? 'rgba(109,40,217,0.10)'
+                          : 'linear-gradient(180deg, #00cdb4, #7c3aed)',
                       boxShadow:
                         index === 0
                           ? 'none'
-                          : '0 0 18px rgba(0,232,122,0.18)',
+                          : '0 0 14px rgba(0,205,180,0.25)',
                     }}
                   />
 
-                  <span className="text-[10px] font-bold text-[#5A7050] text-center">
+                  <span className="text-[10px] font-bold text-[#9ca3af] text-center">
                     {item.label}
                   </span>
                 </div>
@@ -1000,10 +1081,10 @@ export default function GetStarted() {
             </div>
 
             <div className="mt-5">
-              <PulseLine />
+              <PulseLine color="#7c3aed" />
             </div>
 
-            <p className="text-[10px] text-[#53624E] text-center mt-2">
+            <p className="text-[10px] text-[#9ca3af] text-center mt-2">
               Illustrative estimate based on consistent habits — not a guarantee.
             </p>
           </div>
@@ -1022,11 +1103,11 @@ export default function GetStarted() {
               Your biggest opportunity
             </p>
 
-            <p className="text-xl font-extrabold text-slate-900 dark:text-[#E8F0E0]">
+            <p className="text-xl font-extrabold text-slate-900">
               {weakest?.icon} {weakest?.label}
             </p>
 
-            <p className="text-sm text-slate-500 dark:text-[#71836A] mt-2 leading-relaxed">
+            <p className="text-sm text-slate-500 mt-2 leading-relaxed">
               Improving your {weakest?.label?.toLowerCase()} consistency
               could make one of the biggest differences to your overall
               baseline.
@@ -1039,9 +1120,9 @@ export default function GetStarted() {
             className="w-full py-4 rounded-2xl font-bold text-sm text-white"
             style={{
               background:
-                'linear-gradient(135deg, #00E87A, #7F5AF0)',
+                'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
               boxShadow:
-                '0 8px 30px rgba(0,232,122,0.22)',
+                '0 8px 30px rgba(124,58,237,0.28)',
             }}
           >
             Build my 7-day plan →
@@ -1050,7 +1131,7 @@ export default function GetStarted() {
           <button
             type="button"
             onClick={() => setPhase('reveal')}
-            className="w-full py-2 text-sm font-semibold text-[#5A7050]"
+            className="w-full py-2 text-sm font-semibold text-[#9ca3af]"
           >
             ← Back to my score
           </button>
@@ -1065,18 +1146,19 @@ export default function GetStarted() {
 
   if (phase === 'plan') {
     return (
-      <div className="app-bg min-h-screen px-4 py-8">
-        <div className="max-w-md mx-auto space-y-5">
+      <div className="min-h-screen px-4 py-8 relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+        <AmbientBackground />
+        <div className="max-w-md mx-auto space-y-5 relative z-10">
           <div className="text-center pt-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00E87A] mb-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4] mb-2">
               Your first 7 days
             </p>
 
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-[#E8F0E0]">
+            <h1 className="text-3xl font-extrabold text-slate-900">
               Start smaller. Stay consistent.
             </h1>
 
-            <p className="text-sm text-slate-500 dark:text-[#5A7050] mt-2">
+            <p className="text-sm text-slate-500 mt-2">
               Based on your answers, these are the highest-value places to start.
             </p>
           </div>
@@ -1087,29 +1169,30 @@ export default function GetStarted() {
                 key={`${item.title}-${index}`}
                 className="rounded-2xl p-5 flex gap-4"
                 style={{
-                  background: 'rgba(255,255,255,0.035)',
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  background: '#ffffff',
+                  border: '1px solid rgba(109,40,217,0.10)',
+                  boxShadow: '0 4px 14px rgba(109,40,217,0.06)',
                 }}
               >
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
                   style={{
-                    background: 'rgba(0,232,122,0.08)',
+                    background: 'rgba(0,205,180,0.10)',
                   }}
                 >
                   {item.icon}
                 </div>
 
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-[#00C466] mb-1">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-[#00cdb4] mb-1">
                     Day {index + 1} · {item.pillar}
                   </p>
 
-                  <h3 className="font-extrabold text-lg text-slate-900 dark:text-[#E8F0E0]">
+                  <h3 className="font-extrabold text-lg text-slate-900">
                     {item.title}
                   </h3>
 
-                  <p className="text-sm text-slate-500 dark:text-[#71836A] mt-1 leading-relaxed">
+                  <p className="text-sm text-slate-500 mt-1 leading-relaxed">
                     {item.action}
                   </p>
                 </div>
@@ -1121,17 +1204,17 @@ export default function GetStarted() {
             className="rounded-2xl p-5 text-center"
             style={{
               background:
-                'linear-gradient(135deg, rgba(127,90,240,0.08), rgba(0,232,122,0.07))',
-              border: '1px solid rgba(127,90,240,0.16)',
+                'linear-gradient(135deg, rgba(124,58,237,0.06), rgba(0,205,180,0.06))',
+              border: '1px solid rgba(124,58,237,0.14)',
             }}
           >
             <p className="text-2xl mb-2">🎯</p>
 
-            <p className="font-extrabold text-slate-900 dark:text-[#E8F0E0]">
+            <p className="font-extrabold text-slate-900">
               Your goal isn't perfection.
             </p>
 
-            <p className="text-sm text-slate-500 dark:text-[#71836A] mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               It's proving to yourself that you can show up consistently.
             </p>
           </div>
@@ -1142,9 +1225,9 @@ export default function GetStarted() {
             className="w-full py-4 rounded-2xl font-bold text-sm text-white"
             style={{
               background:
-                'linear-gradient(135deg, #00E87A, #7F5AF0)',
+                'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
               boxShadow:
-                '0 8px 30px rgba(0,232,122,0.22)',
+                '0 8px 30px rgba(124,58,237,0.28)',
             }}
           >
             Start my first action →
@@ -1153,7 +1236,7 @@ export default function GetStarted() {
           <button
             type="button"
             onClick={() => setPhase('trajectory')}
-            className="w-full py-2 text-sm font-semibold text-[#5A7050]"
+            className="w-full py-2 text-sm font-semibold text-[#9ca3af]"
           >
             ← Back
           </button>
@@ -1170,20 +1253,21 @@ export default function GetStarted() {
     const firstAction = plan[0]
 
     return (
-      <div className="app-bg min-h-screen flex items-center px-4 py-10">
-        <div className="max-w-md mx-auto w-full">
+      <div className="min-h-screen flex items-center px-4 py-10 relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+        <AmbientBackground />
+        <div className="max-w-md mx-auto w-full relative z-10">
           <div className="text-center mb-7">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00E87A] mb-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4] mb-3">
               Your first move
             </p>
 
-            <h1 className="text-4xl font-black text-slate-900 dark:text-[#E8F0E0] leading-tight">
+            <h1 className="text-4xl font-black text-slate-900 leading-tight">
               Don't just plan it.
               <br />
               <span
                 style={{
                   background:
-                    'linear-gradient(90deg, #00E87A, #7F5AF0)',
+                    'linear-gradient(90deg, #ff7ac6, #7c3aed, #00cdb4)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}
@@ -1196,25 +1280,24 @@ export default function GetStarted() {
           <div
             className="rounded-[30px] p-7 text-center"
             style={{
-              background:
-                'linear-gradient(145deg, #0A0D08, #171E12)',
-              border: '1px solid rgba(0,232,122,0.18)',
-              boxShadow: '0 20px 70px rgba(0,0,0,0.35)',
+              background: '#ffffff',
+              border: '1px solid rgba(109,40,217,0.10)',
+              boxShadow: '0 20px 60px rgba(109,40,217,0.12)',
             }}
           >
             <div className="text-6xl mb-5">
               {firstAction?.icon || '🎯'}
             </div>
 
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00E87A] mb-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4] mb-2">
               Your first action
             </p>
 
-            <h2 className="text-2xl font-extrabold text-[#E8F0E0]">
+            <h2 className="text-2xl font-extrabold text-slate-900">
               {firstAction?.title || 'Take one positive action'}
             </h2>
 
-            <p className="text-[#8FA084] mt-3 leading-relaxed">
+            <p className="text-[#6b7280] mt-3 leading-relaxed">
               {firstAction?.action ||
                 'Do one small thing today that moves you forward.'}
             </p>
@@ -1222,14 +1305,14 @@ export default function GetStarted() {
             <div
               className="mt-6 p-4 rounded-2xl text-left"
               style={{
-                background: 'rgba(255,255,255,0.035)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'rgba(109,40,217,0.035)',
+                border: '1px solid rgba(109,40,217,0.08)',
               }}
             >
               <div className="flex items-start gap-3">
                 <CheckIcon />
 
-                <p className="text-sm text-[#9DB890] leading-relaxed">
+                <p className="text-sm text-[#6b7280] leading-relaxed">
                   Qyven works by turning small daily actions into visible
                   progress over time.
                 </p>
@@ -1243,15 +1326,15 @@ export default function GetStarted() {
             className="w-full mt-5 py-4 rounded-2xl font-bold text-sm text-white"
             style={{
               background:
-                'linear-gradient(135deg, #00E87A, #7F5AF0)',
+                'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
               boxShadow:
-                '0 8px 30px rgba(0,232,122,0.22)',
+                '0 8px 30px rgba(124,58,237,0.28)',
             }}
           >
             Save my progress with Qyven →
           </button>
 
-          <p className="text-center text-xs text-[#53624E] mt-3">
+          <p className="text-center text-xs text-[#9ca3af] mt-3">
             Your assessment is ready to save.
           </p>
         </div>
@@ -1265,39 +1348,46 @@ export default function GetStarted() {
 
   if (phase === 'signup') {
     return (
-      <div className="app-bg min-h-screen flex items-center px-4 py-10">
-        <div className="max-w-md w-full mx-auto">
+      <div className="min-h-screen flex items-center px-4 py-10 relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+        <AmbientBackground />
+        <div className="max-w-md w-full mx-auto relative z-10">
           <div
             className="rounded-2xl p-4 flex items-center gap-4 mb-6"
             style={{
-              background: 'rgba(0,232,122,0.07)',
-              border: '1px solid rgba(0,232,122,0.16)',
+              background: 'rgba(0,205,180,0.08)',
+              border: '1px solid rgba(0,205,180,0.18)',
             }}
           >
             <div
               className="text-4xl font-black tabular-nums"
-              style={{ color: '#00E87A' }}
+              style={{
+                background:
+                  'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
             >
               {scores?.fss}
             </div>
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#00C466]">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#00cdb4]">
                 Your score is ready
               </p>
 
-              <p className="text-sm font-semibold text-[#9DB890]">
+              <p className="text-sm font-semibold text-[#6b7280]">
                 Create an account to keep your progress.
               </p>
             </div>
           </div>
 
           <div className="text-center mb-7">
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-[#E8F0E0]">
+            <h1 className="text-3xl font-extrabold text-slate-900">
               Your Future Self starts here.
             </h1>
 
-            <p className="text-sm text-slate-500 dark:text-[#71836A] mt-2">
+            <p className="text-sm text-slate-500 mt-2">
               Save your baseline, track your habits and watch your progress.
             </p>
           </div>
@@ -1305,11 +1395,11 @@ export default function GetStarted() {
           <div
             className="rounded-3xl p-5 mb-5"
             style={{
-              background: 'rgba(255,255,255,0.025)',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: '#ffffff',
+              border: '1px solid rgba(109,40,217,0.10)',
             }}
           >
-            <p className="text-xs font-bold uppercase tracking-widest text-[#5A7050] mb-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#9ca3af] mb-4">
               What you'll unlock
             </p>
 
@@ -1323,7 +1413,7 @@ export default function GetStarted() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="flex items-center gap-3 text-sm font-semibold text-slate-700 dark:text-[#B3C3AC]"
+                  className="flex items-center gap-3 text-sm font-semibold text-slate-700"
                 >
                   <CheckIcon />
                   {item}
@@ -1344,9 +1434,9 @@ export default function GetStarted() {
             className="flex items-center justify-center w-full py-4 rounded-2xl font-bold text-sm text-white"
             style={{
               background:
-                'linear-gradient(135deg, #00E87A, #7F5AF0)',
+                'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
               boxShadow:
-                '0 8px 30px rgba(0,232,122,0.22)',
+                '0 8px 30px rgba(124,58,237,0.28)',
             }}
           >
             Create my free account →
@@ -1354,12 +1444,12 @@ export default function GetStarted() {
 
           <Link
             to="/login"
-            className="flex items-center justify-center w-full py-3 mt-2 text-sm font-semibold text-[#71836A]"
+            className="flex items-center justify-center w-full py-3 mt-2 text-sm font-semibold text-[#6b7280]"
           >
             Already have an account? Log in
           </Link>
 
-          <p className="text-center text-[11px] text-[#53624E] mt-3">
+          <p className="text-center text-[11px] text-[#9ca3af] mt-3">
             Free · No credit card · Your assessment is saved when you sign up
           </p>
         </div>
@@ -1372,34 +1462,35 @@ export default function GetStarted() {
   // ───────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="app-bg min-h-screen px-4 py-7 flex flex-col">
-      <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
+    <div className="min-h-screen px-4 py-7 flex flex-col relative overflow-hidden" style={{ background: '#f5f3ff' }}>
+      <AmbientBackground />
+      <div className="max-w-md mx-auto w-full flex-1 flex flex-col relative z-10">
         {/* HEADER */}
 
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#00E87A]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#00cdb4]">
                 Qyven
               </p>
 
-              <p className="text-sm font-bold text-slate-900 dark:text-[#E8F0E0] mt-1">
+              <p className="text-sm font-bold text-slate-900 mt-1">
                 Build your Future Self
               </p>
             </div>
 
-            <p className="text-xs font-bold text-slate-400 dark:text-[#5A7050]">
+            <p className="text-xs font-bold text-slate-400">
               {qIndex + 1} / {totalQ}
             </p>
           </div>
 
-          <div className="h-1.5 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${((qIndex + 1) / totalQ) * 100}%`,
                 background:
-                  'linear-gradient(90deg, #7F5AF0, #00E87A)',
+                  'linear-gradient(90deg, #ff7ac6, #7c3aed, #00cdb4)',
               }}
             />
           </div>
@@ -1409,12 +1500,12 @@ export default function GetStarted() {
 
         <div className="flex-1">
           <div className="mb-6">
-            <h2 className="text-3xl font-black text-slate-900 dark:text-[#E8F0E0] leading-[1.08]">
+            <h2 className="text-3xl font-black text-slate-900 leading-[1.08]">
               {currentQ.text}
             </h2>
 
             {currentQ.sub && (
-              <p className="text-sm text-slate-500 dark:text-[#71836A] mt-2 leading-relaxed">
+              <p className="text-sm text-slate-500 mt-2 leading-relaxed">
                 {currentQ.sub}
               </p>
             )}
@@ -1438,11 +1529,14 @@ export default function GetStarted() {
                     className="w-full flex items-center gap-4 p-4 rounded-2xl text-left border transition-all duration-150"
                     style={{
                       background: selected
-                        ? 'rgba(0,232,122,0.08)'
-                        : 'rgba(255,255,255,0.035)',
+                        ? 'rgba(0,205,180,0.08)'
+                        : '#ffffff',
                       borderColor: selected
-                        ? 'rgba(0,232,122,0.38)'
-                        : 'rgba(255,255,255,0.07)',
+                        ? 'rgba(0,205,180,0.45)'
+                        : 'rgba(109,40,217,0.16)',
+                      boxShadow: selected
+                        ? '0 4px 14px rgba(0,205,180,0.14)'
+                        : '0 2px 8px rgba(109,40,217,0.06)',
                       transform: selected
                         ? 'translateY(-1px)'
                         : 'none',
@@ -1452,12 +1546,12 @@ export default function GetStarted() {
                       {option.emoji}
                     </span>
 
-                    <span className="font-semibold text-slate-800 dark:text-[#E8F0E0]">
+                    <span className="font-semibold text-slate-800">
                       {option.label}
                     </span>
 
                     {selected && (
-                      <span className="ml-auto text-[#00E87A] font-bold">
+                      <span className="ml-auto text-[#00cdb4] font-bold">
                         ✓
                       </span>
                     )}
@@ -1487,23 +1581,26 @@ export default function GetStarted() {
                       className="relative flex flex-col items-start gap-3 p-4 rounded-2xl text-left border transition-all duration-150 min-h-[112px]"
                       style={{
                         background: selected
-                          ? 'rgba(0,232,122,0.08)'
-                          : 'rgba(255,255,255,0.035)',
+                          ? 'rgba(0,205,180,0.08)'
+                          : '#ffffff',
                         borderColor: selected
-                          ? 'rgba(0,232,122,0.38)'
-                          : 'rgba(255,255,255,0.07)',
+                          ? 'rgba(0,205,180,0.45)'
+                          : 'rgba(109,40,217,0.16)',
+                        boxShadow: selected
+                          ? '0 4px 14px rgba(0,205,180,0.14)'
+                          : '0 2px 8px rgba(109,40,217,0.06)',
                       }}
                     >
                       <span className="text-2xl">
                         {option.emoji}
                       </span>
 
-                      <span className="font-semibold text-sm text-slate-800 dark:text-[#E8F0E0] leading-tight">
+                      <span className="font-semibold text-sm text-slate-800 leading-tight">
                         {option.label}
                       </span>
 
                       {selected && (
-                        <span className="absolute top-3 right-3 text-[#00E87A] font-bold">
+                        <span className="absolute top-3 right-3 text-[#00cdb4] font-bold">
                           ✓
                         </span>
                       )}
@@ -1521,9 +1618,9 @@ export default function GetStarted() {
                 className="w-full py-4 rounded-2xl font-bold text-sm text-white mt-5 disabled:opacity-30"
                 style={{
                   background:
-                    'linear-gradient(135deg, #7F5AF0, #00C466)',
+                    'linear-gradient(135deg, #7c3aed, #00cdb4)',
                   boxShadow:
-                    '0 8px 24px rgba(127,90,240,0.2)',
+                    '0 8px 24px rgba(124,58,237,0.24)',
                 }}
               >
                 Continue →
@@ -1538,7 +1635,7 @@ export default function GetStarted() {
           <button
             type="button"
             onClick={goBack}
-            className="mt-7 py-2 text-center text-sm text-slate-400 dark:text-[#5A7050] font-semibold"
+            className="mt-7 py-2 text-center text-sm text-slate-400 font-semibold"
           >
             ← Back
           </button>
