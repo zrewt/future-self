@@ -12,7 +12,7 @@ const TIER_LIGHT = {
   bronze:    { bg: 'rgba(217,119,6,0.1)',   text: '#B45309', border: 'rgba(217,119,6,0.22)'   },
   silver:    { bg: 'rgba(100,116,139,0.1)',  text: '#475569', border: 'rgba(100,116,139,0.22)' },
   gold:      { bg: 'rgba(234,179,8,0.1)',   text: '#A16207', border: 'rgba(234,179,8,0.22)'   },
-  legendary: { bg: 'rgba(127,90,240,0.1)',  text: '#6D44E0', border: 'rgba(127,90,240,0.22)'  },
+  legendary: { bg: 'rgba(124,58,237,0.1)',  text: '#6626d9', border: 'rgba(124,58,237,0.22)'  },
 }
 
 const TIER_DARK = {
@@ -73,7 +73,7 @@ export default function Achievements() {
     ? ACHIEVEMENTS
     : ACHIEVEMENTS.filter((a) => a.category === filter)
 
-  const primaryHex = isDark ? '#00E87A' : '#7F5AF0'
+  const primaryHex = isDark ? '#00E87A' : '#7c3aed'
 
   return (
     <div className="animate-slide-up pb-6">
@@ -94,7 +94,7 @@ export default function Achievements() {
               width: `${(earnedCount / ACHIEVEMENTS.length) * 100}%`,
               background: isDark
                 ? 'linear-gradient(90deg, #00E87A, #7F5AF0)'
-                : 'linear-gradient(90deg, #7F5AF0, #A882F5)',
+                : 'linear-gradient(90deg, #ff7ac6, #7c3aed, #00cdb4)',
             }}
           />
         </div>
@@ -119,7 +119,7 @@ export default function Achievements() {
                   : isDark ? '#5A7050' : '#64748B',
                 border: isActive
                   ? 'none'
-                  : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E6DC'}`,
+                  : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(109,40,217,0.12)'}`,
               }}
             >
               {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
@@ -140,21 +140,24 @@ export default function Achievements() {
           return (
             <div
               key={ach.key}
-              className="rounded-3xl p-4 transition-all duration-200 border"
+              className="relative overflow-hidden rounded-3xl p-4 transition-all duration-200 border"
               style={{
                 background: earned
-                  ? isDark ? '#16201C' : '#F8FAFF'
-                  : isDark ? '#111915' : '#F8FAFC',
+                  ? isDark ? '#16201C' : '#FAF8FF'
+                  : isDark ? '#111915' : '#FAFAFC',
                 borderColor: earned
-                  ? isDark ? 'rgba(94,234,212,0.22)' : '#C7D2FE'
-                  : isDark ? 'rgba(148,163,184,0.12)' : '#E2E8F0',
+                  ? isDark ? 'rgba(94,234,212,0.22)' : 'rgba(124,58,237,0.22)'
+                  : isDark ? 'rgba(148,163,184,0.12)' : 'rgba(109,40,217,0.10)',
                 boxShadow: earned
                   ? isDark
                     ? '0 6px 18px rgba(0,0,0,0.2)'
-                    : '0 4px 14px rgba(79,70,229,0.07)'
+                    : '0 4px 14px rgba(124,58,237,0.08)'
                   : 'none',
               }}
             >
+              {earned && !isDark && (
+                <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4]" />
+              )}
               <div className="flex gap-3">
                 <span
                   className="text-3xl"
@@ -205,13 +208,13 @@ export default function Achievements() {
                   </div>
                   <div
                     className="h-1.5 rounded-full overflow-hidden"
-                    style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#E2E6DC' }}
+                    style={{ background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(109,40,217,0.08)' }}
                   >
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${pct}%`,
-                        background: isDark ? 'rgba(0,232,122,0.5)' : 'rgba(127,90,240,0.5)',
+                        background: isDark ? 'rgba(0,232,122,0.5)' : 'linear-gradient(90deg, rgba(255,122,198,0.7), rgba(124,58,237,0.7))',
                       }}
                     />
                   </div>
