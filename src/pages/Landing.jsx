@@ -711,7 +711,7 @@ export default function Landing() {
                       '0 0 10px rgba(0,232,198,0.8)',
                   }}
                 />
-                Your habits. Your trajectory.
+                Your Future Self Score
               </div>
             </Reveal>
 
@@ -728,12 +728,12 @@ export default function Landing() {
                   maxWidth: 700,
                 }}
               >
-                What is your
+                Your habits are
                 <br />
                 <span
                   style={{
                     background:
-                      'linear-gradient(110deg,#8b5cf6,#7c3aed 45%,#67E8F9)',
+                      'linear-gradient(110deg,#8b5cf6,#7c3aed 45%,#00cdb4)',
                     WebkitBackgroundClip:
                       'text',
                     WebkitTextFillColor:
@@ -741,33 +741,44 @@ export default function Landing() {
                     backgroundClip: 'text',
                   }}
                 >
-                  Future Self Score?
+                  shaping your future.
                 </span>
               </h1>
             </Reveal>
 
-            <Reveal delay={160}>
+            <Reveal delay={120}>
+              <div
+                className="qyven-hero-question"
+                style={{
+                  marginTop: 20,
+                  fontSize: 'clamp(22px,3vw,30px)',
+                  fontWeight: 800,
+                  letterSpacing: '-0.04em',
+                  color: '#12111e',
+                }}
+              >
+                Do you know your score?
+              </div>
+            </Reveal>
+
+            <Reveal delay={180}>
               <p
                 className="qyven-hero-description"
                 style={{
-                  margin:
-                    '25px 0 0',
+                  margin: '16px 0 0',
                   maxWidth: 560,
                   color: '#6b7280',
-                  fontSize:
-                    'clamp(16px,2.3vw,19px)',
+                  fontSize: 'clamp(16px,2.3vw,19px)',
                   lineHeight: 1.65,
                 }}
               >
-                Every small choice you make today is
-                quietly deciding who you become.
-                Qyven turns that invisible math into
-                one number you can actually see —
-                and change.
+                Qyven turns your everyday habits into one simple
+                Future Self Score — so you can see where you stand
+                and where your consistency could take you.
               </p>
             </Reveal>
 
-            <Reveal delay={230}>
+            <Reveal delay={240}>
               <div
                 className="qyven-hero-actions"
                 style={{
@@ -775,7 +786,7 @@ export default function Landing() {
                   flexWrap: 'wrap',
                   alignItems: 'center',
                   gap: 12,
-                  marginTop: 32,
+                  marginTop: 28,
                 }}
               >
                 <Link
@@ -789,9 +800,8 @@ export default function Landing() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding:
-                      '16px 25px',
-                    minHeight: 52,
+                    padding: '16px 27px',
+                    minHeight: 54,
                     borderRadius: 999,
                     background:
                       'linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)',
@@ -914,7 +924,7 @@ export default function Landing() {
                         fontWeight: 800,
                       }}
                     >
-                      Your Future Self
+                      Your Future Self Score
                     </div>
 
                     <div
@@ -924,7 +934,7 @@ export default function Landing() {
                         fontWeight: 700,
                       }}
                     >
-                      Score preview
+                      See where you stand
                     </div>
                   </div>
 
@@ -1969,7 +1979,7 @@ export default function Landing() {
             >
               {isLoggedIn
                 ? 'Go to my dashboard →'
-                : 'Find My Future Self Score →'}
+                : 'Find My Score →'}
             </Link>
 
             <div
