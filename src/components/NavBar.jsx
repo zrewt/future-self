@@ -41,8 +41,8 @@ function NavItem({ tab, compact = false }) {
       {({ isActive }) => (
         <span className={`flex items-center ${compact ? 'flex-col gap-1 py-2' : 'gap-3 px-3 py-2.5'} rounded-xl text-sm font-semibold transition-colors ${
           isActive
-            ? 'bg-slate-900 text-white dark:bg-[#7F5AF0] dark:text-white'
-            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-[#B4B7D4] dark:hover:bg-white/[0.06] dark:hover:text-[#F1EEF9]'
+            ? 'text-white bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)] dark:bg-[#7F5AF0] dark:text-white'
+            : 'text-slate-500 hover:bg-[#7c3aed]/5 hover:text-slate-900 dark:text-[#B4B7D4] dark:hover:bg-white/[0.06] dark:hover:text-[#F1EEF9]'
         }`}>
           <Icon className={compact ? 'w-5 h-5' : 'w-[18px] h-[18px] shrink-0'} />
           <span className={compact ? 'text-[10px] leading-none' : ''}>{tab.label}</span>
@@ -71,24 +71,24 @@ export default function NavBar() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-slate-200/80 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl dark:border-white/10 dark:bg-[#141220]/95">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-[rgba(109,40,217,0.10)] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl dark:border-white/10 dark:bg-[#141220]/95">
         <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
           {mobileTabs.map((tab) => <NavItem key={tab.to} tab={tab} compact />)}
         </div>
       </nav>
 
-      <aside className="hidden md:flex fixed left-5 top-5 bottom-5 z-50 w-[232px] flex-col rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#141220] dark:shadow-[0_12px_36px_rgba(0,0,0,0.28)]">
+      <aside className="hidden md:flex fixed left-5 top-5 bottom-5 z-50 w-[232px] flex-col rounded-2xl border border-[rgba(109,40,217,0.10)] bg-white p-3 shadow-[0_8px_30px_rgba(109,40,217,0.08)] dark:border-white/10 dark:bg-[#141220] dark:shadow-[0_12px_36px_rgba(0,0,0,0.28)]">
         <div className="flex items-center gap-3 px-2 py-3 mb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-extrabold text-white dark:bg-gradient-to-br dark:from-[#FF7AC6] dark:via-[#7F5AF0] dark:to-[#00E8C6]">Q</div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-extrabold text-white bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)] dark:bg-gradient-to-br dark:from-[#FF7AC6] dark:via-[#7F5AF0] dark:to-[#00E8C6]">Q</div>
           <div>
             <p className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-[#F1EEF9]">Qyven</p>
             <p className="text-[10px] font-medium text-slate-400 dark:text-[#8A8FA3]">Personal wellbeing</p>
           </div>
         </div>
 
-        <NavLink to="/profile" className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 transition-colors hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.035] dark:hover:bg-white/[0.06]">
+        <NavLink to="/profile" className="mb-4 rounded-xl border border-[rgba(109,40,217,0.10)] bg-slate-50 p-3 transition-colors hover:border-[#7c3aed]/25 hover:bg-[#7c3aed]/5 dark:border-white/10 dark:bg-white/[0.035] dark:hover:bg-white/[0.06]">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-700 dark:bg-[#7F5AF0]/20 dark:text-[#C4B5FD]">{initial}</div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7c3aed]/10 text-sm font-bold text-[#7c3aed] dark:bg-[#7F5AF0]/20 dark:text-[#C4B5FD]">{initial}</div>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-slate-800 dark:text-[#F1EEF9]">{profile?.username || 'Future builder'}</p>
               <p className="text-[10px] font-medium text-slate-500 dark:text-[#B4B7D4]">View profile</p>
@@ -101,8 +101,8 @@ export default function NavBar() {
           {desktopTabs.map((tab) => <NavItem key={tab.to} tab={tab} />)}
         </div>
 
-        <div className="border-t border-slate-200 pt-3 dark:border-white/10">
-          <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:text-[#9DB890] dark:hover:bg-white/[0.06]">
+        <div className="border-t border-[rgba(109,40,217,0.10)] pt-3 dark:border-white/10">
+          <button type="button" onClick={toggleTheme} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-[#7c3aed]/5 dark:text-[#9DB890] dark:hover:bg-white/[0.06]">
             <ThemeIcon className="h-[18px] w-[18px]" /> {theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
           </button>
           <button type="button" onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-[#9DB890] dark:hover:bg-red-500/10 dark:hover:text-red-400">
@@ -111,7 +111,7 @@ export default function NavBar() {
         </div>
       </aside>
 
-      <button type="button" onClick={toggleTheme} className="md:hidden fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm dark:border-white/10 dark:bg-[#111509] dark:text-green">
+      <button type="button" onClick={toggleTheme} className="md:hidden fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(109,40,217,0.10)] bg-white text-slate-600 shadow-[0_2px_10px_rgba(109,40,217,0.08)] dark:border-white/10 dark:bg-[#111509] dark:text-green">
         <ThemeIcon className="w-5 h-5" />
       </button>
     </>

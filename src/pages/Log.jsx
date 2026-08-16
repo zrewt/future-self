@@ -252,29 +252,40 @@ function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up px-4">
-      <div className="glass-card p-8 w-full max-w-sm text-center">
+      <div className="relative overflow-hidden rounded-3xl bg-white p-8 w-full max-w-sm text-center border border-[rgba(109,40,217,0.10)] shadow-[0_20px_60px_rgba(109,40,217,0.14)]">
+        <div className="absolute top-0 left-8 right-8 h-[3px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4]" />
         <ShieldNotice shieldEvent={shieldEvent} newShieldEarned={newShieldEarned} />
         <p className="text-4xl mb-1">🔒</p>
         <p className="text-2xl font-extrabold text-slate-900 mb-1">Locked in!</p>
-        <p className="text-3xl font-extrabold text-primary tabular-nums mb-6">+{displayedTotal} XP</p>
+        <p
+          className="text-3xl font-extrabold tabular-nums mb-6"
+          style={{
+            background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          +{displayedTotal} XP
+        </p>
         <div className="space-y-2 text-left">
           {lines.map((line, i) => (
             <div
               key={i}
               className={`flex items-center justify-between rounded-xl px-3 py-2 transition-all duration-300 ${
-                i < visible ? 'opacity-100 translate-y-0 bg-primary/5' : 'opacity-0 translate-y-2'
+                i < visible ? 'opacity-100 translate-y-0 bg-[#7c3aed]/5' : 'opacity-0 translate-y-2'
               }`}
               style={{ transitionDelay: `${i * 20}ms` }}
             >
               <span className="text-sm font-semibold text-slate-700">{line.icon} {line.label}</span>
-              <span className="text-sm font-extrabold text-primary tabular-nums">+{line.xp}</span>
+              <span className="text-sm font-extrabold text-[#7c3aed] tabular-nums">+{line.xp}</span>
             </div>
           ))}
         </div>
         {visible >= lines.length && lines.length > 0 && (
           <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
             <span className="text-sm font-bold text-slate-500">Total</span>
-            <span className="text-xl font-extrabold text-primary tabular-nums">+{total} XP</span>
+            <span className="text-xl font-extrabold text-[#7c3aed] tabular-nums">+{total} XP</span>
           </div>
         )}
       </div>
@@ -289,7 +300,7 @@ function GracePrompt({ missedDate, onAnswer, loading }) {
   })
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up px-4">
-      <div className="glass-card p-8 w-full max-w-sm text-center">
+      <div className="rounded-3xl bg-white p-8 w-full max-w-sm text-center border border-[rgba(109,40,217,0.10)] shadow-[0_8px_28px_rgba(109,40,217,0.10)]">
         <p className="text-4xl mb-2">🤔</p>
         <p className="text-xl font-extrabold text-slate-900 mb-2">Missed a day?</p>
         <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">
@@ -337,7 +348,7 @@ function StreakBadge({ count }) {
 //    (see below near FoodDetailSection) since it has no dedicated section. ──
 function FocusBadge() {
   return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-primary bg-primary/10 rounded-full px-2 py-0.5 ml-2">
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#7c3aed] bg-[#7c3aed]/10 rounded-full px-2 py-0.5 ml-2">
       🎯 Your focus
     </span>
   )
@@ -348,7 +359,7 @@ function ScorePill({ score, label }) {
   const color = score >= 70
     ? 'text-teal bg-teal/10'
     : score >= 45
-    ? 'text-primary bg-primary/10'
+    ? 'text-[#7c3aed] bg-[#7c3aed]/10'
     : 'text-coral bg-coral/10'
   return (
     <span className={`text-[10px] font-extrabold rounded-full px-2 py-0.5 tabular-nums ml-auto ${color}`}>
@@ -697,14 +708,15 @@ export default function Log() {
       </header>
 
       {profile?.streak_shields > 0 && (
-        <div className="flex items-center gap-1.5 text-xs font-bold text-primary px-1 mb-3">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[#7c3aed] px-1 mb-3">
           <span>🛡️</span>
           <span>{profile.streak_shields} streak shield{profile.streak_shields > 1 ? 's' : ''} banked</span>
         </div>
       )}
 
       {/* Live score preview */}
-      <div className="glass-card p-3 mb-4 grid grid-cols-3 gap-2 text-center text-xs">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-3 mb-4 grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
         {[
           { l: 'Nutrition',   v: nutritionPreview },
           { l: 'Fitness',     v: fitnessPreview },
@@ -712,13 +724,13 @@ export default function Log() {
         ].map((s) => (
           <div key={s.l}>
             <p className="text-slate-400 font-bold uppercase text-[10px]">{s.l}</p>
-            <p className="text-lg font-extrabold text-primary tabular-nums">{s.v}</p>
+            <p className="text-lg font-extrabold text-[#7c3aed] dark:text-primary tabular-nums">{s.v}</p>
           </div>
         ))}
       </div>
 
       {/* Quick-log fast lane */}
-      <div className="glass-card p-4 mb-4">
+      <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4 mb-4">
         <p className="section-title mb-2">⚡ Quick log</p>
         <p className="text-xs text-slate-500 font-medium mb-3">Tap what applies — fills in smart values instantly</p>
         <div className="grid grid-cols-5 gap-2">
@@ -731,9 +743,13 @@ export default function Log() {
                 onClick={() => toggleQuickPreset(preset)}
                 className={`flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold transition-all ${
                   active
-                    ? 'bg-primary text-white shadow-md scale-95'
-                    : 'bg-slate-50 text-slate-600 border border-surface-border'
+                    ? 'text-white scale-95'
+                    : 'bg-slate-50 text-slate-600 border border-[rgba(109,40,217,0.10)]'
                 }`}
+                style={active ? {
+                  background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+                  boxShadow: '0 4px 14px rgba(124,58,237,0.28)',
+                } : undefined}
               >
                 <span className="text-xl">{preset.emoji}</span>
                 <span className="leading-tight text-center text-[10px]">{preset.label}</span>
@@ -761,7 +777,10 @@ export default function Log() {
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* ── Nutrition ── */}
-        <div className={`glass-card p-5 ${focusPillar === 'nutrition' ? 'ring-2 ring-primary/40' : ''}`}>
+        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'nutrition' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
+          {focusPillar === 'nutrition' && (
+            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+          )}
           <div className="flex items-center mb-1">
             <label className="label-text mb-0">Nutrition — today&apos;s servings</label>
             <StreakBadge count={habitStreaks.nutrition} />
@@ -778,7 +797,7 @@ export default function Log() {
             forceOpen={focusPillar === 'longevity'}
           >
             {focusPillar === 'longevity' && (
-              <p className="text-[11px] text-primary font-semibold mb-2 leading-relaxed">
+              <p className="text-[11px] text-[#7c3aed] font-semibold mb-2 leading-relaxed">
                 Longevity doesn't have its own section — it's a composite of sleep, fitness, nutrition, and hydration.
                 Logging specific foods here is your single best lever for it, and it boosts your nutrition score too.
               </p>
@@ -793,7 +812,10 @@ export default function Log() {
         </div>
 
         {/* ── Workout ── */}
-        <div className={`glass-card p-5 ${focusPillar === 'fitness' ? 'ring-2 ring-primary/40' : ''}`}>
+        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'fitness' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
+          {focusPillar === 'fitness' && (
+            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+          )}
           <div className="flex items-center mb-3">
             <label className="label-text mb-0">Workout</label>
             <StreakBadge count={habitStreaks.workout} />
@@ -803,7 +825,7 @@ export default function Log() {
           <button
             type="button"
             onClick={() => setShowWorkoutLib((v) => !v)}
-            className="w-full text-left text-xs font-bold text-primary mb-3 flex items-center gap-1"
+            className="w-full text-left text-xs font-bold text-[#7c3aed] mb-3 flex items-center gap-1"
           >
             🏃 {showWorkoutLib ? 'Hide' : 'Pick a workout'} ▾
           </button>
@@ -816,8 +838,9 @@ export default function Log() {
                     type="button"
                     onClick={() => setWorkoutLibTab(tab)}
                     className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      workoutLibTab === tab ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
+                      workoutLibTab === tab ? 'text-white' : 'bg-slate-100 text-slate-500'
                     }`}
+                    style={workoutLibTab === tab ? { background: 'linear-gradient(135deg, #7c3aed, #00cdb4)' } : undefined}
                   >
                     {tab === 'presets' ? '⚡ Presets' : '⭐ Saved'}
                   </button>
@@ -829,7 +852,7 @@ export default function Log() {
                     key={w.id}
                     type="button"
                     onClick={() => applyWorkout(w)}
-                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 border border-surface-border text-xs font-semibold text-slate-700 hover:bg-primary/5 hover:border-primary/30 transition-colors"
+                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 border border-[rgba(109,40,217,0.10)] text-xs font-semibold text-slate-700 hover:bg-[#7c3aed]/5 hover:border-[#7c3aed]/30 transition-colors"
                   >
                     <span className="text-lg">{w.emoji}</span>
                     <span className="text-[10px] leading-tight text-center">{w.name}</span>
@@ -847,7 +870,7 @@ export default function Log() {
                 onClick={() => updateField('exercise_type', type)}
                 className={[
                   'px-3 py-1.5 rounded-full text-sm font-medium capitalize',
-                  form.exercise_type === type ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600',
+                  form.exercise_type === type ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600',
                 ].join(' ')}
               >
                 {type}
@@ -871,7 +894,10 @@ export default function Log() {
         </div>
 
         {/* ── Sleep ── */}
-        <div className={`glass-card p-5 ${focusPillar === 'energy' ? 'ring-2 ring-primary/40' : ''}`}>
+        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'energy' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
+          {focusPillar === 'energy' && (
+            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+          )}
           <div className="flex items-center mb-3">
             <label className="label-text mb-0">Sleep</label>
             <StreakBadge count={habitStreaks.sleep} />
@@ -901,13 +927,13 @@ export default function Log() {
                 onChange={(e) => updateField('sleep_quality', Number(e.target.value))}
                 className="w-full mt-3"
               />
-              <p className="text-sm font-bold text-primary tabular-nums">{form.sleep_quality}/10</p>
+              <p className="text-sm font-bold text-[#7c3aed] tabular-nums">{form.sleep_quality}/10</p>
             </div>
           </div>
         </div>
 
         {/* ── Water ── */}
-        <div className="glass-card p-5">
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
           <div className="flex items-center mb-2">
             <label className="label-text mb-0">Water</label>
             <StreakBadge count={habitStreaks.water} />
@@ -927,7 +953,7 @@ export default function Log() {
                 key={ml}
                 type="button"
                 onClick={() => updateField('water_ml', ml)}
-                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.water_ml === ml ? 'bg-primary text-white' : 'bg-slate-100'}`}
+                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.water_ml === ml ? 'bg-[#7c3aed] text-white' : 'bg-slate-100'}`}
               >
                 {ml / 1000}L
               </button>
@@ -937,7 +963,10 @@ export default function Log() {
         </div>
 
         {/* ── Focus ── */}
-        <div className={`glass-card p-5 ${focusPillar === 'focus' ? 'ring-2 ring-primary/40' : ''}`}>
+        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'focus' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
+          {focusPillar === 'focus' && (
+            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+          )}
           <div className="flex items-center mb-2">
             <label className="label-text mb-0">Focus (min)</label>
             <StreakBadge count={habitStreaks.focus} />
@@ -958,7 +987,7 @@ export default function Log() {
         </div>
 
         {/* ── Reading ── */}
-        <div className="glass-card p-5">
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
           <div className="flex items-center mb-2">
             <label className="label-text mb-0">Reading (min)</label>
             <StreakBadge count={habitStreaks.reading} />
@@ -977,7 +1006,7 @@ export default function Log() {
         </div>
 
         {/* ── Meditation ── */}
-        <div className="glass-card p-5">
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
           <div className="flex items-center mb-2">
             <label className="label-text mb-0">Meditation (min)</label>
             <StreakBadge count={habitStreaks.meditation} />
@@ -996,7 +1025,7 @@ export default function Log() {
         </div>
 
         {/* ── Screen time ── */}
-        <div className="glass-card p-5">
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
           <div className="flex items-center mb-2">
             <label className="label-text mb-0">Screen time</label>
           </div>
@@ -1015,7 +1044,7 @@ export default function Log() {
                 key={mins}
                 type="button"
                 onClick={() => updateField('screen_time_minutes', mins)}
-                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.screen_time_minutes === mins ? 'bg-primary text-white' : 'bg-slate-100'}`}
+                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.screen_time_minutes === mins ? 'bg-[#7c3aed] text-white' : 'bg-slate-100'}`}
               >
                 {formatScreenTime(mins)}
               </button>
@@ -1025,7 +1054,7 @@ export default function Log() {
         </div>
 
         {/* ── Mood ── */}
-        <div className="glass-card p-5">
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
           <label className="label-text">Mood</label>
           <div className="flex flex-wrap gap-1.5 justify-between">
             {MOOD_EMOJIS.map((emoji, i) => (
@@ -1034,7 +1063,7 @@ export default function Log() {
                 type="button"
                 onClick={() => handleMoodChange(i + 1)}
                 className={`text-xl w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  form.mood === i + 1 ? 'bg-primary-50 ring-2 ring-primary scale-110' : 'opacity-50'
+                  form.mood === i + 1 ? 'bg-[#7c3aed]/10 ring-2 ring-[#7c3aed] scale-110' : 'opacity-50'
                 }`}
               >
                 {emoji}
@@ -1063,7 +1092,11 @@ export default function Log() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary w-full text-lg py-4 shadow-glow"
+          className="w-full text-lg py-4 rounded-2xl font-bold text-white transition-all hover:brightness-105 active:scale-[0.98]"
+          style={{
+            background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+            boxShadow: '0 6px 22px rgba(124,58,237,0.32)',
+          }}
         >
           {loading ? 'Saving…' : 'Lock in today 🔒'}
         </button>
