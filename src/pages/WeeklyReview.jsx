@@ -140,6 +140,9 @@ const TONE_LABEL = {
   projection: { text: 'Projection',  color: 'text-primary bg-primary/10' },
 }
 
+// Shared branded card recipe, matching every other page
+const cardClass = 'rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-transparent'
+
 export default function WeeklyReview() {
   const { user, profile, recentLogs } = useUserStore()
   const [loading,  setLoading]  = useState(true)
@@ -206,26 +209,27 @@ export default function WeeklyReview() {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="glass-card p-4">
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-bold text-slate-400 uppercase">Avg Future Self</p>
           <p className="text-3xl font-extrabold text-primary mt-1">{avgFSS}</p>
         </div>
-        <div className="glass-card p-4">
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-bold text-slate-400 uppercase">XP earned</p>
           <p className="text-3xl font-extrabold text-primary mt-1">{xpEarned}</p>
         </div>
-        <div className="glass-card p-4">
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-bold text-slate-400 uppercase">Perfect days</p>
           <p className="text-2xl font-extrabold text-teal mt-1">{perfectDays}</p>
         </div>
-        <div className="glass-card p-4">
+        <div className={`${cardClass} p-4`}>
           <p className="text-xs font-bold text-slate-400 uppercase">Streak</p>
           <p className="text-2xl font-extrabold text-coral mt-1">{streakNow} 🔥</p>
         </div>
       </div>
 
       {/* Integrity + FSS summary row */}
-      <div className="glass-card p-4">
+      <div className={`relative overflow-hidden ${cardClass} p-4`}>
+        <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
         <div className="flex items-center justify-between">
           <div>
             <p className="section-title mb-1">This week's integrity</p>
@@ -257,7 +261,7 @@ export default function WeeklyReview() {
       </div>
 
       {/* Category bars */}
-      <div className="glass-card p-4">
+      <div className={`${cardClass} p-4`}>
         <p className="section-title mb-3">Category averages</p>
         <ul className="space-y-2">
           {ranked.map((c) => (
@@ -266,7 +270,7 @@ export default function WeeklyReview() {
               <div className="flex-1 h-2 bg-slate-100 dark:bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${c.avg}%`, background: c.avg >= 70 ? '#1D9E75' : c.avg >= 50 ? '#7F77DD' : '#EF9F27' }}
+                  style={{ width: `${c.avg}%`, background: c.avg >= 70 ? '#00b8a0' : c.avg >= 50 ? '#7c3aed' : '#d97706' }}
                 />
               </div>
               <span className="text-sm font-bold tabular-nums w-8 text-right">{c.avg}</span>
@@ -277,12 +281,12 @@ export default function WeeklyReview() {
 
       {/* Best / worst */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="glass-card p-4 border-teal/20 bg-teal/5">
+        <div className={`${cardClass} p-4 border-teal/20 bg-teal/5`}>
           <p className="text-[10px] font-bold text-teal uppercase">Strongest</p>
           <p className="font-extrabold text-slate-900 mt-1">{best.label}</p>
           <p className="text-2xl font-bold text-teal">{best.avg}</p>
         </div>
-        <div className="glass-card p-4 border-amber-200/40 bg-amber-50/40 dark:bg-amber/5 dark:border-amber/20">
+        <div className={`${cardClass} p-4 border-amber-200/40 bg-amber-50/40 dark:bg-amber/5 dark:border-amber/20`}>
           <p className="text-[10px] font-bold text-amber-600 dark:text-amber uppercase">Focus next</p>
           <p className="font-extrabold text-slate-900 mt-1">{worst.label}</p>
           <p className="text-2xl font-bold text-amber-600 dark:text-amber">{worst.avg}</p>
@@ -294,7 +298,7 @@ export default function WeeklyReview() {
         <p className="section-title mb-3">This week's breakdown</p>
         <div className="space-y-3">
           {insights.map((insight, i) => (
-            <div key={i} className={`glass-card p-4 border ${TONE_STYLES[insight.tone]}`}>
+            <div key={i} className={`${cardClass} p-4 border ${TONE_STYLES[insight.tone]}`}>
               <div className="flex items-start gap-3">
                 <span className="text-xl shrink-0 mt-0.5">{insight.icon}</span>
                 <div className="flex-1 min-w-0">
@@ -311,7 +315,12 @@ export default function WeeklyReview() {
         </div>
       </div>
 
-      <Link to="/log" className="btn-primary w-full block text-center">Log today</Link>
+      <Link
+        to="/log"
+        className="w-full block text-center py-3.5 rounded-2xl font-semibold text-white transition-all bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)] shadow-[0_4px_16px_rgba(124,58,237,0.26)] dark:bg-[linear-gradient(135deg,#00E87A,#7F5AF0)] dark:shadow-none"
+      >
+        Log today
+      </Link>
     </div>
   )
 }

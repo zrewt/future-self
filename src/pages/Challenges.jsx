@@ -15,6 +15,9 @@ const CATEGORY_LABELS = {
   sleep: 'Sleep',
 }
 
+// Shared branded card recipe, matching every other page
+const cardClass = 'rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-transparent'
+
 function daysLeft(startedAt, duration) {
   const start = new Date(startedAt)
   const end = new Date(start)
@@ -171,11 +174,11 @@ export default function Challenges() {
       {/* Stats */}
       {(activeCount > 0 || completedCount > 0) && (
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="glass-card p-4 text-center">
+          <div className={`${cardClass} p-4 text-center`}>
             <p className="text-2xl font-extrabold text-primary">{activeCount}</p>
             <p className="text-xs font-bold text-slate-400 uppercase mt-1">Active</p>
           </div>
-          <div className="glass-card p-4 text-center">
+          <div className={`${cardClass} p-4 text-center`}>
             <p className="text-2xl font-extrabold text-teal">{completedCount}</p>
             <p className="text-xs font-bold text-slate-400 uppercase mt-1">Completed</p>
           </div>
@@ -190,7 +193,9 @@ export default function Challenges() {
             type="button"
             onClick={() => setFilter(cat)}
             className={`shrink-0 pill text-xs ${
-              filter === cat ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
+              filter === cat
+                ? 'text-white bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)]'
+                : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
             }`}
           >
             {CATEGORY_LABELS[cat]}
@@ -219,11 +224,15 @@ export default function Challenges() {
             <div
               key={challenge.id}
               className={[
-                'glass-card p-4 transition-all',
+                cardClass,
+                'relative overflow-hidden p-4 transition-all',
                 isCompleted ? 'ring-2 ring-teal/40' : '',
-                isActive ? 'ring-2 ring-primary/30' : '',
+                isActive ? 'ring-2 ring-[#7c3aed]/30' : '',
               ].join(' ')}
             >
+              {isCompleted && (
+                <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+              )}
               {/* Header */}
               <div className="flex items-start gap-3 mb-3">
                 <div
@@ -241,7 +250,7 @@ export default function Challenges() {
                       </span>
                     )}
                     {isActive && (
-                      <span className="pill bg-primary/10 text-primary text-[10px]">
+                      <span className="pill bg-[#7c3aed]/10 text-[#7c3aed] text-[10px]">
                         Active
                       </span>
                     )}
@@ -303,7 +312,7 @@ export default function Challenges() {
                 <button
                   type="button"
                   onClick={() => handleJoin(challenge)}
-                  className="btn-primary w-full !py-2.5 text-sm"
+                  className="w-full !py-2.5 text-sm rounded-2xl font-semibold text-white transition-all bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)] shadow-[0_4px_14px_rgba(124,58,237,0.24)] dark:bg-[linear-gradient(135deg,#00E87A,#7F5AF0)] dark:shadow-none"
                 >
                   Join challenge
                 </button>

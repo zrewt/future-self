@@ -130,7 +130,7 @@ export default function Profile() {
 
   const tooltipStyle = {
     background: isDark ? '#161C0F' : '#fff',
-    border: `1px solid ${isDark ? 'rgba(0,232,122,0.15)' : '#e2e8f0'}`,
+    border: `1px solid ${isDark ? 'rgba(0,232,122,0.15)' : 'rgba(109,40,217,0.14)'}`,
     borderRadius: 12,
     fontSize: 12,
     color: isDark ? '#E8F0E0' : '#0D1409',
@@ -143,13 +143,18 @@ export default function Profile() {
     { label: 'Personal best', value: stats?.bestFSS       ?? 0, icon: '🏆' },
   ]
 
-  const primaryHex   = isDark ? '#00E87A' : '#7F5AF0'
+  const primaryHex   = isDark ? '#00E87A' : '#7c3aed'
   const targetDirty  = screenTimeTarget !== (profile.screen_time_target_minutes ?? 180)
+
+  // Shared branded card recipe — white, purple-tinted border/shadow in light
+  // mode; existing dark surface in dark mode. Matches every other page.
+  const cardClass = 'rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B]'
 
   return (
     <div className="max-w-lg mx-auto space-y-4 animate-slide-up pb-10">
 
-      <div className="glass-card overflow-hidden">
+      <div className={`relative overflow-hidden ${cardClass}`}>
+        <div className="absolute top-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
         <div className="p-5 pb-4">
           <div className="flex items-center gap-4">
             <div
@@ -157,10 +162,10 @@ export default function Profile() {
               style={{
                 background: isDark
                   ? 'linear-gradient(135deg, #00E87A, #7F5AF0)'
-                  : 'linear-gradient(135deg, #7F5AF0, #6D44E0)',
+                  : 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
                 boxShadow: isDark
                   ? '0 4px 20px rgba(0,232,122,0.35)'
-                  : '0 4px 20px rgba(127,90,240,0.35)',
+                  : '0 4px 20px rgba(124,58,237,0.32)',
               }}
             >
               {initial}
@@ -194,7 +199,7 @@ export default function Profile() {
     color: primaryHex,
     background: isDark
       ? 'rgba(0,232,122,0.1)'
-      : 'rgba(127,90,240,0.1)',
+      : 'rgba(124,58,237,0.1)',
   }}
 >
   View public →
@@ -208,7 +213,7 @@ export default function Profile() {
 
       <div className="grid grid-cols-2 gap-3">
         {statItems.map((s) => (
-          <div key={s.label} className="glass-card p-4">
+          <div key={s.label} className={`${cardClass} p-4`}>
             <div className="flex items-center justify-between mb-1">
               <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">{s.label}</p>
               <span className="text-base">{s.icon}</span>
@@ -220,7 +225,7 @@ export default function Profile() {
         ))}
       </div>
 
-      <div className="glass-card p-5">
+      <div className={`${cardClass} p-5`}>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">🌐</span>
           <p className="font-extrabold text-slate-900 dark:text-[#E8F0E0] text-sm">Your public profile</p>
@@ -230,7 +235,12 @@ export default function Profile() {
           Anyone with the link sees your streak, score, level, and achievements.
         </p>
         <div className="flex gap-2">
-          <button type="button" onClick={handleShare} className="btn-primary flex-1 !py-2.5 text-sm">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex-1 !py-2.5 text-sm rounded-2xl font-semibold text-white transition-all dark:bg-gradient-to-br dark:from-[#00E87A] dark:to-[#7F5AF0]"
+            style={{ background: isDark ? undefined : 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)', boxShadow: isDark ? undefined : '0 4px 16px rgba(124,58,237,0.28)' }}
+          >
             {shareStatus === 'shared' ? '✓ Shared!' : shareStatus === 'copied' ? '✓ Copied!' : '↗ Share profile'}
           </button>
           <button type="button" onClick={handleCopyLink} className="btn-secondary !py-2.5 !px-3 text-sm" title="Copy link">
@@ -242,7 +252,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="glass-card p-5">
+      <div className={`${cardClass} p-5`}>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">📵</span>
           <p className="font-extrabold text-slate-900 dark:text-[#E8F0E0] text-sm">Screen time goal</p>
@@ -280,7 +290,7 @@ export default function Profile() {
               onClick={() => setScreenTimeTarget(mins)}
               className="text-xs font-semibold px-2.5 py-1 rounded-lg"
               style={{
-                background: screenTimeTarget === mins ? primaryHex : (isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'),
+                background: screenTimeTarget === mins ? primaryHex : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(109,40,217,0.06)'),
                 color: screenTimeTarget === mins ? '#fff' : (isDark ? '#9DB890' : '#475569'),
               }}
             >
@@ -293,13 +303,14 @@ export default function Profile() {
           type="button"
           onClick={handleSaveScreenTimeTarget}
           disabled={savingTarget || !targetDirty}
-          className="btn-primary w-full !py-2.5 text-sm disabled:opacity-50"
+          className="w-full !py-2.5 text-sm rounded-2xl font-bold text-white transition-all disabled:opacity-50 dark:bg-gradient-to-br dark:from-[#00E87A] dark:to-[#7F5AF0]"
+          style={{ background: isDark ? undefined : 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)', boxShadow: isDark ? undefined : '0 4px 16px rgba(124,58,237,0.26)' }}
         >
           {savingTarget ? 'Saving…' : targetSavedAt ? '✓ Saved' : 'Save target'}
         </button>
       </div>
 
-      <div className="glass-card p-5">
+      <div className={`${cardClass} p-5`}>
         <p className="section-title mb-1">Score history</p>
         <p className="text-xs text-slate-400 dark:text-[#5A7050] font-medium mb-4">Last 30 days — Future Self Score</p>
 
@@ -321,7 +332,7 @@ export default function Profile() {
                       <stop offset="100%" stopColor={primaryHex} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(109,40,217,0.06)'} vertical={false} />
                   <XAxis dataKey="date" tick={{ fontSize: 9, fill: isDark ? '#5A7050' : '#94a3b8' }} axisLine={false} tickLine={false} interval={6} />
                   <YAxis domain={[0, 100]} hide />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v) => [v, 'Future Self']} />
@@ -341,10 +352,10 @@ export default function Profile() {
                     <YAxis domain={[0, 100]} hide />
                     <Tooltip contentStyle={tooltipStyle} />
                     {[
-                      { key: 'nut', color: '#00E87A', label: 'Nutrition' },
-                      { key: 'fit', color: '#7F5AF0', label: 'Fitness' },
-                      { key: 'nrg', color: '#4DA6FF', label: 'Energy' },
-                      { key: 'foc', color: '#FFB830', label: 'Focus' },
+                      { key: 'nut', color: '#00b8a0', label: 'Nutrition' },
+                      { key: 'fit', color: '#7c3aed', label: 'Fitness' },
+                      { key: 'nrg', color: '#3b82c4', label: 'Energy' },
+                      { key: 'foc', color: '#d97706', label: 'Focus' },
                     ].map((l) => (
                       <Area key={l.key} type="monotone" dataKey={l.key} name={l.label} stroke={l.color} strokeWidth={1.5} fill="none" dot={false} />
                     ))}
@@ -357,22 +368,22 @@ export default function Profile() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link to="/achievements" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+        <Link to="/achievements" className={`${cardClass} p-4 hover:border-[#7c3aed]/25 transition-colors`}>
           <span className="text-2xl block mb-2">🏆</span>
           <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050] uppercase tracking-wide mb-0.5">Earned</p>
           <p className="text-sm font-extrabold text-slate-900 dark:text-[#E8F0E0]">Achievements</p>
         </Link>
-        <Link to="/challenges" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+        <Link to="/challenges" className={`${cardClass} p-4 hover:border-[#7c3aed]/25 transition-colors`}>
           <span className="text-2xl block mb-2">⚔️</span>
           <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050] uppercase tracking-wide mb-0.5">Active</p>
           <p className="text-sm font-extrabold text-slate-900 dark:text-[#E8F0E0]">Challenges</p>
         </Link>
-        <Link to="/weekly" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+        <Link to="/weekly" className={`${cardClass} p-4 hover:border-[#7c3aed]/25 transition-colors`}>
           <span className="text-2xl block mb-2">📊</span>
           <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050] uppercase tracking-wide mb-0.5">Analysis</p>
           <p className="text-sm font-extrabold text-slate-900 dark:text-[#E8F0E0]">Weekly review</p>
         </Link>
-        <Link to="/insights" className="glass-card p-4 hover:shadow-card-hover transition-shadow">
+        <Link to="/insights" className={`${cardClass} p-4 hover:border-[#7c3aed]/25 transition-colors`}>
           <span className="text-2xl block mb-2">🔎</span>
           <p className="text-xs font-bold text-slate-500 dark:text-[#5A7050] uppercase tracking-wide mb-0.5">Your data</p>
           <p className="text-sm font-extrabold text-slate-900 dark:text-[#E8F0E0]">Ask your data</p>
@@ -387,9 +398,9 @@ export default function Profile() {
           font-semibold rounded-2xl py-3.5 px-6 border
           transition-all duration-200 active:scale-[0.97]
           bg-transparent
-          border-slate-200 dark:border-white/10
+          border-[rgba(109,40,217,0.14)] dark:border-white/10
           text-slate-500 dark:text-[#5A7050]
-          hover:bg-slate-50 dark:hover:bg-white/5
+          hover:bg-[#7c3aed]/5 dark:hover:bg-white/5
           hover:text-slate-700 dark:hover:text-[#9DB890]
         "
       >
