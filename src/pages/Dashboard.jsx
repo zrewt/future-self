@@ -306,9 +306,13 @@ export default function Dashboard() {
   return (
     <div className="space-y-5 animate-slide-up max-w-2xl mx-auto">
 
-      {/* ── Path-toned greeting (avatar_class personalization) ── */}
+      {/* ── Path-toned greeting (avatar_class personalization) ──
+          NOTE: paths.js exposes this as tone.greetingPrefix (not
+          tone.greeting) and the strings are full sentences/questions,
+          e.g. "Ready to put in the work today?" — not lead-in fragments.
+          So we lead with the username instead of trailing it. */}
       <p className="px-1 text-sm font-semibold text-slate-500 dark:text-[#9DB890]">
-        {pathConfig.tone.greeting}, {profile.username}.
+        {profile.username}, {pathConfig.tone.greetingPrefix}
       </p>
 
       {/* ── Hero card ── */}
