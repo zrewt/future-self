@@ -12,9 +12,16 @@ import {
 import { buildTrendSeries, attachMilestones, comparePillarsMonthOverMonth } from '../../utils/trends'
 
 const RANGES = [
+  { key: 7, label: '7D' },
   { key: 30, label: '30D' },
   { key: 90, label: '90D' },
 ]
+
+function tickInterval(range) {
+  if (range === 90) return 13
+  if (range === 30) return 6
+  return 0
+}
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -97,7 +104,7 @@ export default function TrendChart({ trendLogs, achievementEvents, userChallenge
               dataKey="date"
               tick={{ fontSize: 10, fill: '#94a3b8' }}
               tickFormatter={(d) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              interval={range === 90 ? 13 : 6}
+              interval={tickInterval(range)}
               axisLine={false}
               tickLine={false}
             />
