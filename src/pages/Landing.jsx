@@ -31,7 +31,38 @@ function useParallax() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reveal animation
+// Scroll progress (0–1) — drives the top progress bar
+// ─────────────────────────────────────────────────────────────────────────────
+
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    let ticking = false
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const scrollTop = window.scrollY
+          const docHeight = document.documentElement.scrollHeight - window.innerHeight
+          setProgress(docHeight > 0 ? Math.min(scrollTop / docHeight, 1) : 0)
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  return progress
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reveal animation — now blurs in as well as fading/translating in
 // ─────────────────────────────────────────────────────────────────────────────
 
 function useReveal(threshold = 0.15) {
@@ -60,7 +91,7 @@ function useReveal(threshold = 0.15) {
   return [ref, visible]
 }
 
-function Reveal({ children, delay = 0, scale = false }) {
+function Reveal({ children, delay = 0, scale = false, blur = true }) {
   const [ref, visible] = useReveal()
 
   return (
@@ -68,14 +99,145 @@ function Reveal({ children, delay = 0, scale = false }) {
       ref={ref}
       style={{
         opacity: visible ? 1 : 0,
+        filter: blur ? (visible ? 'blur(0px)' : 'blur(6px)') : undefined,
         transform: visible
           ? 'translateY(0) scale(1)'
           : `translateY(28px) scale(${scale ? 0.95 : 1})`,
         transition: `opacity 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1),
-          transform 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1)`,
+          transform 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1),
+          filter 0.75s ${delay}ms cubic-bezier(0.16,1,0.3,1)`,
       }}
     >
       {children}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Magnetic button — CTA subtly follows the cursor toward its center on hover
+// ─────────────────────────────────────────────────────────────────────────────
+
+function MagneticButton({ to, className, style, children, strength = 0.15 }) {
+  const ref = useRef(null)
+  const [transform, setTransform] = useState('translate(0px,0px) scale(1)')
+
+  const handleMove = (e) => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const x = (e.clientX - rect.left - rect.width / 2) * strength
+    const y = (e.clientY - rect.top - rect.height / 2) * strength
+    setTransform(`translate(${x}px, ${y}px) scale(1.03)`)
+  }
+
+  const handleLeave = () => setTransform('translate(0px,0px) scale(1)')
+
+  return (
+    <Link
+      ref={ref}
+      to={to}
+      className={className}
+      style={{ ...style, transform, transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1)' }}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+    >
+      {children}
+    </Link>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scroll progress bar (fixed, top of viewport)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ScrollProgressBar({ progress }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        zIndex: 200,
+        background: 'rgba(109,40,217,0.06)',
+      }}
+    >
+      <div
+        style={{
+          height: '100%',
+          width: `${progress * 100}%`,
+          background: 'linear-gradient(90deg,#ff7ac6,#7c3aed,#00cdb4)',
+          boxShadow: '0 0 8px rgba(124,58,237,0.5)',
+          transition: 'width 0.1s linear',
+        }}
+      />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subtle film-grain texture overlay
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GrainOverlay() {
+  return (
+    <div
+      aria-hidden="true"
+      className="qyven-grain-overlay"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 40,
+        pointerEvents: 'none',
+        opacity: 0.025,
+        mixBlendMode: 'overlay',
+        backgroundImage:
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+      }}
+    />
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sticky mobile CTA — appears once the user scrolls past the hero
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StickyMobileCTA({ show, isLoggedIn }) {
+  return (
+    <div
+      className="qyven-sticky-mobile-cta"
+      style={{
+        position: 'fixed',
+        left: 12,
+        right: 12,
+        bottom: 12,
+        zIndex: 90,
+        transform: show ? 'translateY(0)' : 'translateY(120%)',
+        opacity: show ? 1 : 0,
+        transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease',
+        pointerEvents: show ? 'auto' : 'none',
+      }}
+    >
+      <Link
+        to={isLoggedIn ? '/dashboard' : '/get-started'}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '15px 20px',
+          borderRadius: 999,
+          background: 'linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)',
+          color: '#fff',
+          textDecoration: 'none',
+          fontSize: 14,
+          fontWeight: 800,
+          boxShadow: '0 10px 30px rgba(124,58,237,0.4)',
+        }}
+      >
+        {isLoggedIn ? 'Go to my dashboard →' : 'Find My Score — Free →'}
+      </Link>
     </div>
   )
 }
@@ -546,6 +708,18 @@ export default function Landing() {
 
   const isLoggedIn = authReady && !!user
   const scrollY = useParallax()
+  const scrollProgress = useScrollProgress()
+
+  const [spotlight, setSpotlight] = useState({ x: 50, y: 50 })
+  const handleHeroMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setSpotlight({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    })
+  }
+
+  const showStickyCTA = scrollY > (typeof window !== 'undefined' ? window.innerHeight * 0.6 : 500)
 
   return (
     <div
@@ -562,6 +736,9 @@ export default function Landing() {
         maxWidth: '100%',
       }}
     >
+      <ScrollProgressBar progress={scrollProgress} />
+      <GrainOverlay />
+
       <FloatingBlobs scrollY={scrollY} />
       <AmbientTrajectory scrollY={scrollY} />
 
@@ -656,6 +833,7 @@ export default function Landing() {
 
       <section
         className="qyven-hero qyven-hero-enhanced"
+        onMouseMove={handleHeroMouseMove}
         style={{
           minHeight: '100vh',
           padding: '125px 20px 70px',
@@ -667,6 +845,18 @@ export default function Landing() {
         }}
       >
         <div
+          className="qyven-hero-spotlight"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 0,
+            background: `radial-gradient(600px circle at ${spotlight.x}% ${spotlight.y}%, rgba(124,58,237,0.07), transparent 70%)`,
+          }}
+        />
+
+        <div
           className="qyven-hero-grid"
           style={{
             width: '100%',
@@ -676,6 +866,8 @@ export default function Landing() {
               'minmax(0,1.05fr) minmax(300px,0.75fr)',
             gap: 70,
             alignItems: 'center',
+            position: 'relative',
+            zIndex: 1,
           }}
         >
           {/* Hero copy */}
@@ -789,12 +981,8 @@ export default function Landing() {
                   marginTop: 28,
                 }}
               >
-                <Link
-                  to={
-                    isLoggedIn
-                      ? '/dashboard'
-                      : '/get-started'
-                  }
+                <MagneticButton
+                  to={isLoggedIn ? '/dashboard' : '/get-started'}
                   className="qyven-main-cta qyven-interactive-button"
                   style={{
                     display: 'inline-flex',
@@ -816,7 +1004,7 @@ export default function Landing() {
                   {isLoggedIn
                     ? 'Go to my dashboard →'
                     : 'Find My Score →'}
-                </Link>
+                </MagneticButton>
 
                 {!isLoggedIn && (
                   <span
@@ -1948,12 +2136,8 @@ export default function Landing() {
               want to be.
             </p>
 
-            <Link
-              to={
-                isLoggedIn
-                  ? '/dashboard'
-                  : '/get-started'
-              }
+            <MagneticButton
+              to={isLoggedIn ? '/dashboard' : '/get-started'}
               className="qyven-final-button qyven-interactive-button"
               style={{
                 display:
@@ -1980,7 +2164,7 @@ export default function Landing() {
               {isLoggedIn
                 ? 'Go to my dashboard →'
                 : 'Find My Score →'}
-            </Link>
+            </MagneticButton>
 
             <div
               style={{
@@ -2055,6 +2239,10 @@ export default function Landing() {
           </Link>
         )}
       </footer>
+
+      {/* ───────────────── STICKY MOBILE CTA ───────────────── */}
+
+      <StickyMobileCTA show={showStickyCTA} isLoggedIn={isLoggedIn} />
 
       {/* ───────────────── MOBILE / PWA RESPONSIVE CSS ───────────────── */}
 
@@ -2167,6 +2355,8 @@ export default function Landing() {
           }
 
           @media (max-width: 780px) {
+            .qyven-hero-spotlight { display: none !important; }
+
             .qyven-nav {
               height: 60px !important;
               padding-left: 16px !important;
@@ -2352,12 +2542,17 @@ export default function Landing() {
               flex-direction: column !important;
               text-align: center !important;
               gap: 14px !important;
+              padding-bottom: 88px !important;
             }
 
             .qyven-footer p {
               max-width: 280px !important;
               line-height: 1.5 !important;
             }
+          }
+
+          @media (min-width: 781px) {
+            .qyven-sticky-mobile-cta { display: none !important; }
           }
 
           @media (max-width: 480px) {
@@ -2592,18 +2787,16 @@ export default function Landing() {
 
           .qyven-interactive-button {
             transition:
-              transform 220ms cubic-bezier(0.16,1,0.3,1),
               box-shadow 220ms ease,
               filter 220ms ease;
           }
 
           .qyven-interactive-button:hover {
-            transform: translateY(-2px) scale(1.015);
             filter: brightness(1.06);
           }
 
           .qyven-interactive-button:active {
-            transform: translateY(0) scale(0.99);
+            filter: brightness(0.97);
           }
 
           .qyven-chart-line {

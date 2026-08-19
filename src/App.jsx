@@ -5,6 +5,7 @@ import { useUserStore } from './store/useUserStore'
 import NavBar from './components/NavBar'
 import AuthGuard from './components/AuthGuard'
 import Spinner from './components/ui/Spinner'
+import AmbientBackground from './components/ui/AmbientBackground'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Onboarding from './pages/Onboarding'
@@ -22,10 +23,13 @@ import GetStarted from './pages/GetStarted'
 function AppLayout() {
   return (
     <div className="app-bg min-h-screen">
-      <NavBar />
-      <main className="relative px-4 pt-6 pb-28 md:pb-8 md:pl-[252px] max-w-2xl lg:max-w-3xl mx-auto animate-fade-in">
-        <Outlet />
-      </main>
+      <AmbientBackground />
+      <div className="relative z-10">
+        <NavBar />
+        <main className="relative px-4 pt-6 pb-28 md:pb-8 md:pl-[252px] max-w-2xl lg:max-w-3xl mx-auto animate-fade-in">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
