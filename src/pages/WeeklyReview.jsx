@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabase'
 import { useUserStore } from '../store/useUserStore'
@@ -7,6 +7,7 @@ import EmptyHome from '../components/home/EmptyHome'
 import IntegrityCard from '../components/home/IntegrityCard'
 import { localWeekStartISO } from '../utils/date'
 import { computeIntegrityScore } from '../utils/integrity'
+import { explainScoreChange } from '../utils/scoreChangeExplainer'
 
 function generateInsights(logs, profile) {
   if (!logs.length) return []
@@ -143,6 +144,76 @@ const TONE_LABEL = {
 // Shared branded card recipe, matching every other page
 const cardClass = 'rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-transparent'
 
+// ── "Why Did My Score Change" — Premium Phase 1 flagship feature.
+// NOTE: not yet gated behind any Premium/paywall UI (Phase 4 hasn't been
+// built). Visible to everyone for now — wrap in the locked-state component
+// once that exists.
+function WhyScoreChangedCard({ recentLogs }) {
+  const result = useMemo(() => explainScoreChange(recentLogs), [recentLogs])
+
+  if (!result || result.status === 'insufficient_data') {
+    return (
+      <div className={`${cardClass} p-4`}>
+        <p className="section-title mb-1">Why did my score change?</p>
+        <p className="text-sm text-slate-500 font-medium">
+          Log a bit more — this unlocks once you have about two weeks of history to compare against.
+        </p>
+      </div>
+    )
+  }
+
+  if (result.status === 'steady') {
+    return (
+      <div className={`${cardClass} p-4`}>
+        <p className="section-title mb-1">Why did my score change?</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
+          Holding steady — this week averaged {result.overallThisWeek}, close to last week's {result.overallLastWeek}. Nothing dramatic to flag.
+        </p>
+      </div>
+    )
+  }
+
+  const { direction, overallDelta, overallThisWeek, overallLastWeek, movers, recommendation } = result
+  const isUp = direction === 'up'
+
+  return (
+    <div className={`relative overflow-hidden ${cardClass} p-4`}>
+      <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+      <p className="section-title mb-1">Why did my score change?</p>
+
+      <div className="flex items-baseline gap-2 mb-3">
+        <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">
+          {overallLastWeek} → {overallThisWeek}
+        </span>
+        <span className={`text-sm font-bold ${isUp ? 'text-teal' : 'text-coral'}`}>
+          {isUp ? '+' : ''}{overallDelta}
+        </span>
+      </div>
+
+      <div className="space-y-2.5">
+        {movers.map((m) => (
+          <div key={m.key} className="flex items-start gap-3">
+            <span className={`text-xs font-extrabold tabular-nums w-12 shrink-0 ${m.delta > 0 ? 'text-teal' : 'text-coral'}`}>
+              {m.delta > 0 ? '+' : ''}{m.delta}
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{m.label}</p>
+              {m.sentence && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5 leading-relaxed">{m.sentence}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/10">
+        <p className="text-xs font-bold text-primary dark:text-[#00E87A] uppercase tracking-wide mb-1">Biggest opportunity</p>
+        <p className="text-sm text-slate-700 dark:text-slate-200 font-medium leading-relaxed">{recommendation}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function WeeklyReview() {
   const { user, profile, recentLogs } = useUserStore()
   const [loading,  setLoading]  = useState(true)
@@ -259,6 +330,9 @@ export default function WeeklyReview() {
             : 'Keep logging daily, including bad days. Honest tracking is what makes your Future Self Score meaningful.'}
         </p>
       </div>
+
+      {/* Why did my score change (Premium Phase 1) */}
+      <WhyScoreChangedCard recentLogs={recentLogs} />
 
       {/* Category bars */}
       <div className={`${cardClass} p-4`}>
