@@ -6,6 +6,7 @@ import Spinner from '../components/ui/Spinner'
 import { IconFlame } from '../components/ui/Icons'
 import EmptyHome from '../components/home/EmptyHome'
 import TrendChart from '../components/home/TrendChart'
+import WhatIfSimulator from '../components/home/WhatIfSimulator'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
 import { getPathConfig } from '../data/paths'
@@ -265,7 +266,7 @@ function LogCTA({ todayLog }) {
 
 export default function Dashboard() {
   const {
-    profile, todayLog, recentScores,
+    profile, todayLog, recentScores, recentLogs,
     trendLogs, achievementEvents, userChallenges,
   } = useUserStore()
 
@@ -427,6 +428,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* ── What-if simulator (Premium Phase 2) ── */}
+      <WhatIfSimulator recentLogs={recentLogs} streakDays={profile.current_streak} />
 
       {/* ── Trend chart ── */}
       <TrendChart
