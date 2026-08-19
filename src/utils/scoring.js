@@ -26,6 +26,10 @@ export function calcMacroSummary(foods) {
 }
 
 // ── NUTRITION SCORE ────────────────────────────────────────────────────────────
+// REBALANCED: servings-only ceiling dropped from ~85-100 to 65. The 65-100
+// range now requires real logged food-quality data (calcFoodQualityScore) —
+// hitting your fruit/veg/protein quotas alone is no longer enough to
+// approach a perfect nutrition score.
 export function calcNutritionFromServings(log, foods = []) {
   const fruit     = log.fruit_servings     ?? 0
   const veg       = log.vegetable_servings ?? 0
@@ -37,21 +41,22 @@ export function calcNutritionFromServings(log, foods = []) {
   }
 
   let base =
-    (Math.min(fruit,   3) / 3) * 25 +
-    (Math.min(veg,     4) / 4) * 30 +
-    (Math.min(protein, 3) / 3) * 30 +
-    Math.min((log.water_ml || 0) / 2500, 1) * 15 -
-    Math.min(processed, 5) * 8
+    (Math.min(fruit,   4) / 4) * 15 +
+    (Math.min(veg,     6) / 6) * 20 +
+    (Math.min(protein, 4) / 4) * 20 +
+    Math.min((log.water_ml || 0) / 3000, 1) * 10 -
+    Math.min(processed, 5) * 10
 
-  base = Math.min(100, Math.max(0, Math.round(base)))
+  base = Math.min(65, Math.max(0, Math.round(base)))
 
   const fq = calcFoodQualityScore(foods)
   if (fq == null) return base
-  const blended = Math.round(base * 0.25 + fq * 0.75)
+  const blended = Math.round(base * 0.15 + fq * 0.85)
   return Math.min(100, Math.max(base, blended))
 }
 
 // ── FITNESS ────────────────────────────────────────────────────────────────────
+// REBALANCED: duration threshold for full credit raised 45min → 60min.
 const WORKOUT_FACTOR = { gym: 1, run: 1.1, sport: 1.05, yoga: 0.85, rest: 0.25 }
 
 export function calcFitnessFromWorkout(log) {
@@ -61,66 +66,79 @@ export function calcFitnessFromWorkout(log) {
   if (duration === 0 && (log.exercise_intensity || 0) > 0) return legacyFitness(log)
   const factor = WORKOUT_FACTOR[type] ?? 0.5
   return Math.min(100, Math.round(
-    Math.min(duration / 45, 1) * 75 * factor + (log.sleep_quality || 5) * 1.5
+    Math.min(duration / 60, 1) * 72 * factor + (log.sleep_quality || 0) * 2.2
   ))
 }
 
 // ── ENERGY (legacy composite — kept for charts / DB) ───────────────────────────
+// REBALANCED: 8h → 9h for full sleep-hours credit; sleep_quality and mood no
+// longer default to 5 when unlogged — real tracking required, not assumed.
 export function calcEnergyFromSleep(log) {
   return Math.min(100, Math.round(
-    (Number(log.sleep_hours || 0) / 8) * 50 +
-    (log.sleep_quality || 5) * 4 +
-    (log.mood || 5) * 2 +
-    Math.min((log.water_ml || 0) / 3000, 1) * 15
+    (Number(log.sleep_hours || 0) / 9) * 40 +
+    (log.sleep_quality || 0) * 3.5 +
+    (log.mood || 0) * 2 +
+    Math.min((log.water_ml || 0) / 3200, 1) * 15
   ))
 }
 
 // ── FUTURE SELF PILLARS ────────────────────────────────────────────────────────
+// REBALANCED: 8h → 9h for full credit; sleep_quality no longer defaults to 5.
 export function calcSleepScore(log) {
   return Math.min(100, Math.round(
-    (Number(log.sleep_hours || 0) / 8) * 65 +
-    (log.sleep_quality || 5) * 3.5
+    (Number(log.sleep_hours || 0) / 9) * 55 +
+    (log.sleep_quality || 0) * 4.2
   ))
 }
 
+// REBALANCED: 2500ml → 3200ml required for full hydration credit.
 export function calcHydrationScore(log) {
-  return Math.min(100, Math.round(Math.min((log.water_ml || 0) / 2500, 1) * 100))
+  return Math.min(100, Math.round(Math.min((log.water_ml || 0) / 3200, 1) * 100))
 }
 
+// REBALANCED: focus 60→90min, reading 20→30min, meditation 10→20min; mood
+// no longer defaults to 5.
 export function calcHabitsScore(log) {
   return Math.min(100, Math.round(
-    Math.min((log.focus_minutes || 0) / 60, 1) * 40 +
-    Math.min((log.reading_minutes || 0) / 20, 1) * 25 +
-    Math.min((log.meditation_minutes || 0) / 10, 1) * 20 +
-    (log.mood || 5) * 3
+    Math.min((log.focus_minutes || 0) / 90, 1) * 35 +
+    Math.min((log.reading_minutes || 0) / 30, 1) * 20 +
+    Math.min((log.meditation_minutes || 0) / 20, 1) * 15 +
+    (log.mood || 0) * 3
   ))
 }
 
 // ── FOCUS ──────────────────────────────────────────────────────────────────────
+// REBALANCED: focus 90→120min, reading 30→45min, meditation 10→20min.
 export function calcFocusScore(log) {
   return Math.min(100, Math.round(
-    ((log.focus_minutes      || 0) / 90) * 60 +
-    ((log.reading_minutes    || 0) / 30) * 25 +
-    ((log.meditation_minutes || 0) / 10) * 15
+    ((log.focus_minutes      || 0) / 120) * 55 +
+    ((log.reading_minutes    || 0) / 45)  * 25 +
+    ((log.meditation_minutes || 0) / 20)  * 20
   ))
 }
 
 // ── LONGEVITY ──────────────────────────────────────────────────────────────────
+// REBALANCED: base ceiling reduced (30→25 sleep weight, 20→15 hydration
+// weight — base now tops out at 90, not 100). Blend with real food-longevity
+// data flipped to favor it more heavily (was 55/45 base-heavy, now 45/55
+// quality-heavy) — matches the nutrition rebalance's philosophy.
 export function calcLongevityScore(log, fitnessScore, nutritionScore, foods = []) {
   const base = Math.min(100, Math.round(
-    (Number(log.sleep_hours || 0) / 8) * 30 +
+    (Number(log.sleep_hours || 0) / 9) * 25 +
     fitnessScore   * 0.25 +
     nutritionScore * 0.25 +
-    Math.min((log.water_ml || 0) / 3000, 1) * 20
+    Math.min((log.water_ml || 0) / 3200, 1) * 15
   ))
   const fl = calcFoodLongevityScore(foods)
   return fl != null
-    ? Math.min(100, Math.round(base * 0.55 + fl * 0.45))
+    ? Math.min(100, Math.round(base * 0.45 + fl * 0.55))
     : base
 }
 
 // ── FUTURE SELF SCORE ──────────────────────────────────────────────────────────
-// Combines nutrition, fitness, sleep, hydration & daily habits — not food alone.
+// UNCHANGED — weights and 97-cap left as-is. Since every input dimension
+// above is now harder to max, the composite naturally becomes harder
+// without needing its own weight changes.
 export function calcFutureSelfScore(scores, streakDays) {
   const c = 0.7 + (Math.min(streakDays, 100) / 100) * 0.3
   const composite = (
@@ -165,7 +183,7 @@ export function buildAllScores(log, streakDays = 0, foods = []) {
   const energy    = calcEnergyFromSleep(log)
   const focus     = calcFocusScore(log)
   const longevity = calcLongevityScore(log, fitness, nutrition, foods)
-  const mood      = (log.mood || 5) * 10
+  const mood      = (log.mood || 0) * 10
   const fss       = getFutureSelfBreakdown(log, foods, streakDays)
   return {
     fitness_score:     fitness,
@@ -195,6 +213,9 @@ export function getScoreBreakdown(scores, streakDays) {
 }
 
 // ── XP ─────────────────────────────────────────────────────────────────────────
+// UNCHANGED for now — thresholds here (fitness>=50, nutrition>=50, etc.)
+// weren't part of the requested recalibration. Worth revisiting separately
+// if XP starts feeling too easy/hard to earn under the new curve.
 export function calcXP(log, streakDays, questXP = 0, foods = []) {
   let base = 0
   if (calcFitnessFromWorkout(log) >= 50 || (log.workout_duration_min || 0) >= 20) base += 25
@@ -209,14 +230,26 @@ export function calcXP(log, streakDays, questXP = 0, foods = []) {
 }
 
 // ── PERFECT DAY ────────────────────────────────────────────────────────────────
+// RECALIBRATED thresholds, per the new harder curve. Reasoning:
+//  - nutrition: 55 → 45 (servings-only ceiling is now 65, so 45 is a real
+//    solid-effort bar, not a token minimum)
+//  - fitness: 50 → 45 (new formula still lands ~65 at default 45min/quality
+//    unset, so 45 stays meaningful without being trivial)
+//  - sleep_hours: 7 → 7.5 (formula now targets 9h for full credit, so the
+//    perfect-day bar should track that upward shift)
+//  - mood: unchanged (raw input, unaffected by the formula rebalance)
+//  - water_ml: 2000 → 2200 (hydration ceiling moved 2500→3200; this keeps
+//    the perfect-day bar meaningfully below the new max, not at parity)
+// These are a reasonable starting recalibration, not derived from data —
+// worth revisiting once real logged days come in under the new curve.
 export function isPerfectDay(log, foods = []) {
   const s = buildAllScores(log, 0, foods)
   return (
-    s.nutrition_score >= 55 &&
-    s.fitness_score   >= 50 &&
-    Number(log.sleep_hours) >= 7 &&
+    s.nutrition_score >= 45 &&
+    s.fitness_score   >= 45 &&
+    Number(log.sleep_hours) >= 7.5 &&
     (log.mood     || 0) >= 7 &&
-    (log.water_ml || 0) >= 2000
+    (log.water_ml || 0) >= 2200
   )
 }
 
