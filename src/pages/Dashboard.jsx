@@ -7,6 +7,7 @@ import { IconFlame } from '../components/ui/Icons'
 import EmptyHome from '../components/home/EmptyHome'
 import TrendChart from '../components/home/TrendChart'
 import WhatIfSimulator from '../components/home/WhatIfSimulator'
+import FutureProjection from '../components/home/FutureProjection'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
 import { getPathConfig } from '../data/paths'
@@ -266,7 +267,7 @@ function LogCTA({ todayLog }) {
 
 export default function Dashboard() {
   const {
-    profile, todayLog, recentScores, recentLogs,
+    profile, todayLog, recentScores, recentLogs, projectionLogs,
     trendLogs, achievementEvents, userChallenges,
   } = useUserStore()
 
@@ -431,6 +432,13 @@ export default function Dashboard() {
 
       {/* ── What-if simulator (Premium Phase 2) ── */}
       <WhatIfSimulator recentLogs={recentLogs} streakDays={profile.current_streak} />
+
+      {/* ── Future Self projection (Premium Phase 3) ── */}
+      <FutureProjection
+        projectionLogs={projectionLogs}
+        currentFSS={currentFSS}
+        currentStreak={profile.current_streak}
+      />
 
       {/* ── Trend chart ── */}
       <TrendChart

@@ -42,9 +42,10 @@ export const useUserStore = create((set, get) => ({
   todayLog: null,
   recentScores: [],
   recentLogs: [],
-  trendLogs: [],          // NEW — up to 90 days, for the trend chart
+  trendLogs: [],          // up to 90 days, computed pillar fields only — for the trend chart
+  projectionLogs: [],     // NEW — up to 90 days, RAW fields — for Future Self Projection
   earnedAchievements: [],
-  achievementEvents: [],  // NEW — [{ key, earned_at }], for milestone dots
+  achievementEvents: [],
   userChallenges: [],
   savedMeals: [],
   authReady: false,
@@ -76,7 +77,7 @@ export const useUserStore = create((set, get) => ({
         supabase.from('users_profile').update({ last_active_date: today }).eq('id', userId)
       }
 
-      const [todayLogRes, logsRes, trendLogsRes, achievementsRes, challengesRes, savedMealsRes] = await Promise.all([
+      const [todayLogRes, logsRes, trendLogsRes, projectionLogsRes, achievementsRes, challengesRes, savedMealsRes] = await Promise.all([
         supabase
           .from('daily_logs')
           .select('*')
@@ -95,6 +96,16 @@ export const useUserStore = create((set, get) => ({
           .eq('user_id', userId)
           .order('log_date', { ascending: false })
           .limit(90),
+        // NEW — raw fields (not just computed pillars), 90-day window, for
+        // Future Self Projection's trend-slope calculations. Kept separate
+        // from recentLogs (30-day cap) and trendLogs (no raw fields) so
+        // neither of those existing behaviors change.
+        supabase
+          .from('daily_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('log_date', { ascending: false })
+          .limit(90),
         supabase.from('achievements').select('achievement_key, earned_at').eq('user_id', userId),
         supabase.from('user_challenges').select('*').eq('user_id', userId),
         supabase.from('saved_meals').select('*').eq('user_id', userId),
@@ -103,6 +114,7 @@ export const useUserStore = create((set, get) => ({
       const todayLog = todayLogRes.error ? null : todayLogRes.data
       const recentLogs = logsRes.data || []
       const trendLogs = trendLogsRes.data || []
+      const projectionLogs = projectionLogsRes.data || []
       const recentScores = recentLogs.map((r) => r.future_self_score)
       const earnedAchievements = (achievementsRes.data || []).map((a) => a.achievement_key)
       const achievementEvents = (achievementsRes.data || []).map((a) => ({
@@ -117,6 +129,7 @@ export const useUserStore = create((set, get) => ({
         todayLog,
         recentLogs,
         trendLogs,
+        projectionLogs,
         recentScores,
         earnedAchievements,
         achievementEvents,
@@ -179,6 +192,7 @@ export const useUserStore = create((set, get) => ({
       recentScores: [],
       recentLogs: [],
       trendLogs: [],
+      projectionLogs: [],
       earnedAchievements: [],
       achievementEvents: [],
       userChallenges: [],
