@@ -149,6 +149,10 @@ export function calcMacroSummary(foods) {
  *
  * Servings provide a useful baseline.
  * Detailed food logging improves accuracy.
+ *
+ * A maxed-out servings day (4/4/4/none, decent hydration) should land
+ * around ~75 on servings alone — the 75-100 range is reserved for real
+ * logged food-quality data via calcFoodQualityScore/calcFoodLongevityScore.
  */
 export function calcNutritionFromServings(log, foods = []) {
   const fruit = Number(log.fruit_servings ?? 0)
@@ -166,14 +170,14 @@ export function calcNutritionFromServings(log, foods = []) {
     return legacyNutrition(log)
   }
 
-  const fruitPts = diminishing(fruit, 14, 2)
-  const vegPts = diminishing(veg, 20, 3)
-  const proteinPts = diminishing(protein, 16, 2.5)
+  const fruitPts = diminishing(fruit, 22, 1.1)
+  const vegPts = diminishing(veg, 32, 1.1)
+  const proteinPts = diminishing(protein, 26, 1.1)
 
   const waterPts = diminishing(
     Number(log.water_ml || 0),
-    10,
-    1400
+    16,
+    850
   )
 
   /*
@@ -182,8 +186,8 @@ export function calcNutritionFromServings(log, foods = []) {
    */
   const processedPenalty = diminishing(
     processed,
-    10,
-    2.5
+    15,
+    2.2
   )
 
   let base =
@@ -194,7 +198,7 @@ export function calcNutritionFromServings(log, foods = []) {
     processedPenalty
 
   base = Math.min(
-    60,
+    75,
     Math.max(0, Math.round(base))
   )
 
@@ -258,14 +262,14 @@ export function calcFitnessFromWorkout(log) {
     WORKOUT_FACTOR[type] ?? 1
 
   /*
-   * 20–30 min = meaningful
-   * 45–60 min = strong
-   * 90+ min = still improves, but diminishing returns
+   * 20–30 min = meaningful  (~57-67)
+   * 45–60 min = strong      (~75-80)
+   * 90+ min = still improves, but diminishing returns (~86+)
    */
   const durationPts = diminishing(
     duration,
     100,
-    35
+    15
   )
 
   return Math.min(
@@ -834,15 +838,12 @@ export function getLevelFromXP(totalXP) {
   )
 
   for (let n = 1; n <= 99; n++) {
-    if (
-      xp <
-      Math.floor(
-        100 * Math.pow(n, 1.8)
-      )
-    ) {
-      return n
+    if (xp < Math.floor(100 * Math.pow(n, 1.8))) {
+      return n;
     }
   }
+  
+  return 99;
 
   return 99
 }
