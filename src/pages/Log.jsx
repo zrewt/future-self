@@ -7,6 +7,7 @@ import DetailToggle from '../components/log/DetailToggle'
 import FoodDetailSection from '../components/log/FoodDetailSection'
 import ServingStepper from '../components/log/ServingStepper'
 import ShieldNotice from '../components/log/ShieldNotice'
+import QuickTierSelect from '../components/log/QuickTierSelect'
 import { TextField, SelectField } from '../components/log/TextDetailFields'
 import {
   buildAllScores,
@@ -29,14 +30,115 @@ import {
 import { PRESET_WORKOUTS, getSavedWorkouts } from '../data/workouts'
 import { evaluateStreakGap, checkNewShieldEarned } from '../utils/streakShield'
 
-const EXERCISE_TYPES = ['gym', 'run', 'sport', 'yoga', 'rest']
-const MOOD_EMOJIS = ['😞', '😟', '😐', '🙂', '😊', '😄', '😁', '🤩', '🥳', '🔥']
+const EXERCISE_TYPES = ['gym', 'run', 'sport', 'yoga', 'bike', 'other']
+const MOOD_EMOJIS = ['😞', '😟', '😐', '🙂', '😊', '😄', '🤩']
+const MOOD_VALUES = [1, 3, 4, 6, 7, 9, 10]
 const MEDITATION_STYLES = [
   { value: 'breathwork', label: 'Breathwork' },
   { value: 'guided',     label: 'Guided' },
   { value: 'silent',     label: 'Silent' },
   { value: 'yoga',       label: 'Yoga / stretch' },
   { value: 'other',      label: 'Other' },
+]
+
+// ── Qualitative label — used everywhere instead of a bare number ──────────────
+function scoreLabel(score) {
+  if (score >= 85) return 'Excellent'
+  if (score >= 70) return 'Great'
+  if (score >= 50) return 'Good'
+  if (score >= 30) return 'Okay'
+  return 'Needs work'
+}
+
+function dailyScoreMessage(score) {
+  if (score >= 85) return 'Excellent day. This is what building compounds.'
+  if (score >= 70) return 'Great day. Keep it going.'
+  if (score >= 50) return 'Solid day — small wins add up.'
+  if (score >= 30) return "A tougher day — tomorrow's a reset."
+  return 'Rough day — showing up tomorrow is what counts.'
+}
+
+// ── Quick-tier configs ──────────────────────────────────────────────────────
+
+const NUTRITION_TIERS = [
+  { value: 'needs_work', label: 'Needs Work', apply: (f) => ({ ...f, fruit_servings: 0, vegetable_servings: 0, protein_servings: 1, processed_servings: 3 }) },
+  { value: 'okay',       label: 'Okay',       apply: (f) => ({ ...f, fruit_servings: 1, vegetable_servings: 1, protein_servings: 1, processed_servings: 2 }) },
+  { value: 'good',       label: 'Good',       apply: (f) => ({ ...f, fruit_servings: 2, vegetable_servings: 2, protein_servings: 2, processed_servings: 1 }) },
+  { value: 'great',      label: 'Great',      apply: (f) => ({ ...f, fruit_servings: 3, vegetable_servings: 4, protein_servings: 3, processed_servings: 0 }) },
+]
+
+// Rest/Light/Workout only — intensity slider inside Workout now carries what
+// "Hard" used to represent, so activity-level and intensity aren't conflated.
+const FITNESS_TIERS = [
+  { value: 'rest',    label: 'Rest',    apply: (f) => ({ ...f, exercise_type: 'rest', workout_duration_min: 0, workout_intensity: 1 }) },
+  { value: 'light',   label: 'Light',   apply: (f) => ({ ...f, exercise_type: f.exercise_type === 'rest' ? 'yoga' : f.exercise_type, workout_duration_min: 20, workout_intensity: 3 }) },
+  { value: 'workout', label: 'Workout', apply: (f) => ({ ...f, exercise_type: f.exercise_type === 'rest' ? 'gym' : f.exercise_type, workout_duration_min: f.workout_duration_min || 45, workout_intensity: f.workout_intensity || 6 }) },
+]
+const FITNESS_EXPAND_TIERS = new Set(['workout'])
+
+const SLEEP_HOUR_TIERS = [
+  { value: 6, label: '6h' },
+  { value: 7, label: '7h' },
+  { value: 8, label: '8h' },
+  { value: 9, label: '9h+' },
+]
+const SLEEP_QUALITY_TIERS = [
+  { value: 3, label: 'Poor' },
+  { value: 5, label: 'Okay' },
+  { value: 7, label: 'Good' },
+  { value: 9, label: 'Great' },
+]
+
+const HYDRATION_TIERS = [
+  { value: 1000, label: '1L' },
+  { value: 1500, label: '1.5L' },
+  { value: 2000, label: '2L' },
+  { value: 2500, label: '2.5L' },
+  { value: 3000, label: '3L+' },
+]
+
+const FOCUS_TIERS = [
+  { value: 15,  label: '<30m' },
+  { value: 45,  label: '30-60m' },
+  { value: 90,  label: '1-2h' },
+  { value: 180, label: '2-4h' },
+  { value: 300, label: '4h+' },
+]
+const FOCUS_TOPIC_TIERS = [
+  { value: 'School',   label: 'School' },
+  { value: 'Work',     label: 'Work' },
+  { value: 'Reading',  label: 'Reading' },
+  { value: 'Creative', label: 'Creative' },
+  { value: 'Other',    label: 'Other' },
+]
+
+const READING_TIERS = [
+  { value: 0,   label: '0m' },
+  { value: 15,  label: '15m' },
+  { value: 30,  label: '30m' },
+  { value: 60,  label: '60m' },
+  { value: 120, label: '2h+' },
+]
+const MEDITATION_TIERS = [
+  { value: 0,  label: '0m' },
+  { value: 5,  label: '5m' },
+  { value: 10, label: '10m' },
+  { value: 20, label: '20m' },
+  { value: 30, label: '30m+' },
+]
+const SCREEN_TIME_TIERS = [
+  { value: 30,  label: '<1h' },
+  { value: 90,  label: '1-2h' },
+  { value: 180, label: '2-4h' },
+  { value: 300, label: '4-6h' },
+  { value: 420, label: '6h+' },
+]
+
+const MEAL_TRIGGERS = [
+  { value: 'breakfast', label: '+ Breakfast' },
+  { value: 'lunch',     label: '+ Lunch' },
+  { value: 'dinner',    label: '+ Dinner' },
+  { value: 'snack',     label: '+ Snack' },
 ]
 
 // ── XP breakdown for animated success screen ──────────────────────────────────
@@ -68,17 +170,7 @@ function buildXPBreakdown(log, streakForCalc, questXP, foods, bonusXP) {
   return lines
 }
 
-// ── Habit streak counter ──────────────────────────────────────────────────────
-function calcHabitStreak(recentLogs, check) {
-  let streak = 0
-  for (const log of recentLogs) {
-    if (check(log)) streak++
-    else break
-  }
-  return streak
-}
-
-// ── Numeric input helper ──────────────────────────────────────────────────────
+// ── Numeric input helper (still used for exact overrides) ─────────────────────
 function numericFieldProps(value, onChange) {
   return {
     value: value === 0 ? '' : value,
@@ -91,9 +183,7 @@ function numericFieldProps(value, onChange) {
   }
 }
 
-// ── Streak computation — now shield/grace aware ────────────────────────────────
-// Returns either a normal result, or { graceAvailable: missedDate } meaning
-// the caller should pause and ask the user before finalizing the streak.
+// ── Streak computation — unchanged ──────────────────────────────────────────
 function computeStreak(profile, today, isUpdateSameDay) {
   if (isUpdateSameDay) {
     return {
@@ -177,15 +267,15 @@ function computeStreakForced(profile, today, graceAccepted) {
   }
 }
 
-// ── Smart default form (runs outside component — no hook restrictions) ─────────
+// ── Smart default form ──────────────────────────────────────────────────────
 function getDefaultForm(recentLogs, todayLog) {
   const yesterday = recentLogs?.[0]
   if (!yesterday || todayLog) {
     return {
       fruit_servings: 0, vegetable_servings: 0, protein_servings: 0, processed_servings: 0,
-      exercise_type: 'rest', workout_duration_min: 0,
+      exercise_type: 'rest', workout_duration_min: 0, workout_intensity: 6,
       sleep_hours: 7, sleep_quality: 5, water_ml: 1500,
-      focus_minutes: 0, reading_minutes: 0, meditation_minutes: 0, mood: 5,
+      focus_minutes: 0, reading_minutes: 0, meditation_minutes: 0, mood: 6,
       screen_time_minutes: 0,
     }
   }
@@ -193,49 +283,16 @@ function getDefaultForm(recentLogs, todayLog) {
     fruit_servings: 0, vegetable_servings: 0, protein_servings: 0, processed_servings: 0,
     exercise_type:       yesterday.exercise_type ?? 'rest',
     workout_duration_min: 0,
+    workout_intensity:   yesterday.workout_intensity ?? 6,
     sleep_hours:         Number(yesterday.sleep_hours) || 7,
     sleep_quality:       yesterday.sleep_quality ?? 5,
     water_ml:            yesterday.water_ml ?? 1500,
-    focus_minutes: 0, reading_minutes: 0, meditation_minutes: 0, mood: 5,
+    focus_minutes: 0, reading_minutes: 0, meditation_minutes: 0, mood: 6,
     screen_time_minutes: 0,
   }
 }
 
-// ── Quick-log presets ─────────────────────────────────────────────────────────
-const QUICK_PRESETS = [
-  {
-    id: 'ate_well', label: 'Ate well', emoji: '🥗',
-    apply: (f) => ({
-      ...f,
-      fruit_servings:     Math.max(f.fruit_servings, 2),
-      vegetable_servings: Math.max(f.vegetable_servings, 3),
-      protein_servings:   Math.max(f.protein_servings, 2),
-      processed_servings: Math.min(f.processed_servings, 1),
-    }),
-  },
-  {
-    id: 'worked_out', label: 'Worked out', emoji: '🏋️',
-    apply: (f) => ({
-      ...f,
-      exercise_type:        f.exercise_type === 'rest' ? 'gym' : f.exercise_type,
-      workout_duration_min: Math.max(f.workout_duration_min, 45),
-    }),
-  },
-  {
-    id: 'slept_good', label: 'Slept good', emoji: '💤',
-    apply: (f) => ({ ...f, sleep_hours: Math.max(Number(f.sleep_hours), 8), sleep_quality: Math.max(f.sleep_quality, 8) }),
-  },
-  {
-    id: 'hydrated', label: 'Hydrated', emoji: '💧',
-    apply: (f) => ({ ...f, water_ml: Math.max(f.water_ml, 2500) }),
-  },
-  {
-    id: 'focused', label: 'Focused', emoji: '🎯',
-    apply: (f) => ({ ...f, focus_minutes: Math.max(f.focus_minutes, 60) }),
-  },
-]
-
-// ── Animated XP success screen ────────────────────────────────────────────────
+// ── Animated XP success screen — unchanged ─────────────────────────────────
 function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
   const [visible, setVisible] = useState(0)
   const [shown, setShown]     = useState(false)
@@ -293,7 +350,7 @@ function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
   )
 }
 
-// ── Grace window prompt ───────────────────────────────────────────────────────
+// ── Grace window prompt — unchanged ─────────────────────────────────────────
 function GracePrompt({ missedDate, onAnswer, loading }) {
   const formatted = new Date(`${missedDate}T12:00:00`).toLocaleDateString(undefined, {
     weekday: 'long', month: 'short', day: 'numeric',
@@ -333,38 +390,64 @@ function GracePrompt({ missedDate, onAnswer, loading }) {
   )
 }
 
-// ── Habit streak badge ────────────────────────────────────────────────────────
-function StreakBadge({ count }) {
-  if (!count || count < 2) return null
+// ── Daily Score hero — new, top of page ────────────────────────────────────
+function DailyScoreHero({ score, deltaVsAvg }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-coral bg-coral/10 rounded-full px-1.5 py-0.5 ml-2">
-      🔥{count}
-    </span>
+    <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-6 mb-4 text-center">
+      <div className="absolute top-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+      <p
+        className="text-5xl font-extrabold tabular-nums leading-none mb-1"
+        style={{
+          background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        {score}
+      </p>
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Today's Score</p>
+      {deltaVsAvg != null && (
+        <p className={`text-xs font-bold mb-1 ${deltaVsAvg >= 0 ? 'text-[#00a591]' : 'text-[#e0527a]'}`}>
+          {deltaVsAvg >= 0 ? '↑' : '↓'} {Math.abs(deltaVsAvg)} from your average
+        </p>
+      )}
+      <p className="text-sm text-slate-500 font-medium">{dailyScoreMessage(score)}</p>
+    </div>
   )
 }
 
-// ── Focus pillar badge — shown on whichever section matches the user's
-//    onboarding goal (profile.focus_pillar). Longevity is a special case
-//    (see below near FoodDetailSection) since it has no dedicated section. ──
-function FocusBadge() {
+// ── Simplified section header: "{score} · {label}" ─────────────────────────
+function SectionHeader({ icon, title, score, isFocusPillar }) {
   return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#7c3aed] bg-[#7c3aed]/10 rounded-full px-2 py-0.5 ml-2">
-      🎯 Your focus
-    </span>
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <span className="text-lg">{icon}</span>
+        <span className="label-text mb-0">{title}</span>
+        {isFocusPillar && (
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#7c3aed] bg-[#7c3aed]/10 rounded-full px-2 py-0.5">
+            🎯 Focus
+          </span>
+        )}
+      </div>
+      {score != null && (
+        <p className="text-sm font-extrabold text-[#7c3aed] tabular-nums">
+          {score} <span className="text-slate-400 font-semibold">· {scoreLabel(score)}</span>
+        </p>
+      )}
+    </div>
   )
 }
 
-// ── Section score pill ────────────────────────────────────────────────────────
-function ScorePill({ score, label }) {
-  const color = score >= 70
-    ? 'text-teal bg-teal/10'
-    : score >= 45
-    ? 'text-[#7c3aed] bg-[#7c3aed]/10'
-    : 'text-coral bg-coral/10'
+function SectionCard({ pillar, focusPillar, children }) {
+  const isFocus = pillar && focusPillar === pillar
   return (
-    <span className={`text-[10px] font-extrabold rounded-full px-2 py-0.5 tabular-nums ml-auto ${color}`}>
-      {label}: {score}
-    </span>
+    <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${isFocus ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
+      {isFocus && (
+        <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
+      )}
+      {children}
+    </div>
   )
 }
 
@@ -399,12 +482,12 @@ export default function Log() {
   const [savedAt, setSavedAt]               = useState(null)
   const [error, setError]                   = useState('')
   const [success, setSuccess]               = useState(null)
-  const [quickActive, setQuickActive]       = useState(new Set())
   const [showWorkoutLib, setShowWorkoutLib] = useState(false)
   const [savedWorkouts, setSavedWorkouts]   = useState([])
   const [workoutLibTab, setWorkoutLibTab]   = useState('presets')
   const [lowMoodPrompt, setLowMoodPrompt]   = useState(false)
   const [gracePrompt, setGracePrompt]       = useState(null)
+  const [activeMeal, setActiveMeal]         = useState(null)
 
   const isUpdate = Boolean(todayLog)
 
@@ -421,30 +504,18 @@ export default function Log() {
       processed_servings:   todayLog.processed_servings   ?? 0,
       exercise_type:        todayLog.exercise_type        ?? 'rest',
       workout_duration_min: todayLog.workout_duration_min ?? 0,
+      workout_intensity:    todayLog.workout_intensity    ?? 6,
       sleep_hours:          Number(todayLog.sleep_hours)  || 7,
       sleep_quality:        todayLog.sleep_quality        ?? 5,
       water_ml:             todayLog.water_ml             ?? 1500,
       focus_minutes:        todayLog.focus_minutes        ?? 0,
       reading_minutes:      todayLog.reading_minutes      ?? 0,
       meditation_minutes:   todayLog.meditation_minutes   ?? 0,
-      mood:                 todayLog.mood                 ?? 5,
+      mood:                 todayLog.mood                 ?? 6,
       screen_time_minutes:  todayLog.screen_time_minutes  ?? 0,
     })
     setDetails(parseLogDetails(todayLog.log_details))
   }, [todayLog])
-
-  const habitStreaks = useMemo(() => {
-    const logs = recentLogs || []
-    return {
-      nutrition:  calcHabitStreak(logs, (l) => (l.vegetable_servings || 0) >= 2 || (l.fruit_servings || 0) >= 2),
-      workout:    calcHabitStreak(logs, (l) => (l.workout_duration_min || 0) >= 15 || l.exercise_type !== 'rest'),
-      sleep:      calcHabitStreak(logs, (l) => Number(l.sleep_hours) >= 7),
-      water:      calcHabitStreak(logs, (l) => (l.water_ml || 0) >= 2000),
-      focus:      calcHabitStreak(logs, (l) => (l.focus_minutes || 0) >= 30),
-      reading:    calcHabitStreak(logs, (l) => (l.reading_minutes || 0) >= 10),
-      meditation: calcHabitStreak(logs, (l) => (l.meditation_minutes || 0) >= 5),
-    }
-  }, [recentLogs])
 
   const previewLog    = useMemo(() => ({ ...form, sleep_hours: Number(form.sleep_hours) }), [form])
   const previewScores = useMemo(
@@ -456,8 +527,41 @@ export default function Log() {
   const sleepPreview     = calcSleepScore(previewLog)
   const focusPreview     = calcFocusScore(previewLog)
 
+  // Recent average (previous days, excluding today) for the "vs average" delta
+  const recentAvg = useMemo(() => {
+    const prior = (recentLogs || []).filter((l) => l.future_self_score != null).slice(0, 7)
+    if (!prior.length) return null
+    return Math.round(prior.reduce((s, l) => s + l.future_self_score, 0) / prior.length)
+  }, [recentLogs])
+  const deltaVsAvg = recentAvg != null ? previewScores.future_self_score - recentAvg : null
+
+  const activeNutritionTier = useMemo(() => {
+    const total = form.fruit_servings + form.vegetable_servings + form.protein_servings
+    if (total === 0 && form.processed_servings === 0) return null
+    return NUTRITION_TIERS.find((t) => {
+      const applied = t.apply(form)
+      return applied.fruit_servings === form.fruit_servings &&
+             applied.vegetable_servings === form.vegetable_servings &&
+             applied.protein_servings === form.protein_servings &&
+             applied.processed_servings === form.processed_servings
+    })?.value ?? null
+  }, [form.fruit_servings, form.vegetable_servings, form.protein_servings, form.processed_servings])
+
+  const activeFitnessTier = useMemo(() => {
+    if (form.exercise_type === 'rest') return 'rest'
+    if (form.workout_duration_min > 0 && form.workout_duration_min <= 25) return 'light'
+    if (form.workout_duration_min > 0) return 'workout'
+    return null
+  }, [form.exercise_type, form.workout_duration_min])
+
+  const activeMoodIndex = MOOD_VALUES.indexOf(form.mood)
+
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function applyTier(tier) {
+    setForm((prev) => tier.apply(prev))
   }
 
   function patchDetails(section, patch) {
@@ -470,23 +574,6 @@ export default function Log() {
 
   function handleServingRemoved(servingKey) {
     setForm((prev) => ({ ...prev, [servingKey]: Math.max(0, (prev[servingKey] ?? 0) - 1) }))
-  }
-
-  function toggleQuickPreset(preset) {
-    const next = new Set(quickActive)
-    if (next.has(preset.id)) {
-      next.delete(preset.id)
-      let f = { ...defaultForm }
-      for (const id of next) {
-        const p = QUICK_PRESETS.find((p) => p.id === id)
-        if (p) f = p.apply(f)
-      }
-      setForm(f)
-    } else {
-      next.add(preset.id)
-      setForm((prev) => preset.apply({ ...prev }))
-    }
-    setQuickActive(next)
   }
 
   function applyWorkout(w) {
@@ -507,13 +594,6 @@ export default function Log() {
 
   const glasses = Math.min(8, Math.floor(form.water_ml / 250))
 
-  function formatScreenTime(mins) {
-    const h = Math.floor(mins / 60)
-    const m = mins % 60
-    if (h === 0) return `${m}m`
-    return `${h}h ${m}m`
-  }
-
   // ── Build DB row ──────────────────────────────────────────────────────────
   function buildRow(userId, today, scores, xp_earned, is_perfect_day, mergedDetails) {
     return {
@@ -527,6 +607,7 @@ export default function Log() {
       exercise_intensity:   scores.fitness_score,
       exercise_type:        form.exercise_type,
       workout_duration_min: form.workout_duration_min,
+      workout_intensity:    form.workout_intensity,
       sleep_hours:          Number(form.sleep_hours),
       sleep_quality:        form.sleep_quality,
       water_ml:             form.water_ml,
@@ -542,7 +623,6 @@ export default function Log() {
     }
   }
 
-  // ── Shared finalize step — writes profile + log, shows success screen ──────
   async function finalizeSubmit(streakUpdate) {
     const today = localDateISO()
     const foods          = details.foods || []
@@ -612,7 +692,6 @@ export default function Log() {
     setTimeout(() => navigate('/dashboard'), xpLines.length * 220 + 2800)
   }
 
-  // ── Partial save (no streak/shield logic — just persists progress) ─────────
   async function handlePartialSave() {
     if (!user || !profile) return
     setSaving(true)
@@ -636,7 +715,6 @@ export default function Log() {
     setSaving(false)
   }
 
-  // ── Full submit ───────────────────────────────────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault()
     if (!user || !profile) return
@@ -656,7 +734,6 @@ export default function Log() {
     await finalizeSubmit(streakUpdate)
   }
 
-  // ── Grace prompt answer handler ─────────────────────────────────────────────
   async function handleGraceAnswer(accepted) {
     if (!user || !profile) return
     setLoading(true)
@@ -684,11 +761,8 @@ export default function Log() {
     <div className="max-w-lg mx-auto pb-8 animate-slide-up">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="section-title mb-1">Daily check-in</p>
-          <h1 className="text-2xl font-extrabold text-slate-900">
-            {isUpdate ? "Update today's log" : 'Log today'}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">Scores update live as you fill in each section</p>
+          <p className="section-title mb-1">Daily Check-in</p>
+          <h1 className="text-xl font-extrabold text-slate-900">Your day so far</h1>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <button
@@ -714,356 +788,260 @@ export default function Log() {
         </div>
       )}
 
-      {/* Live score preview */}
-      <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-3 mb-4 grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-        {[
-          { l: 'Nutrition',   v: nutritionPreview },
-          { l: 'Fitness',     v: fitnessPreview },
-          { l: 'Future Self', v: previewScores.future_self_score },
-        ].map((s) => (
-          <div key={s.l}>
-            <p className="text-slate-400 font-bold uppercase text-[10px]">{s.l}</p>
-            <p className="text-lg font-extrabold text-[#7c3aed] dark:text-primary tabular-nums">{s.v}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Quick-log fast lane */}
-      <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4 mb-4">
-        <p className="section-title mb-2">⚡ Quick log</p>
-        <p className="text-xs text-slate-500 font-medium mb-3">Tap what applies — fills in smart values instantly</p>
-        <div className="grid grid-cols-5 gap-2">
-          {QUICK_PRESETS.map((preset) => {
-            const active = quickActive.has(preset.id)
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => toggleQuickPreset(preset)}
-                className={`flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-bold transition-all ${
-                  active
-                    ? 'text-white scale-95'
-                    : 'bg-slate-50 text-slate-600 border border-[rgba(109,40,217,0.10)]'
-                }`}
-                style={active ? {
-                  background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
-                  boxShadow: '0 4px 14px rgba(124,58,237,0.28)',
-                } : undefined}
-              >
-                <span className="text-xl">{preset.emoji}</span>
-                <span className="leading-tight text-center text-[10px]">{preset.label}</span>
-              </button>
-            )
-          })}
-        </div>
-        {quickActive.size > 0 && (
-          <button
-            type="button"
-            onClick={() => { setQuickActive(new Set()); setForm(defaultForm) }}
-            className="text-[10px] font-bold text-slate-400 mt-2 underline"
-          >
-            Clear quick log
-          </button>
-        )}
-      </div>
-
       {error && (
         <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 font-medium">
           {error}
         </div>
       )}
 
+      <DailyScoreHero score={previewScores.future_self_score} deltaVsAvg={deltaVsAvg} />
+
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* ── Nutrition ── */}
-        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'nutrition' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
-          {focusPillar === 'nutrition' && (
-            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-          )}
-          <div className="flex items-center mb-1">
-            <label className="label-text mb-0">Nutrition — today&apos;s servings</label>
-            <StreakBadge count={habitStreaks.nutrition} />
-            {focusPillar === 'nutrition' && <FocusBadge />}
-            <ScorePill score={nutritionPreview} label="Score" />
-          </div>
-          <ServingStepper label="Fruit"      emoji="🍎" value={form.fruit_servings}     onChange={(v) => updateField('fruit_servings', v)} />
-          <ServingStepper label="Vegetables" emoji="🥬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
-          <ServingStepper label="Protein"    emoji="🥩" value={form.protein_servings}   onChange={(v) => updateField('protein_servings', v)} />
-          <ServingStepper label="Processed"  emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
-          <DetailToggle
-            label={focusPillar === 'longevity' ? '🎯 Search specific foods — your focus' : 'Search specific foods'}
-            badge={details.foods.length}
-            forceOpen={focusPillar === 'longevity'}
-          >
-            {focusPillar === 'longevity' && (
-              <p className="text-[11px] text-[#7c3aed] font-semibold mb-2 leading-relaxed">
-                Longevity doesn't have its own section — it's a composite of sleep, fitness, nutrition, and hydration.
-                Logging specific foods here is your single best lever for it, and it boosts your nutrition score too.
-              </p>
-            )}
-            <FoodDetailSection
-              foods={details.foods}
-              onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
-              onServingDetected={handleServingDetected}
-              onServingRemoved={handleServingRemoved}
-            />
-          </DetailToggle>
-        </div>
+        <SectionCard pillar="nutrition" focusPillar={focusPillar}>
+          <SectionHeader icon="🥗" title="Nutrition" score={nutritionPreview} isFocusPillar={focusPillar === 'nutrition'} />
+          <p className="text-xs text-slate-500 font-medium mb-2">How did you eat today?</p>
+          <QuickTierSelect
+            options={NUTRITION_TIERS}
+            value={activeNutritionTier}
+            onSelect={applyTier}
+          />
+          <DetailToggle label="+ Add details" badge={0}>
+            <ServingStepper label="Fruit"      emoji="🍎" value={form.fruit_servings}     onChange={(v) => updateField('fruit_servings', v)} />
+            <ServingStepper label="Vegetables" emoji="🥬" value={form.vegetable_servings} onChange={(v) => updateField('vegetable_servings', v)} />
+            <ServingStepper label="Protein"    emoji="🥩" value={form.protein_servings}   onChange={(v) => updateField('protein_servings', v)} />
+            <ServingStepper label="Processed"  emoji="🍟" value={form.processed_servings} onChange={(v) => updateField('processed_servings', v)} />
 
-        {/* ── Workout ── */}
-        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'fitness' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
-          {focusPillar === 'fitness' && (
-            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-          )}
-          <div className="flex items-center mb-3">
-            <label className="label-text mb-0">Workout</label>
-            <StreakBadge count={habitStreaks.workout} />
-            {focusPillar === 'fitness' && <FocusBadge />}
-            <ScorePill score={fitnessPreview} label="Score" />
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowWorkoutLib((v) => !v)}
-            className="w-full text-left text-xs font-bold text-[#7c3aed] mb-3 flex items-center gap-1"
-          >
-            🏃 {showWorkoutLib ? 'Hide' : 'Pick a workout'} ▾
-          </button>
-          {showWorkoutLib && (
-            <div className="mb-3">
-              <div className="flex gap-2 mb-2">
-                {['presets', 'saved'].map((tab) => (
+            <DetailToggle label="+ Log a meal" badge={details.foods.length}>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {MEAL_TRIGGERS.map((m) => (
                   <button
-                    key={tab}
+                    key={m.value}
                     type="button"
-                    onClick={() => setWorkoutLibTab(tab)}
-                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      workoutLibTab === tab ? 'text-white' : 'bg-slate-100 text-slate-500'
+                    onClick={() => setActiveMeal(activeMeal === m.value ? null : m.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                      activeMeal === m.value ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
                     }`}
-                    style={workoutLibTab === tab ? { background: 'linear-gradient(135deg, #7c3aed, #00cdb4)' } : undefined}
                   >
-                    {tab === 'presets' ? '⚡ Presets' : '⭐ Saved'}
+                    {m.label}
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                {(workoutLibTab === 'presets' ? PRESET_WORKOUTS : getSavedWorkouts()).map((w) => (
-                  <button
-                    key={w.id}
-                    type="button"
-                    onClick={() => applyWorkout(w)}
-                    className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 border border-[rgba(109,40,217,0.10)] text-xs font-semibold text-slate-700 hover:bg-[#7c3aed]/5 hover:border-[#7c3aed]/30 transition-colors"
-                  >
-                    <span className="text-lg">{w.emoji}</span>
-                    <span className="text-[10px] leading-tight text-center">{w.name}</span>
-                    <span className="text-[9px] text-slate-400">{w.duration}min</span>
-                  </button>
-                ))}
+              <FoodDetailSection
+                foods={details.foods}
+                activeMeal={activeMeal}
+                onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+                onServingDetected={handleServingDetected}
+                onServingRemoved={handleServingRemoved}
+              />
+            </DetailToggle>
+          </DetailToggle>
+        </SectionCard>
+
+        {/* ── Fitness ── */}
+        <SectionCard pillar="fitness" focusPillar={focusPillar}>
+          <SectionHeader icon="🏋️" title="Fitness" score={fitnessPreview} isFocusPillar={focusPillar === 'fitness'} />
+          <p className="text-xs text-slate-500 font-medium mb-2">What did you do?</p>
+          <QuickTierSelect
+            options={FITNESS_TIERS}
+            value={activeFitnessTier}
+            onSelect={applyTier}
+          />
+          {activeFitnessTier === 'workout' && (
+            <div className="mt-4 pt-4 border-t border-slate-100/80 space-y-3 animate-fade-in">
+              <button
+                type="button"
+                onClick={() => setShowWorkoutLib((v) => !v)}
+                className="w-full text-left text-xs font-bold text-[#7c3aed] flex items-center gap-1"
+              >
+                🏃 {showWorkoutLib ? 'Hide' : 'Pick from library'} ▾
+              </button>
+              {showWorkoutLib && (
+                <div>
+                  <div className="flex gap-2 mb-2">
+                    {['presets', 'saved'].map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setWorkoutLibTab(tab)}
+                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          workoutLibTab === tab ? 'text-white' : 'bg-slate-100 text-slate-500'
+                        }`}
+                        style={workoutLibTab === tab ? { background: 'linear-gradient(135deg, #7c3aed, #00cdb4)' } : undefined}
+                      >
+                        {tab === 'presets' ? '⚡ Presets' : '⭐ Saved'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                    {(workoutLibTab === 'presets' ? PRESET_WORKOUTS : getSavedWorkouts()).map((w) => (
+                      <button
+                        key={w.id}
+                        type="button"
+                        onClick={() => applyWorkout(w)}
+                        className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 border border-[rgba(109,40,217,0.10)] text-xs font-semibold text-slate-700 hover:bg-[#7c3aed]/5 hover:border-[#7c3aed]/30 transition-colors"
+                      >
+                        <span className="text-lg">{w.emoji}</span>
+                        <span className="text-[10px] leading-tight text-center">{w.name}</span>
+                        <span className="text-[9px] text-slate-400">{w.duration}min</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Type</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {EXERCISE_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => updateField('exercise_type', type)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize ${
+                        form.exercise_type === type ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Duration (minutes)</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {[15, 30, 45, 60, 90].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => updateField('workout_duration_min', d)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                        form.workout_duration_min === d ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {d === 90 ? '90+' : d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">Intensity</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={form.workout_intensity}
+                  onChange={(e) => updateField('workout_intensity', Number(e.target.value))}
+                  className="w-full mt-2"
+                />
+                <p className="text-sm font-bold text-[#7c3aed] tabular-nums">{form.workout_intensity}/10</p>
+              </div>
+              <DetailToggle label="Workout notes" badge={details.exercise.name || details.exercise.notes ? 1 : 0}>
+                <TextField label="Activity" value={details.exercise.name} onChange={(v) => patchDetails('exercise', { name: v })} placeholder="Upper body, 5k…" />
+                <TextField label="Notes"    value={details.exercise.notes} onChange={(v) => patchDetails('exercise', { notes: v })} multiline />
+              </DetailToggle>
             </div>
           )}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {EXERCISE_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => updateField('exercise_type', type)}
-                className={[
-                  'px-3 py-1.5 rounded-full text-sm font-medium capitalize',
-                  form.exercise_type === type ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600',
-                ].join(' ')}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-          <label className="text-xs font-semibold text-slate-500">Duration (minutes)</label>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={300}
-            placeholder="0"
-            {...numericFieldProps(form.workout_duration_min, (v) => updateField('workout_duration_min', v))}
-            className="input-field mt-1"
-          />
-          <DetailToggle label="Workout notes" badge={details.exercise.name || details.exercise.notes ? 1 : 0}>
-            <TextField label="Activity" value={details.exercise.name} onChange={(v) => patchDetails('exercise', { name: v })} placeholder="Upper body, 5k…" />
-            <TextField label="Notes"    value={details.exercise.notes} onChange={(v) => patchDetails('exercise', { notes: v })} multiline />
-          </DetailToggle>
-        </div>
+        </SectionCard>
 
         {/* ── Sleep ── */}
-        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'energy' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
-          {focusPillar === 'energy' && (
-            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-          )}
-          <div className="flex items-center mb-3">
-            <label className="label-text mb-0">Sleep</label>
-            <StreakBadge count={habitStreaks.sleep} />
-            {focusPillar === 'energy' && <FocusBadge />}
-            <ScorePill score={sleepPreview} label="Score" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label-text">Hours slept</label>
-              <input
-                type="number"
-                step={0.5}
-                min={0}
-                max={14}
-                value={form.sleep_hours}
-                onChange={(e) => updateField('sleep_hours', e.target.value)}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="label-text">Sleep quality</label>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                value={form.sleep_quality}
-                onChange={(e) => updateField('sleep_quality', Number(e.target.value))}
-                className="w-full mt-3"
-              />
-              <p className="text-sm font-bold text-[#7c3aed] tabular-nums">{form.sleep_quality}/10</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Water ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
-          <div className="flex items-center mb-2">
-            <label className="label-text mb-0">Water</label>
-            <StreakBadge count={habitStreaks.water} />
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={4000}
-            step={100}
-            value={form.water_ml}
-            onChange={(e) => updateField('water_ml', Number(e.target.value))}
-            className="w-full"
+        <SectionCard pillar="energy" focusPillar={focusPillar}>
+          <SectionHeader icon="😴" title="Sleep" score={sleepPreview} isFocusPillar={focusPillar === 'energy'} />
+          <QuickTierSelect
+            options={SLEEP_HOUR_TIERS}
+            value={Number(form.sleep_hours) >= 9 ? 9 : Number(form.sleep_hours)}
+            onSelect={(opt) => updateField('sleep_hours', opt.value)}
           />
-          <div className="flex flex-wrap gap-2 mt-2">
-            {[500, 1000, 1500, 2000, 2500, 3000].map((ml) => (
-              <button
-                key={ml}
-                type="button"
-                onClick={() => updateField('water_ml', ml)}
-                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.water_ml === ml ? 'bg-[#7c3aed] text-white' : 'bg-slate-100'}`}
-              >
-                {ml / 1000}L
-              </button>
-            ))}
+          <div className="mt-3">
+            <QuickTierSelect
+              options={SLEEP_QUALITY_TIERS}
+              value={form.sleep_quality}
+              onSelect={(opt) => updateField('sleep_quality', opt.value)}
+            />
           </div>
-          <p className="text-sm mt-2">{'🥛'.repeat(glasses) || '—'} · {form.water_ml} ml</p>
+          <DetailToggle label="+ Adjust exactly" badge={0}>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-text">Hours slept</label>
+                <input
+                  type="number"
+                  step={0.5}
+                  min={0}
+                  max={14}
+                  value={form.sleep_hours}
+                  onChange={(e) => updateField('sleep_hours', e.target.value)}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="label-text">Quality</label>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={form.sleep_quality}
+                  onChange={(e) => updateField('sleep_quality', Number(e.target.value))}
+                  className="w-full mt-3"
+                />
+                <p className="text-sm font-bold text-[#7c3aed] tabular-nums">{form.sleep_quality}/10</p>
+              </div>
+            </div>
+          </DetailToggle>
+        </SectionCard>
+
+        {/* ── Hydration ── */}
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">💧</span>
+              <span className="label-text mb-0">Hydration</span>
+            </div>
+            <p className="text-sm font-extrabold text-[#7c3aed] tabular-nums">{(form.water_ml / 1000).toFixed(1)}L</p>
+          </div>
+          <QuickTierSelect
+            options={HYDRATION_TIERS}
+            value={form.water_ml}
+            onSelect={(opt) => updateField('water_ml', opt.value)}
+          />
+          <p className="text-sm mt-3 text-slate-400">{'🥛'.repeat(glasses) || '—'}</p>
         </div>
 
         {/* ── Focus ── */}
-        <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${focusPillar === 'focus' ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
-          {focusPillar === 'focus' && (
-            <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-          )}
-          <div className="flex items-center mb-2">
-            <label className="label-text mb-0">Focus (min)</label>
-            <StreakBadge count={habitStreaks.focus} />
-            {focusPillar === 'focus' && <FocusBadge />}
-            <ScorePill score={focusPreview} label="Score" />
-          </div>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="0"
-            {...numericFieldProps(form.focus_minutes, (v) => updateField('focus_minutes', v))}
-            className="input-field"
+        <SectionCard pillar="focus" focusPillar={focusPillar}>
+          <SectionHeader icon="🎯" title="Focus" score={focusPreview} isFocusPillar={focusPillar === 'focus'} />
+          <p className="text-xs text-slate-500 font-medium mb-2">How much?</p>
+          <QuickTierSelect
+            options={FOCUS_TIERS}
+            value={form.focus_minutes}
+            onSelect={(opt) => updateField('focus_minutes', opt.value)}
           />
-          <DetailToggle label="What you worked on" badge={details.focus.activity ? 1 : 0}>
-            <TextField value={details.focus.activity} onChange={(v) => patchDetails('focus', { activity: v })} placeholder="Project, study topic…" />
+          <DetailToggle label="+ Add details" badge={details.focus.activity ? 1 : 0}>
+            <p className="text-xs font-semibold text-slate-500 mb-2">What did you focus on?</p>
+            <QuickTierSelect
+              options={FOCUS_TOPIC_TIERS}
+              value={details.focus.activity}
+              onSelect={(opt) => patchDetails('focus', { activity: opt.value })}
+            />
+            <div className="mt-2">
+              <TextField value={details.focus.activity} onChange={(v) => patchDetails('focus', { activity: v })} placeholder="Or describe it…" />
+            </div>
           </DetailToggle>
-        </div>
-
-        {/* ── Reading ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
-          <div className="flex items-center mb-2">
-            <label className="label-text mb-0">Reading (min)</label>
-            <StreakBadge count={habitStreaks.reading} />
-          </div>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="0"
-            {...numericFieldProps(form.reading_minutes, (v) => updateField('reading_minutes', v))}
-            className="input-field"
-          />
-          <DetailToggle label="Book / article" badge={details.reading.title ? 1 : 0}>
-            <TextField label="Title" value={details.reading.title} onChange={(v) => patchDetails('reading', { title: v })} />
-          </DetailToggle>
-        </div>
-
-        {/* ── Meditation ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
-          <div className="flex items-center mb-2">
-            <label className="label-text mb-0">Meditation (min)</label>
-            <StreakBadge count={habitStreaks.meditation} />
-          </div>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="0"
-            {...numericFieldProps(form.meditation_minutes, (v) => updateField('meditation_minutes', v))}
-            className="input-field"
-          />
-          <DetailToggle label="Style" badge={details.meditation.style ? 1 : 0}>
-            <SelectField label="Type" value={details.meditation.style} onChange={(v) => patchDetails('meditation', { style: v })} options={MEDITATION_STYLES} />
-          </DetailToggle>
-        </div>
-
-        {/* ── Screen time ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
-          <div className="flex items-center mb-2">
-            <label className="label-text mb-0">Screen time</label>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={600}
-            step={15}
-            value={form.screen_time_minutes}
-            onChange={(e) => updateField('screen_time_minutes', Number(e.target.value))}
-            className="w-full"
-          />
-          <div className="flex flex-wrap gap-2 mt-2">
-            {[60, 120, 180, 240, 360, 480].map((mins) => (
-              <button
-                key={mins}
-                type="button"
-                onClick={() => updateField('screen_time_minutes', mins)}
-                className={`text-xs font-semibold px-2 py-1 rounded-lg ${form.screen_time_minutes === mins ? 'bg-[#7c3aed] text-white' : 'bg-slate-100'}`}
-              >
-                {formatScreenTime(mins)}
-              </button>
-            ))}
-          </div>
-          <p className="text-sm mt-2 text-slate-500 font-medium">{formatScreenTime(form.screen_time_minutes)} today</p>
-        </div>
+        </SectionCard>
 
         {/* ── Mood ── */}
         <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
-          <label className="label-text">Mood</label>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">😊</span>
+            <label className="label-text mb-0">Mood</label>
+          </div>
           <div className="flex flex-wrap gap-1.5 justify-between">
             {MOOD_EMOJIS.map((emoji, i) => (
               <button
-                key={i + 1}
+                key={i}
                 type="button"
-                onClick={() => handleMoodChange(i + 1)}
-                className={`text-xl w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                  form.mood === i + 1 ? 'bg-[#7c3aed]/10 ring-2 ring-[#7c3aed] scale-110' : 'opacity-50'
+                onClick={() => handleMoodChange(MOOD_VALUES[i])}
+                className={`text-xl w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                  activeMoodIndex === i ? 'bg-[#7c3aed]/10 ring-2 ring-[#7c3aed] scale-110' : 'opacity-50'
                 }`}
               >
                 {emoji}
@@ -1086,6 +1064,44 @@ export default function Log() {
               multiline
               placeholder={form.mood <= 4 ? 'What made today feel this way…' : 'How today felt…'}
             />
+          </DetailToggle>
+        </div>
+
+        {/* ── Add more ── */}
+        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
+          <DetailToggle label="+ Add more" badge={0}>
+            <div>
+              <label className="label-text mb-2">📚 Reading</label>
+              <QuickTierSelect
+                options={READING_TIERS}
+                value={form.reading_minutes}
+                onSelect={(opt) => updateField('reading_minutes', opt.value)}
+              />
+              <DetailToggle label="Book / article" badge={details.reading.title ? 1 : 0}>
+                <TextField label="Title" value={details.reading.title} onChange={(v) => patchDetails('reading', { title: v })} />
+              </DetailToggle>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100">
+              <label className="label-text mb-2">🧘 Meditation</label>
+              <QuickTierSelect
+                options={MEDITATION_TIERS}
+                value={form.meditation_minutes}
+                onSelect={(opt) => updateField('meditation_minutes', opt.value)}
+              />
+              <DetailToggle label="Style" badge={details.meditation.style ? 1 : 0}>
+                <SelectField label="Type" value={details.meditation.style} onChange={(v) => patchDetails('meditation', { style: v })} options={MEDITATION_STYLES} />
+              </DetailToggle>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100">
+              <label className="label-text mb-2">📱 Screen time</label>
+              <QuickTierSelect
+                options={SCREEN_TIME_TIERS}
+                value={form.screen_time_minutes}
+                onSelect={(opt) => updateField('screen_time_minutes', opt.value)}
+              />
+            </div>
           </DetailToggle>
         </div>
 

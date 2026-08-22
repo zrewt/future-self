@@ -109,6 +109,14 @@ const NUT_SEED_KEYWORDS = [
 ]
 
 
+const OIL_KEYWORDS = [
+  'olive oil',
+  'avocado oil',
+  'coconut oil',
+  'flaxseed oil',
+]
+
+
 const WHOLE_TIER_VERY_HIGH =
   LEGUME_KEYWORDS
 
@@ -389,6 +397,11 @@ function isPlant(food) {
 }
 
 
+/*
+ * Point values raised this session so a realistic 2-4 item meal
+ * log (not a full day's eating) can meaningfully reach the
+ * "Whole Foods" ceiling — see scoring.js's floor change for context.
+ */
 function wholeFoodTierPoints(food) {
   const name = food.name || ''
 
@@ -409,10 +422,10 @@ function wholeFoodTierPoints(food) {
         ]
       )
     ) {
-      return 4
+      return 7
     }
 
-    return 3
+    return 5
   }
 
   if (
@@ -421,7 +434,7 @@ function wholeFoodTierPoints(food) {
       WHOLE_TIER_VERY_HIGH
     )
   ) {
-    return 5
+    return 10
   }
 
   if (
@@ -430,7 +443,7 @@ function wholeFoodTierPoints(food) {
       WHOLE_TIER_HIGH
     )
   ) {
-    return 4
+    return 8
   }
 
   if (
@@ -439,7 +452,16 @@ function wholeFoodTierPoints(food) {
       WHOLE_TIER_MODERATE
     )
   ) {
-    return 2
+    return 4
+  }
+
+  if (
+    matchesAny(
+      name,
+      OIL_KEYWORDS
+    )
+  ) {
+    return 3
   }
 
   return 0
@@ -790,21 +812,30 @@ function mealTotals(foods) {
 
 // ── POINT TIERS ──────────────────────────────────────────────────────────────
 
+/*
+ * Thresholds lowered this session — 30g+ protein for full credit
+ * assumed a large meal; 25g (roughly one solid protein serving) is
+ * a more realistic bar for a quick log.
+ */
 function tierProtein(grams) {
-  if (grams >= 30) return 20
-  if (grams >= 20) return 15
-  if (grams >= 10) return 10
-  if (grams >= 5) return 5
+  if (grams >= 25) return 20
+  if (grams >= 15) return 15
+  if (grams >= 8) return 10
+  if (grams >= 3) return 5
 
   return 0
 }
 
 
+/*
+ * Thresholds lowered this session to match realistic per-item fiber
+ * contributions (e.g. one serving of broccoli ≈ 4g, not 10g+).
+ */
 function tierFiber(grams) {
-  if (grams >= 10) return 20
-  if (grams >= 7) return 15
-  if (grams >= 4) return 10
-  if (grams >= 1) return 5
+  if (grams >= 8) return 20
+  if (grams >= 5) return 15
+  if (grams >= 2) return 10
+  if (grams >= 0.5) return 5
 
   return 0
 }
@@ -1006,7 +1037,7 @@ export function calcFoodQualityBreakdown(
       points: Math.min(
         10,
         Math.round(
-          totals.microHits * 2.5
+          totals.microHits * 5
         )
       ),
       max: 10,
@@ -1017,7 +1048,7 @@ export function calcFoodQualityBreakdown(
       points: Math.min(
         10,
         Math.round(
-          totals.fatHits * 3.5
+          totals.fatHits * 5
         )
       ),
       max: 10,
@@ -1051,6 +1082,8 @@ export function calcFoodQualityScore(
 
 
 // ── FOOD LONGEVITY ───────────────────────────────────────────────────────────
+// (unchanged this session — no floor-masking issue here, since
+// calcLongevityScore blends this directly without a max() floor)
 
 export function calcFoodLongevityBreakdown(
   foods

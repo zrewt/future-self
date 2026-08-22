@@ -11,6 +11,7 @@ import FutureProjection from '../components/home/FutureProjection'
 import { evaluateQuests } from '../data/quests'
 import { getLevelName } from '../utils/scoring'
 import { getPathConfig } from '../data/paths'
+import { calcCurrentSmoothedFSS, calcMomentum } from '../utils/trends'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -90,13 +91,14 @@ function getDailyEdge(log, questsDone, questCount) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+// NOTE: `score` here is the SMOOTHED Future Self Score, not the raw daily
+// composite. See `dailyScore` for today's raw number, shown separately.
 function ScoreRing({ score }) {
   const { theme } = useTheme()
   const radius = 40
   const circumference = 2 * Math.PI * radius
   const progress = (score / 100) * circumference
 
-  // Light mode: brand teal/purple/pink scale. Dark mode: green scale.
   const scoreColor = theme === 'dark'
     ? score >= 70 ? '#00E8C6' : score >= 45 ? '#FFB830' : '#FF7AC6'
     : score >= 70 ? '#00cdb4' : score >= 45 ? '#7c3aed' : '#e0527a'
@@ -225,6 +227,30 @@ function WeekPaceCard({ recentScores }) {
   )
 }
 
+// NEW — Daily Score vs. smoothed FSS + Momentum, shown together so the
+// distinction is legible at a glance rather than just via the ring label.
+function DailyVsFutureCard({ dailyScore, smoothedFSS, momentum }) {
+  if (dailyScore == null) return null
+  return (
+    <div className="rounded-2xl px-4 py-3 flex items-center justify-between border bg-slate-50 dark:bg-[#141220] border-slate-200 dark:border-[#29263B]">
+      <div>
+        <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 dark:text-[#5A7050] mb-0.5">
+          Today's Daily Score
+        </p>
+        <p className="text-lg font-extrabold tabular-nums text-slate-700 dark:text-[#E8F0E0]">{dailyScore}</p>
+      </div>
+      {momentum != null && (
+        <div className="text-right shrink-0 ml-3">
+          <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050]">Momentum</p>
+          <p className={`text-sm font-extrabold tabular-nums ${momentum.delta >= 0 ? 'text-[#00a591]' : 'text-[#e0527a]'}`}>
+            {momentum.delta >= 0 ? '+' : ''}{momentum.delta} this month
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LogCTA({ todayLog }) {
   const hour = new Date().getHours()
   const isUrgent = !todayLog && hour >= 20
@@ -282,7 +308,14 @@ export default function Dashboard() {
   const levelName  = getLevelName(level)
   const initial    = (profile.username || '?')[0].toUpperCase()
   const log        = todayLog || {}
-  const currentFSS = log.future_self_score ?? recentScores[0] ?? 0
+
+  // Daily Score = today's raw composite (unchanged meaning, just relabeled).
+  // Future Self Score (ring) = smoothed, slow-moving trailing indicator —
+  // derived client-side from trendLogs, NOT stored anywhere new.
+  const dailyScore  = log.future_self_score ?? recentScores[0] ?? null
+  const smoothedFSS = calcCurrentSmoothedFSS(trendLogs) ?? dailyScore ?? 0
+  const momentum    = calcMomentum(trendLogs)
+
   const quests     = evaluateQuests(todayLog)
   const habitsDone = quests.filter((q) => q.done).length
   const dailyEdge  = getDailyEdge(todayLog, habitsDone, quests.length)
@@ -308,11 +341,6 @@ export default function Dashboard() {
   return (
     <div className="space-y-5 animate-slide-up max-w-2xl mx-auto">
 
-      {/* ── Path-toned greeting (avatar_class personalization) ──
-          NOTE: paths.js exposes this as tone.greetingPrefix (not
-          tone.greeting) and the strings are full sentences/questions,
-          e.g. "Ready to put in the work today?" — not lead-in fragments.
-          So we lead with the username instead of trailing it. */}
       <p className="px-1 text-sm font-semibold text-slate-500 dark:text-[#9DB890]">
         {profile.username}, {pathConfig.tone.greetingPrefix}
       </p>
@@ -320,7 +348,6 @@ export default function Dashboard() {
       {/* ── Hero card ── */}
       <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
         <div className="absolute top-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-        {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-white/6">
           <Link to="/profile" className="flex items-center gap-3 min-w-0">
             <div
@@ -360,10 +387,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Score ring + pillars */}
         <div className="px-5 py-5">
           <div className="flex items-center gap-4">
-            <ScoreRing score={currentFSS} />
+            <ScoreRing score={smoothedFSS} />
             <div className="flex-1 space-y-2 min-w-0">
               {pillars.map((p) => (
                 <PillarBar key={p.label} {...p} highlight={focusScoreKey === p.scoreKey} />
@@ -393,24 +419,22 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* XP bar */}
         <div className="px-5 pb-5">
           <XPBar totalXP={profile.total_xp} level={level} />
         </div>
       </div>
 
-      {/* ── Your focus pillar (goal-driven personalization) ── */}
+      {/* ── Daily Score / Momentum ── */}
+      <DailyVsFutureCard dailyScore={dailyScore} smoothedFSS={smoothedFSS} momentum={momentum} />
+
       {focusPillar && (
         <FocusPillarCard pillar={focusPillar} todayLog={todayLog} />
       )}
 
-      {/* ── vs Best Week ── */}
       {recentScores.length >= 7 && <WeekPaceCard recentScores={recentScores} />}
 
-      {/* ── Log CTA ── */}
       <LogCTA todayLog={todayLog} />
 
-      {/* ── Today's focus ── */}
       {todayLog && (
         <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4">
           <div className="flex items-start justify-between gap-3">
@@ -430,17 +454,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── What-if simulator (Premium Phase 2) ── */}
       <WhatIfSimulator recentLogs={recentLogs} streakDays={profile.current_streak} />
 
-      {/* ── Future Self projection (Premium Phase 3) ── */}
       <FutureProjection
         projectionLogs={projectionLogs}
-        currentFSS={currentFSS}
+        currentFSS={smoothedFSS}
         currentStreak={profile.current_streak}
       />
 
-      {/* ── Trend chart ── */}
       <TrendChart
         trendLogs={trendLogs}
         achievementEvents={achievementEvents}

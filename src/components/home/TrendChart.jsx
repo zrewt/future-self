@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   ReferenceDot,
 } from 'recharts'
-import { buildTrendSeries, attachMilestones, comparePillarsMonthOverMonth } from '../../utils/trends'
+import { calcSmoothedFSSSeries, attachMilestones, comparePillarsMonthOverMonth } from '../../utils/trends'
 
 const RANGES = [
   { key: 7, label: '7D' },
@@ -36,11 +36,33 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+// Builds the SAME smoothed-FSS series as the Dashboard's ScoreRing/Momentum
+// (calcSmoothedFSSSeries — lifetime EMA over trendLogs), then trims to the
+// selected display window. The EMA itself is always computed over full
+// history first — trimming afterward means a 7D view still reflects the
+// real long-term-smoothed value at each point, not a value recomputed from
+// only 7 days of data (which would silently disagree with the ring again).
+function buildSmoothedSeries(trendLogs, days) {
+  const full = calcSmoothedFSSSeries(trendLogs)
+  if (!full) return []
+
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+
+  return full
+    .filter((p) => new Date(`${p.date}T12:00:00`) >= cutoff)
+    .map((p) => ({
+      date: p.date,
+      value: p.smoothedFSS,
+      smoothed: p.smoothedFSS,
+    }))
+}
+
 export default function TrendChart({ trendLogs, achievementEvents, userChallenges }) {
   const [range, setRange] = useState(30)
 
   const series = useMemo(() => {
-    const base = buildTrendSeries(trendLogs, range)
+    const base = buildSmoothedSeries(trendLogs, range)
     return attachMilestones(base, achievementEvents, userChallenges)
   }, [trendLogs, achievementEvents, userChallenges, range])
 

@@ -4,7 +4,15 @@ import { useUserStore } from '../../store/useUserStore'
 import { calcFoodQualityScore, calcFoodLongevityScore, calcMacroSummary } from '../../utils/scoring'
 import { getFoodDisplay } from '../../utils/servingUnits'
 
-// Per-serving macro string — updates live with qty
+const MEAL_LABELS = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snack: 'Snack',
+  other: 'Other',
+}
+const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack', 'other']
+
 function macroStr(food) {
   const d = getFoodDisplay(food)
   const parts = []
@@ -34,8 +42,9 @@ function longevityLabel(score) {
 export default function FoodDetailSection({
   foods,
   onChange,
-  onServingDetected,  // (servingKey) => void  — tells Log to increment stepper
-  onServingRemoved,   // (servingKey) => void  — tells Log to decrement stepper
+  onServingDetected,
+  onServingRemoved,
+  activeMeal = null,   // NEW — 'breakfast' | 'lunch' | 'dinner' | 'snack' | null
 }) {
   const { savedMeals, addSavedMeal, deleteSavedMeal } = useUserStore()
 
@@ -48,7 +57,6 @@ export default function FoodDetailSection({
   const [savingMeal,  setSavingMeal]  = useState(false)
   const [newMealName, setNewMealName] = useState('')
 
-  // Search with debounce
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); setSearchError(''); return }
 
@@ -71,7 +79,6 @@ export default function FoodDetailSection({
     return () => { clearTimeout(timer); ctrl.abort() }
   }, [query])
 
-  // Food analysis — memoised so it only recalculates when foods change
   const analysis = useMemo(() => {
     if (!foods.length) return null
     const fq = calcFoodQualityScore(foods)
@@ -80,14 +87,25 @@ export default function FoodDetailSection({
     return { fq, fl, fm }
   }, [foods])
 
-  // ── Food mutations ─────────────────────────────────────────────────────────
+  // Group added foods by meal for display — 'other'/unset lands last
+  const groupedFoods = useMemo(() => {
+    const groups = {}
+    for (const f of foods) {
+      const key = f.meal && MEAL_LABELS[f.meal] ? f.meal : 'other'
+      if (!groups[key]) groups[key] = []
+      groups[key].push(f)
+    }
+    return MEAL_ORDER
+      .filter((k) => groups[k]?.length)
+      .map((k) => ({ meal: k, items: groups[k] }))
+  }, [foods])
+
   function addFood(item) {
     const servingKey = item.servingKey || detectServingKey(item.name)
-    const food = { ...item, qty: 1, servingKey }
+    const food = { ...item, qty: 1, servingKey, meal: activeMeal || item.meal || null }
     onChange([...foods, food])
     setQuery('')
     setResults([])
-    // Tell Log.jsx to auto-increment the right serving stepper
     if (servingKey && onServingDetected) onServingDetected(servingKey)
   }
 
@@ -96,10 +114,13 @@ export default function FoodDetailSection({
     onChange(foods.map((f) => f.id === id ? { ...f, qty: clamped } : f))
   }
 
+  function setMeal(id, meal) {
+    onChange(foods.map((f) => f.id === id ? { ...f, meal } : f))
+  }
+
   function removeFood(id) {
     const food = foods.find((f) => f.id === id)
     onChange(foods.filter((f) => f.id !== id))
-    // Tell Log.jsx to decrement the serving stepper
     if (food?.servingKey && onServingRemoved) onServingRemoved(food.servingKey)
   }
 
@@ -124,7 +145,6 @@ export default function FoodDetailSection({
     setCustomName('')
   }
 
-  // ── Saved meals ────────────────────────────────────────────────────────────
   async function handleSaveMeal() {
     const name = newMealName.trim()
     if (!name || !foods.length) return
@@ -134,7 +154,7 @@ export default function FoodDetailSection({
   }
 
   function loadMeal(meal) {
-    const newFoods = (meal.foods || []).map((f) => ({ ...f, id: crypto.randomUUID() }))
+    const newFoods = (meal.foods || []).map((f) => ({ ...f, id: crypto.randomUUID(), meal: activeMeal || f.meal || null }))
     onChange([...foods, ...newFoods])
     newFoods.forEach((f) => {
       if (f.servingKey && onServingDetected) onServingDetected(f.servingKey)
@@ -145,7 +165,6 @@ export default function FoodDetailSection({
   return (
     <div className="space-y-3">
 
-      {/* Tab bar */}
       <div className="flex gap-2">
         {[
           { key: 'search', label: '🔍 Search' },
@@ -166,65 +185,79 @@ export default function FoodDetailSection({
         ))}
       </div>
 
-      {/* ── SEARCH TAB ── */}
       {tab === 'search' && (
         <>
           <p className="text-xs text-slate-500 font-medium">
             Scores reflect health & longevity — not calorie targets.
           </p>
 
-          {/* Added foods list */}
-          {foods.length > 0 && (
-            <ul className="space-y-2">
-              {foods.map((f) => (
-                <li
-                  key={f.id}
-                  className="bg-primary-50/50 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 rounded-2xl px-3 py-2.5"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-lg shrink-0">🍽️</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                        {f.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        {getFoodDisplay(f).servingLabel}
-                        {macroStr(f) ? ` · ${macroStr(f)}` : ''}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFood(f.id)}
-                      className="text-slate-400 hover:text-red-400 text-sm font-bold px-1 shrink-0"
-                    >×</button>
-                  </div>
+          {groupedFoods.length > 0 && (
+            <div className="space-y-3">
+              {groupedFoods.map((group) => (
+                <div key={group.meal}>
+                  <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 mb-1.5">
+                    {MEAL_LABELS[group.meal]}
+                  </p>
+                  <ul className="space-y-2">
+                    {group.items.map((f) => (
+                      <li
+                        key={f.id}
+                        className="bg-primary-50/50 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 rounded-2xl px-3 py-2.5"
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg shrink-0">🍽️</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                              {f.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-medium">
+                              {getFoodDisplay(f).servingLabel}
+                              {macroStr(f) ? ` · ${macroStr(f)}` : ''}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFood(f.id)}
+                            className="text-slate-400 hover:text-red-400 text-sm font-bold px-1 shrink-0"
+                          >×</button>
+                        </div>
 
-                  {/* Qty stepper */}
-                  <div className="flex items-center gap-2 mt-2 ml-7">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Qty</span>
-                    <button
-                      type="button"
-                      onClick={() => updateQty(f.id, (f.qty ?? 1) - 0.5)}
-                      className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 text-sm font-bold hover:bg-slate-200 transition-colors"
-                    >−</button>
-                    <span className="text-sm font-extrabold text-primary tabular-nums w-8 text-center">
-                      {f.qty ?? 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateQty(f.id, (f.qty ?? 1) + 0.5)}
-                      className="w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
-                    >+</button>
-                    <span className="text-[10px] text-slate-400 truncate max-w-[100px]">
-                      {f.unit || 'serving'}
-                    </span>
-                  </div>
-                </li>
+                        <div className="flex items-center gap-2 mt-2 ml-7 flex-wrap">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Qty</span>
+                          <button
+                            type="button"
+                            onClick={() => updateQty(f.id, (f.qty ?? 1) - 0.5)}
+                            className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 text-sm font-bold hover:bg-slate-200 transition-colors"
+                          >−</button>
+                          <span className="text-sm font-extrabold text-primary tabular-nums w-8 text-center">
+                            {f.qty ?? 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updateQty(f.id, (f.qty ?? 1) + 0.5)}
+                            className="w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
+                          >+</button>
+                          <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
+                            {f.unit || 'serving'}
+                          </span>
+                          <select
+                            value={f.meal || 'other'}
+                            onChange={(e) => setMeal(f.id, e.target.value)}
+                            className="ml-auto text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1"
+                          >
+                            {MEAL_ORDER.map((m) => (
+                              <option key={m} value={m}>{MEAL_LABELS[m]}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
 
-          {/* Save as meal */}
           {foods.length >= 2 && !savingMeal && (
             <button
               type="button"
@@ -252,7 +285,6 @@ export default function FoodDetailSection({
             </div>
           )}
 
-          {/* Search input */}
           <div className="relative">
             <input
               type="search"
@@ -290,7 +322,6 @@ export default function FoodDetailSection({
             </ul>
           )}
 
-          {/* Manual add */}
           <div className="flex gap-2">
             <input
               type="text"
@@ -304,7 +335,6 @@ export default function FoodDetailSection({
               className="btn-secondary !py-2.5 !px-4 text-sm shrink-0">Add</button>
           </div>
 
-          {/* Food analysis panel */}
           {analysis && (
             <div className="mt-1 p-3 rounded-2xl bg-primary-50/60 dark:bg-white/5 border border-primary-100/60 dark:border-white/10 space-y-2">
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
@@ -353,7 +383,6 @@ export default function FoodDetailSection({
         </>
       )}
 
-      {/* ── SAVED MEALS TAB ── */}
       {tab === 'saved' && (
         <div className="space-y-2">
           {!savedMeals?.length ? (

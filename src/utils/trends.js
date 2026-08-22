@@ -7,8 +7,6 @@ function toDate(iso) {
   return new Date(`${iso}T12:00:00`)
 }
 
-// Simple moving average over `window` days — smooths day-to-day noise
-// so the underlying trend reads clearly even with a spiky daily score.
 function smooth(points, window = 5) {
   return points.map((p, i) => {
     const start = Math.max(0, i - window + 1)
@@ -18,10 +16,6 @@ function smooth(points, window = 5) {
   })
 }
 
-/**
- * Build chart-ready points from trendLogs (newest-first from the DB).
- * Returns oldest-first, since charts read left-to-right chronologically.
- */
 export function buildTrendSeries(trendLogs, days = 30, field = 'future_self_score') {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
@@ -29,7 +23,7 @@ export function buildTrendSeries(trendLogs, days = 30, field = 'future_self_scor
   const filtered = (trendLogs || [])
     .filter((l) => toDate(l.log_date) >= cutoff)
     .slice()
-    .reverse() // oldest first
+    .reverse()
 
   const points = filtered.map((l) => ({
     date: l.log_date,
@@ -39,10 +33,6 @@ export function buildTrendSeries(trendLogs, days = 30, field = 'future_self_scor
   return smooth(points)
 }
 
-/**
- * Attach achievement/milestone markers to the series by matching
- * earned_at dates (or challenge completed_at) to the closest log date.
- */
 export function attachMilestones(series, achievementEvents = [], challenges = []) {
   const milestoneDates = new Set()
 
@@ -59,10 +49,6 @@ export function attachMilestones(series, achievementEvents = [], challenges = []
   }))
 }
 
-/**
- * Compare this calendar month to last calendar month, per pillar.
- * Returns null if there isn't at least some data in both periods.
- */
 export function comparePillarsMonthOverMonth(trendLogs) {
   const now = new Date()
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -106,18 +92,6 @@ export function comparePillarsMonthOverMonth(trendLogs) {
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
 }
 
-/**
- * Compares the last 7 logged days to the 7 days before that. Rolling by
- * logged-day COUNT (not calendar week) so it works from day 15 onward
- * regardless of gaps.
- *
- * IMPORTANT: `logs` must be a full log array with raw fields (e.g.
- * useUserStore's `recentLogs`), sorted newest-first — NOT `trendLogs`,
- * whose query only selects computed scores, not raw fields like
- * sleep_hours or workout_duration_min.
- *
- * Returns null if there isn't at least 14 scored days available.
- */
 export function comparePillarsWeekOverWeek(logs) {
   const scored = (logs || []).filter((l) => l.future_self_score != null)
   if (scored.length < 14) return null
@@ -166,5 +140,59 @@ export function comparePillarsWeekOverWeek(logs) {
     pillars,
     thisWeekLogs: thisWeek,
     lastWeekLogs: lastWeek,
+  }
+}
+
+/**
+ * Derives the slow-moving "Future Self Score" from raw per-day scores
+ * via an exponential moving average (α = 0.1). Display value only —
+ * `future_self_score` in daily_logs keeps meaning "that day's raw
+ * composite" (now surfaced in the UI as "Daily Score"). No DB migration.
+ *
+ * `trendLogs` must be sorted newest-first (as returned by useUserStore).
+ * Returns null if there's nothing to smooth.
+ */
+const FSS_SMOOTHING_ALPHA = 0.1
+
+export function calcSmoothedFSSSeries(trendLogs) {
+  const scored = (trendLogs || [])
+    .filter((l) => l.future_self_score != null)
+    .slice()
+    .reverse()
+
+  if (!scored.length) return null
+
+  let ema = scored[0].future_self_score
+  const series = [{ date: scored[0].log_date, raw: ema, smoothedFSS: Math.round(ema) }]
+
+  for (let i = 1; i < scored.length; i++) {
+    const raw = scored[i].future_self_score
+    ema = FSS_SMOOTHING_ALPHA * raw + (1 - FSS_SMOOTHING_ALPHA) * ema
+    series.push({ date: scored[i].log_date, raw, smoothedFSS: Math.round(ema) })
+  }
+
+  return series
+}
+
+export function calcCurrentSmoothedFSS(trendLogs) {
+  const series = calcSmoothedFSSSeries(trendLogs)
+  if (!series?.length) return null
+  return series[series.length - 1].smoothedFSS
+}
+
+export function calcMomentum(trendLogs, lookback = 30) {
+  const series = calcSmoothedFSSSeries(trendLogs)
+  if (!series || series.length < 2) return null
+
+  const latest = series[series.length - 1]
+  const pastIndex = Math.max(0, series.length - 1 - lookback)
+  const past = series[pastIndex]
+
+  if (pastIndex === series.length - 1) return null
+
+  return {
+    delta: Math.round((latest.smoothedFSS - past.smoothedFSS) * 10) / 10,
+    fromDate: past.date,
+    toDate: latest.date,
   }
 }
