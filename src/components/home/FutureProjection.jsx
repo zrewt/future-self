@@ -25,7 +25,8 @@ export default function FutureProjection({ projectionLogs, currentFSS, currentSt
     )
   }
 
-  const { tier, points, drivers } = result
+  const { tier, points, drivers, insights } = result
+  const showCatchUpNote = insights.catchUpGap >= 5
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4">
@@ -36,7 +37,7 @@ export default function FutureProjection({ projectionLogs, currentFSS, currentSt
         {TIER_COPY[tier]} Projected trajectory if your current pattern continues — an estimate, not a guarantee.
       </p>
 
-      <div className="flex items-stretch gap-1.5 mb-4">
+      <div className="flex items-stretch gap-1.5 mb-3">
         {points.map((p, i) => (
           <div key={p.label} className="flex-1 flex flex-col items-center">
             <div className="rounded-2xl bg-slate-50 dark:bg-[#141220] border border-slate-100 dark:border-[#29263B] w-full py-3 flex flex-col items-center">
@@ -49,6 +50,12 @@ export default function FutureProjection({ projectionLogs, currentFSS, currentSt
           </div>
         ))}
       </div>
+
+      {showCatchUpNote && (
+        <p className="text-[11px] text-[#00a591] dark:text-[#00E8C6] font-medium mb-3 leading-relaxed">
+          Your recent habits already support a higher score — some of this growth is your Future Self Score catching up as more strong days factor in, not just future improvement.
+        </p>
+      )}
 
       {drivers.length > 0 && (
         <div className="pt-3 border-t border-slate-100 dark:border-white/10 space-y-1.5">
