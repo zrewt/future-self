@@ -252,8 +252,6 @@ function ScoreRing({
   strokeWidth = 8,
 }) {
   const [displayed, setDisplayed] = useState(0)
-
-  // Responsive size
   const [ringSize, setRingSize] = useState(size)
 
   useEffect(() => {
@@ -268,50 +266,62 @@ function ScoreRing({
     }
 
     updateSize()
+
     window.addEventListener('resize', updateSize)
 
-    return () => window.removeEventListener('resize', updateSize)
+    return () => {
+      window.removeEventListener('resize', updateSize)
+    }
   }, [size])
 
-  const radius = ringSize / 2 - strokeWidth
-  const circumference = 2 * Math.PI * radius
-
-  const progress = displayed / 100
-  const dashOffset = circumference * (1 - progress)
-
   useEffect(() => {
-    let frame
+    let frame = null
+    let timeout = null
     let start = null
 
-    // Slower, smoother animation
-    const duration = 5500
-    const delay = 500
+    const duration = 3500
+    const delay = 400
 
     const animate = (timestamp) => {
-      if (!start) start = timestamp
+      if (start === null) {
+        start = timestamp
+      }
 
       const elapsed = timestamp - start
       const progress = Math.min(elapsed / duration, 1)
 
-      // Smooth ease-out
       const eased = 1 - Math.pow(1 - progress, 3)
+      const nextValue = Math.round(eased * score)
 
-      setDisplayed(Math.round(eased * score))
+      setDisplayed((previous) =>
+        previous === nextValue ? previous : nextValue
+      )
 
       if (progress < 1) {
         frame = requestAnimationFrame(animate)
       }
     }
 
-    const timeout = setTimeout(() => {
+    timeout = window.setTimeout(() => {
       frame = requestAnimationFrame(animate)
     }, delay)
 
     return () => {
-      clearTimeout(timeout)
-      if (frame) cancelAnimationFrame(frame)
+      if (timeout) {
+        clearTimeout(timeout)
+      }
+
+      if (frame) {
+        cancelAnimationFrame(frame)
+      }
     }
   }, [score])
+
+  const radius = (ringSize - strokeWidth * 2) / 2
+  const circumference = 2 * Math.PI * radius
+
+  const progress = displayed / 100
+  const dashOffset = circumference * (1 - progress)
 
   return (
     <div
@@ -350,7 +360,6 @@ function ScoreRing({
           </linearGradient>
         </defs>
 
-        {/* Background ring */}
         <circle
           cx={ringSize / 2}
           cy={ringSize / 2}
@@ -360,7 +369,6 @@ function ScoreRing({
           strokeWidth={strokeWidth}
         />
 
-        {/* Animated score ring */}
         <circle
           cx={ringSize / 2}
           cy={ringSize / 2}
@@ -372,13 +380,12 @@ function ScoreRing({
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           style={{
-            filter: 'drop-shadow(0 0 10px rgba(127,90,240,0.4))',
-            transition: 'stroke-dashoffset 0.08s linear',
+            filter: 'drop-shadow(0 0 7px rgba(127,90,240,0.32))',
+            willChange: 'stroke-dashoffset',
           }}
         />
       </svg>
 
-      {/* Center content */}
       <div
         style={{
           position: 'relative',
@@ -388,6 +395,7 @@ function ScoreRing({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          pointerEvents: 'none',
         }}
       >
         <div
@@ -397,7 +405,7 @@ function ScoreRing({
             fontWeight: 800,
             letterSpacing: '-0.06em',
             background:
-              'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
+              'linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -2480,9 +2488,7 @@ export default function Landing() {
                 2px 0 8px !important;
             }
 
-            .qyven-score-ring-container > div {
-              transform: scale(0.68);
-            }
+       
 
             /* pillar bar list — 5th direct child of the card */
             .qyven-score-card > div:nth-child(5) {
@@ -2587,11 +2593,12 @@ export default function Landing() {
               padding: 14px !important;
               border-radius: 20px !important;
             }
-
-            .qyven-score-ring-container > div {
-              transform: scale(0.62);
-            }
-
+              
+@media (max-width: 780px) {
+  .qyven-score-card {
+    animation: none !important;
+  }
+}
             .qyven-score-ring-container {
               height: auto !important;
               align-items: center !important;
