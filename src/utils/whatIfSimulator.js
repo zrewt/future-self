@@ -4,18 +4,25 @@
  * synthetic log's raw inputs are ever changed — no scoring formula is
  * touched, duplicated, or forked.
  *
- * IMPORTANT — a real quirk of the existing scoring engine, not something
- * introduced here: the Future Self Score composite uses calcSleepScore
- * (via getFutureSelfBreakdown) for its "sleep" component, which is a
- * DIFFERENT formula from calcEnergyFromSleep (used for the displayed
- * "Sleep & Energy" pillar elsewhere in the app). This simulator correctly
- * follows whichever formula getFutureSelfBreakdown actually uses, since
- * that's what determines the real FSS.
+ * REDESIGNED this session: scenarios are now TARGET-based (current →
+ * suggested value) instead of open-ended +delta sliders. This fixes two
+ * real bugs in the old delta model:
+ *   1. Sleep used to always ADD hours regardless of direction — since
+ *      calcSleepScore is a bell curve centered at 8.25h, adding hours to
+ *      an already-good sleeper made things WORSE, not better. Now the
+ *      sleep scenario targets 8h directly.
+ *   2. With no ranking, a user whose baseline was already near-ceiling on
+ *      most pillars (common after the scoring recalibrations) saw near-
+ *      zero movement on every lever, with no way to know WHY or which
+ *      lever (if any) still had real headroom.
  *
- * Similarly, the "Focus" slider affects FSS via the HABITS component
- * (calcHabitsScore, which reads focus_minutes/reading_minutes/
- * meditation_minutes/mood) — NOT via calcFocusScore, which is a separate
- * display-only pillar not included in the FSS composite formula at all.
+ * IMPORTANT — real quirks of the scoring engine, not introduced here:
+ * FSS's "sleep" component uses calcSleepScore (via getFutureSelfBreakdown),
+ * a DIFFERENT formula from calcEnergyFromSleep (the displayed pillar).
+ * The "Focus" scenario affects FSS via calcHabitsScore (habits component),
+ * NOT calcFocusScore (a separate display-only pillar not in the FSS
+ * composite at all). This simulator always follows whichever formula
+ * getFutureSelfBreakdown actually uses.
  */
 
 import { getFutureSelfBreakdown } from './scoring'
@@ -54,6 +61,7 @@ export function buildBaselineLog(recentLogs) {
     processed_servings:   avgField(recentLogs, 'processed_servings'),
     water_ml:             avgField(recentLogs, 'water_ml'),
     workout_duration_min: avgField(recentLogs, 'workout_duration_min'),
+    workout_intensity:    avgField(recentLogs, 'workout_intensity') || 6,
     exercise_type:        modeField(recentLogs, 'exercise_type', 'gym'),
     sleep_hours:          avgField(recentLogs, 'sleep_hours'),
     sleep_quality:        avgField(recentLogs, 'sleep_quality') || 5,
@@ -64,60 +72,121 @@ export function buildBaselineLog(recentLogs) {
   }
 }
 
-// Slider definitions — each maps a 0..max delta onto baseline field(s).
-// `apply` returns a NEW log object; never mutates the baseline.
-export const WHATIF_LEVERS = {
-  sleep: {
-    label: 'Sleep',
-    unit: 'hr more/night',
-    min: 0,
-    max: 2,
-    step: 0.25,
-    apply: (log, delta) => ({ ...log, sleep_hours: (log.sleep_hours || 0) + delta }),
-  },
-  workouts: {
-    label: 'Workouts',
-    unit: 'session(s)/week more',
-    min: 0,
-    max: 3,
-    step: 1,
-    // Each extra weekly session assumed ~45min (matches WORKOUT_FACTOR's
-    // own 45min denominator in scoring.js), spread across 7 days as a
-    // daily average. Real per-user session length may differ — worth
-    // revisiting if this feels off in practice.
-    apply: (log, delta) => ({
-      ...log,
-      workout_duration_min: (log.workout_duration_min || 0) + (delta * 45) / 7,
-    }),
-  },
-  veg: {
-    label: 'Vegetables',
-    unit: 'serving(s)/day more',
+function scoreForLog(log, streakDays) {
+  return getFutureSelfBreakdown(log, [], streakDays).score
+}
+
+// ~45min/session, matching WORKOUT_FACTOR's own denominator in scoring.js —
+// used only to translate "sessions/week" into a daily-average minute value.
+const MIN_PER_SESSION = 45
+const sessionsToDailyMin = (sessions) => (sessions * MIN_PER_SESSION) / 7
+const dailyMinToSessions = (mins) => Math.round((mins * 7) / MIN_PER_SESSION)
+
+/**
+ * Each scenario represents a real-life action, not an abstract pillar
+ * slider. `getCurrent` reads the baseline's real value in scenario units;
+ * `suggestedTarget` is the "Try it" default; `apply` returns a NEW log
+ * with that field set to the given value (never mutates).
+ */
+export const SCENARIOS = [
+  {
+    key: 'veg',
+    icon: '🥗',
+    label: 'Eat more vegetables',
+    unit: 'servings/day',
     min: 0,
     max: 4,
     step: 1,
-    apply: (log, delta) => ({ ...log, vegetable_servings: (log.vegetable_servings || 0) + delta }),
+    getCurrent: (b) => Math.round(b.vegetable_servings),
+    suggestedTarget: (b) => Math.min(4, Math.round(b.vegetable_servings) + 1),
+    formatValue: (v) => (v >= 4 ? '4+' : `${v}`),
+    apply: (log, v) => ({ ...log, vegetable_servings: v }),
   },
-  focus: {
-    label: 'Focus time',
-    unit: 'min/day more',
+  {
+    key: 'workouts',
+    icon: '🏃',
+    label: 'Exercise consistently',
+    unit: 'days/week',
     min: 0,
-    max: 60,
-    step: 5,
-    apply: (log, delta) => ({ ...log, focus_minutes: (log.focus_minutes || 0) + delta }),
+    max: 7,
+    step: 1,
+    getCurrent: (b) => dailyMinToSessions(b.workout_duration_min),
+    suggestedTarget: (b) => Math.min(7, dailyMinToSessions(b.workout_duration_min) + 1),
+    formatValue: (v) => `${v}`,
+    apply: (log, v) => ({ ...log, workout_duration_min: sessionsToDailyMin(v) }),
   },
+  {
+    key: 'sleep',
+    icon: '😴',
+    label: 'Improve sleep',
+    unit: 'hours',
+    min: 5,
+    max: 9.5,
+    step: 0.25,
+    getCurrent: (b) => Math.round(b.sleep_hours * 4) / 4,
+    // Fixed target of 8h — the actual optimum of the bell curve — not
+    // "current + delta", so this never recommends sleeping past optimal.
+    suggestedTarget: () => 8,
+    formatValue: (v) => `${v}h`,
+    apply: (log, v) => ({ ...log, sleep_hours: v }),
+  },
+  {
+    key: 'focus',
+    icon: '🎯',
+    label: 'Focus',
+    unit: 'min/day',
+    min: 0,
+    max: 180,
+    step: 5,
+    getCurrent: (b) => Math.round(b.focus_minutes / 5) * 5,
+    suggestedTarget: (b) => Math.min(180, Math.round(b.focus_minutes / 5) * 5 + 30),
+    formatValue: (v) => `${v} min`,
+    apply: (log, v) => ({ ...log, focus_minutes: v }),
+  },
+  {
+    key: 'hydration',
+    icon: '💧',
+    label: 'Hydration',
+    unit: 'ml/day',
+    min: 500,
+    max: 4000,
+    step: 250,
+    getCurrent: (b) => Math.round(b.water_ml / 250) * 250,
+    suggestedTarget: (b) => Math.min(4000, Math.round(b.water_ml / 250) * 250 + 500),
+    formatValue: (v) => `${(v / 1000).toFixed(1)}L`,
+    apply: (log, v) => ({ ...log, water_ml: v }),
+  },
+]
+
+/**
+ * Runs every scenario at ITS suggested target and ranks by impact —
+ * powers both "biggest opportunity" (top result) and the "what's shaping
+ * your Future Self" ranked list. Impact is rounded to 1 decimal, honest
+ * about being small.
+ */
+export function rankScenarios(baseline, streakDays) {
+  const baselineScore = scoreForLog(baseline, streakDays)
+
+  return SCENARIOS.map((s) => {
+    const current = s.getCurrent(baseline)
+    const target = s.suggestedTarget(baseline)
+    const simulatedLog = s.apply(baseline, target)
+    const impact = Math.round((scoreForLog(simulatedLog, streakDays) - baselineScore) * 10) / 10
+    return { ...s, current, target, impact }
+  }).sort((a, b) => b.impact - a.impact)
 }
 
 /**
- * Runs a baseline log (optionally with lever deltas applied) through the
- * real, unmodified scoring pipeline. `deltas` = { sleep: 0.5, workouts: 1, ... }
+ * Live score for a single scenario at an arbitrary (slider) value —
+ * used while the user is dragging, not just at the suggested target.
  */
-export function simulateFSS(baselineLog, deltas, streakDays) {
-  let log = { ...baselineLog }
-  Object.entries(deltas).forEach(([key, delta]) => {
-    if (!delta) return
-    const lever = WHATIF_LEVERS[key]
-    if (lever) log = lever.apply(log, delta)
-  })
-  return getFutureSelfBreakdown(log, [], streakDays)
+export function simulateScenario(baseline, scenario, value, streakDays) {
+  const baselineScore = scoreForLog(baseline, streakDays)
+  const simulatedLog = scenario.apply(baseline, value)
+  const simulatedScore = scoreForLog(simulatedLog, streakDays)
+  return {
+    baselineScore,
+    simulatedScore,
+    delta: Math.round((simulatedScore - baselineScore) * 10) / 10,
+  }
 }
