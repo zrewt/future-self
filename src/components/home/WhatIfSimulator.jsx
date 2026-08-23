@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useUserStore } from '../../store/useUserStore'
 import { buildBaselineLog, rankScenarios, simulateScenario } from '../../utils/whatIfSimulator'
+import { scenarioToHabit } from '../../utils/habitSuggestions'
 
 export default function WhatIfSimulator({ recentLogs, streakDays }) {
+  const { habits, addHabit } = useUserStore()
+  const [addingHabit, setAddingHabit] = useState(false)
+
   const baseline = useMemo(() => buildBaselineLog(recentLogs), [recentLogs])
   const ranked = useMemo(
     () => (baseline ? rankScenarios(baseline, streakDays) : []),
@@ -13,8 +18,6 @@ export default function WhatIfSimulator({ recentLogs, streakDays }) {
 
   const activeScenario = ranked.find((s) => s.key === activeKey) || null
 
-  // When a scenario becomes active (or ranked recomputes), default the
-  // slider to its suggested target.
   useEffect(() => {
     if (activeScenario) setValue(activeScenario.target)
   }, [activeKey]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -36,8 +39,6 @@ export default function WhatIfSimulator({ recentLogs, streakDays }) {
   }
 
   const biggest = ranked[0]
-  const baselineScore = ranked[0] ? (live?.baselineScore ?? null) : null
-  const currentFSS = live ? live.baselineScore : (ranked[0] ? simulateScenario(baseline, ranked[0], ranked[0].current, streakDays).baselineScore : 0)
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4">
@@ -48,7 +49,6 @@ export default function WhatIfSimulator({ recentLogs, streakDays }) {
         See what could happen if you changed one part of your routine.
       </p>
 
-      {/* ── No scenario selected: lead with the biggest opportunity ── */}
       {!activeScenario && biggest && (
         <div className="mb-4">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Your biggest opportunity</p>
@@ -78,7 +78,6 @@ export default function WhatIfSimulator({ recentLogs, streakDays }) {
         </div>
       )}
 
-      {/* ── Active scenario: live slider ── */}
       {activeScenario && live && (
         <div className="mb-4">
           <button
@@ -122,10 +121,34 @@ export default function WhatIfSimulator({ recentLogs, streakDays }) {
           <p className="text-[10px] text-slate-400 dark:text-[#5A7050] font-medium mt-3">
             Estimated impact — based on your recent habits and Qyven's scoring model, not a guarantee.
           </p>
+
+          {(() => {
+            const habitDraft = scenarioToHabit(activeScenario)
+            const alreadyHave = habits.some(
+              (h) => h.pillar_tag === habitDraft?.pillar_tag && h.name.toLowerCase() === habitDraft?.name.toLowerCase()
+            )
+            if (!habitDraft || alreadyHave) return null
+            return (
+              <button
+                type="button"
+                disabled={addingHabit}
+                onClick={async () => {
+                  setAddingHabit(true)
+                  await addHabit({
+                    ...habitDraft,
+                    reason: `You tried this in the What-If Simulator — estimated impact +${live.delta} Future Self.`,
+                  })
+                  setAddingHabit(false)
+                }}
+                className="mt-2 text-xs font-bold text-[#7c3aed] dark:text-[#00E87A] underline"
+              >
+                {addingHabit ? 'Adding…' : '+ Add to my habits'}
+              </button>
+            )
+          })()}
         </div>
       )}
 
-      {/* ── What would you change? — quick switcher ── */}
       <div className="mb-4">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">What would you change?</p>
         <div className="flex gap-2 flex-wrap">
@@ -145,7 +168,6 @@ export default function WhatIfSimulator({ recentLogs, streakDays }) {
         </div>
       </div>
 
-      {/* ── Biggest levers ranking ── */}
       <div className="pt-3 border-t border-slate-100 dark:border-white/8">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">What's shaping your Future Self?</p>
         <div className="space-y-1.5">

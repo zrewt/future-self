@@ -8,6 +8,7 @@ import FoodDetailSection from '../components/log/FoodDetailSection'
 import ServingStepper from '../components/log/ServingStepper'
 import ShieldNotice from '../components/log/ShieldNotice'
 import QuickTierSelect from '../components/log/QuickTierSelect'
+import MyHabitsSection from '../components/log/MyHabitsSection'
 import { TextField, SelectField } from '../components/log/TextDetailFields'
 import {
   buildAllScores,
@@ -41,7 +42,6 @@ const MEDITATION_STYLES = [
   { value: 'other',      label: 'Other' },
 ]
 
-// ── Qualitative label — used everywhere instead of a bare number ──────────────
 function scoreLabel(score) {
   if (score >= 85) return 'Excellent'
   if (score >= 70) return 'Great'
@@ -58,8 +58,6 @@ function dailyScoreMessage(score) {
   return 'Rough day — showing up tomorrow is what counts.'
 }
 
-// ── Quick-tier configs ──────────────────────────────────────────────────────
-
 const NUTRITION_TIERS = [
   { value: 'needs_work', label: 'Needs Work', apply: (f) => ({ ...f, fruit_servings: 0, vegetable_servings: 0, protein_servings: 1, processed_servings: 3 }) },
   { value: 'okay',       label: 'Okay',       apply: (f) => ({ ...f, fruit_servings: 1, vegetable_servings: 1, protein_servings: 1, processed_servings: 2 }) },
@@ -67,8 +65,6 @@ const NUTRITION_TIERS = [
   { value: 'great',      label: 'Great',      apply: (f) => ({ ...f, fruit_servings: 3, vegetable_servings: 4, protein_servings: 3, processed_servings: 0 }) },
 ]
 
-// Rest/Light/Workout only — intensity slider inside Workout now carries what
-// "Hard" used to represent, so activity-level and intensity aren't conflated.
 const FITNESS_TIERS = [
   { value: 'rest',    label: 'Rest',    apply: (f) => ({ ...f, exercise_type: 'rest', workout_duration_min: 0, workout_intensity: 1 }) },
   { value: 'light',   label: 'Light',   apply: (f) => ({ ...f, exercise_type: f.exercise_type === 'rest' ? 'yoga' : f.exercise_type, workout_duration_min: 20, workout_intensity: 3 }) },
@@ -141,7 +137,6 @@ const MEAL_TRIGGERS = [
   { value: 'snack',     label: '+ Snack' },
 ]
 
-// ── XP breakdown for animated success screen ──────────────────────────────────
 function buildXPBreakdown(log, streakForCalc, questXP, foods, bonusXP) {
   const lines = []
   if (calcFitnessFromWorkout(log) >= 50 || (log.workout_duration_min || 0) >= 20)
@@ -170,7 +165,6 @@ function buildXPBreakdown(log, streakForCalc, questXP, foods, bonusXP) {
   return lines
 }
 
-// ── Numeric input helper (still used for exact overrides) ─────────────────────
 function numericFieldProps(value, onChange) {
   return {
     value: value === 0 ? '' : value,
@@ -183,7 +177,6 @@ function numericFieldProps(value, onChange) {
   }
 }
 
-// ── Streak computation — unchanged ──────────────────────────────────────────
 function computeStreak(profile, today, isUpdateSameDay) {
   if (isUpdateSameDay) {
     return {
@@ -267,7 +260,6 @@ function computeStreakForced(profile, today, graceAccepted) {
   }
 }
 
-// ── Smart default form ──────────────────────────────────────────────────────
 function getDefaultForm(recentLogs, todayLog) {
   const yesterday = recentLogs?.[0]
   if (!yesterday || todayLog) {
@@ -292,7 +284,6 @@ function getDefaultForm(recentLogs, todayLog) {
   }
 }
 
-// ── Animated XP success screen — unchanged ─────────────────────────────────
 function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
   const [visible, setVisible] = useState(0)
   const [shown, setShown]     = useState(false)
@@ -350,7 +341,6 @@ function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
   )
 }
 
-// ── Grace window prompt — unchanged ─────────────────────────────────────────
 function GracePrompt({ missedDate, onAnswer, loading }) {
   const formatted = new Date(`${missedDate}T12:00:00`).toLocaleDateString(undefined, {
     weekday: 'long', month: 'short', day: 'numeric',
@@ -390,7 +380,23 @@ function GracePrompt({ missedDate, onAnswer, loading }) {
   )
 }
 
-// ── Daily Score hero — new, top of page ────────────────────────────────────
+function StreakBadge({ count }) {
+  if (!count || count < 2) return null
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-coral bg-coral/10 rounded-full px-1.5 py-0.5 ml-2">
+      🔥{count}
+    </span>
+  )
+}
+
+function FocusBadge() {
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#7c3aed] bg-[#7c3aed]/10 rounded-full px-2 py-0.5 ml-2">
+      🎯 Your focus
+    </span>
+  )
+}
+
 function DailyScoreHero({ score, deltaVsAvg }) {
   return (
     <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-6 mb-4 text-center">
@@ -417,7 +423,6 @@ function DailyScoreHero({ score, deltaVsAvg }) {
   )
 }
 
-// ── Simplified section header: "{score} · {label}" ─────────────────────────
 function SectionHeader({ icon, title, score, isFocusPillar }) {
   return (
     <div className="flex items-center justify-between mb-3">
@@ -451,7 +456,6 @@ function SectionCard({ pillar, focusPillar, children }) {
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function Log() {
   const navigate = useNavigate()
   const {
@@ -527,7 +531,6 @@ export default function Log() {
   const sleepPreview     = calcSleepScore(previewLog)
   const focusPreview     = calcFocusScore(previewLog)
 
-  // Recent average (previous days, excluding today) for the "vs average" delta
   const recentAvg = useMemo(() => {
     const prior = (recentLogs || []).filter((l) => l.future_self_score != null).slice(0, 7)
     if (!prior.length) return null
@@ -594,7 +597,13 @@ export default function Log() {
 
   const glasses = Math.min(8, Math.floor(form.water_ml / 250))
 
-  // ── Build DB row ──────────────────────────────────────────────────────────
+  function formatScreenTime(mins) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    if (h === 0) return `${m}m`
+    return `${h}h ${m}m`
+  }
+
   function buildRow(userId, today, scores, xp_earned, is_perfect_day, mergedDetails) {
     return {
       user_id:              userId,
@@ -828,13 +837,24 @@ export default function Log() {
                   </button>
                 ))}
               </div>
-              <FoodDetailSection
-                foods={details.foods}
-                activeMeal={activeMeal}
-                onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
-                onServingDetected={handleServingDetected}
-                onServingRemoved={handleServingRemoved}
-              />
+              {activeMeal && (
+                <FoodDetailSection
+                  foods={details.foods}
+                  activeMeal={activeMeal}
+                  onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+                  onServingDetected={handleServingDetected}
+                  onServingRemoved={handleServingRemoved}
+                />
+              )}
+              {!activeMeal && details.foods.length > 0 && (
+                <FoodDetailSection
+                  foods={details.foods}
+                  activeMeal={null}
+                  onChange={(foods) => setDetails((d) => ({ ...d, foods }))}
+                  onServingDetected={handleServingDetected}
+                  onServingRemoved={handleServingRemoved}
+                />
+              )}
             </DetailToggle>
           </DetailToggle>
         </SectionCard>
@@ -848,7 +868,7 @@ export default function Log() {
             value={activeFitnessTier}
             onSelect={applyTier}
           />
-          {activeFitnessTier === 'workout' && (
+          {activeFitnessTier && FITNESS_EXPAND_TIERS.has(activeFitnessTier) && (
             <div className="mt-4 pt-4 border-t border-slate-100/80 space-y-3 animate-fade-in">
               <button
                 type="button"
@@ -1030,10 +1050,7 @@ export default function Log() {
 
         {/* ── Mood ── */}
         <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">😊</span>
-            <label className="label-text mb-0">Mood</label>
-          </div>
+          <label className="label-text">Mood</label>
           <div className="flex flex-wrap gap-1.5 justify-between">
             {MOOD_EMOJIS.map((emoji, i) => (
               <button
@@ -1066,6 +1083,9 @@ export default function Log() {
             />
           </DetailToggle>
         </div>
+
+        {/* ── My Habits ── */}
+        <MyHabitsSection />
 
         {/* ── Add more ── */}
         <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
