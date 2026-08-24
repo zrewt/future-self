@@ -8,6 +8,7 @@ import {
   getWeekProgress,
   getTodayLogForHabit,
   isHabitLogComplete,
+  getHabitStep,
 } from '../../utils/habits'
 import { getSuggestedHabit } from '../../utils/habitSuggestions'
 
@@ -25,7 +26,7 @@ function dismissForAWeek() {
   localStorage.setItem(DISMISS_KEY, until.toISOString())
 }
 
-function SuggestedHabitCard({ onAdded }) {
+function SuggestedHabitCard() {
   const { recentLogs, profile, habits, addHabit } = useUserStore()
   const [dismissed, setDismissed] = useState(isDismissed())
   const [adding, setAdding] = useState(false)
@@ -41,7 +42,6 @@ function SuggestedHabitCard({ onAdded }) {
     setAdding(true)
     await addHabit({ ...suggestion.habit, reason: suggestion.reason })
     setAdding(false)
-    onAdded?.()
   }
 
   function handleDismiss() {
@@ -83,38 +83,45 @@ function SuggestedHabitCard({ onAdded }) {
   )
 }
 
-function HabitRow({ habit, habitLogs }) {
+function HabitRow({ habit, habitLogs, onEdit }) {
   const { logHabitProgress } = useUserStore()
   const [showWhy, setShowWhy] = useState(false)
   const today = localDateISO()
   const todayLog = getTodayLogForHabit(habit, habitLogs, today)
   const done = isHabitLogComplete(habit, todayLog)
   const { completed, target } = getWeekProgress(habit, habitLogs)
+  const step = getHabitStep(habit)
 
-  function toggleBoolean() {
+  function toggleBoolean(e) {
+    e.stopPropagation()
     logHabitProgress(habit, done ? 0 : 1, !done)
   }
 
-  function adjustValue(delta) {
+  function adjustValue(e, delta) {
+    e.stopPropagation()
     const current = todayLog?.value || 0
     const next = Math.max(0, current + delta)
     const nextDone = habit.target_value ? next >= habit.target_value : next > 0
     logHabitProgress(habit, next, nextDone)
   }
 
-  const step = habit.tracking_type === 'distance' ? 0.5 : habit.tracking_type === 'amount' ? 250 : 5
-
   return (
     <div className="py-3 border-b border-slate-100 last:border-b-0">
-      <div className="flex items-center gap-3">
+      <div
+        className="flex items-center gap-3 cursor-pointer"
+        onClick={() => onEdit(habit)}
+      >
         <span className="text-xl shrink-0">{habit.icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{habit.name}</p>
+            {habit.one_time && (
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide shrink-0">One-time</span>
+            )}
             {habit.reason && (
               <button
                 type="button"
-                onClick={() => setShowWhy((v) => !v)}
+                onClick={(e) => { e.stopPropagation(); setShowWhy((v) => !v) }}
                 className="text-[10px] text-[#7c3aed] font-bold shrink-0"
               >
                 💡 Why
@@ -122,7 +129,9 @@ function HabitRow({ habit, habitLogs }) {
             )}
           </div>
           <p className="text-[10px] text-slate-400 font-medium">
-            {completed}/{target} this week
+            {habit.one_time
+              ? 'Tap to edit or delete'
+              : `${completed}/${target} this week`}
             {habit.tracking_type !== 'boolean' && todayLog?.value ? ` · ${todayLog.value}${TRACKING_TYPES[habit.tracking_type].unit || ''} today` : ''}
           </p>
         </div>
@@ -139,9 +148,9 @@ function HabitRow({ habit, habitLogs }) {
           </button>
         ) : (
           <div className="flex items-center gap-1.5 shrink-0">
-            <button type="button" onClick={() => adjustValue(-step)} className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">−</button>
+            <button type="button" onClick={(e) => adjustValue(e, -step)} className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">−</button>
             <span className="text-xs font-extrabold text-[#7c3aed] tabular-nums w-8 text-center">{todayLog?.value || 0}</span>
-            <button type="button" onClick={() => adjustValue(step)} className="w-7 h-7 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] text-sm font-bold">+</button>
+            <button type="button" onClick={(e) => adjustValue(e, step)} className="w-7 h-7 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] text-sm font-bold">+</button>
           </div>
         )}
       </div>
@@ -154,58 +163,42 @@ function HabitRow({ habit, habitLogs }) {
   )
 }
 
-function AddHabitFlow({ onClose }) {
-  const { addHabit } = useUserStore()
-  const [step, setStep] = useState('browse')
+// Shared form for both creating a custom habit and editing an existing one.
+function HabitForm({ initial, onSave, onCancel, onDelete }) {
   const [form, setForm] = useState({
-    name: '', icon: '⭐', tracking_type: 'boolean',
-    target_value: '', target_unit: '', frequency_per_week: 7,
-    difficulty: 'moderate', pillar_tag: null,
+    name: initial?.name || '',
+    icon: initial?.icon || '⭐',
+    tracking_type: initial?.tracking_type || 'boolean',
+    target_value: initial?.target_value ?? '',
+    target_unit: initial?.target_unit || '',
+    frequency_per_week: initial?.frequency_per_week || 7,
+    difficulty: initial?.difficulty || 'moderate',
+    pillar_tag: initial?.pillar_tag || null,
+    one_time: initial?.one_time || false,
   })
 
-  async function saveHabit(habitData) {
-    await addHabit({
-      name: habitData.name,
-      icon: habitData.icon || '⭐',
-      tracking_type: habitData.tracking_type,
-      target_value: habitData.target_value ? Number(habitData.target_value) : null,
-      target_unit: habitData.target_unit || null,
-      frequency_per_week: Number(habitData.frequency_per_week) || 7,
-      difficulty: habitData.difficulty || 'moderate',
-      pillar_tag: habitData.pillar_tag || null,
-    })
-    onClose()
+  function toggleOneTime() {
+    setForm((f) => ({
+      ...f,
+      one_time: !f.one_time,
+      // One-time tasks are just "did you do it" — force boolean tracking
+      // so there's no weekly-frequency concept to configure.
+      tracking_type: !f.one_time ? 'boolean' : f.tracking_type,
+    }))
   }
 
-  if (step === 'browse') {
-    return (
-      <div className="space-y-4">
-        {HABIT_CATEGORIES.map((cat) => (
-          <div key={cat.key}>
-            <p className="text-xs font-bold text-slate-500 mb-2">{cat.label}</p>
-            <div className="flex flex-wrap gap-2">
-              {cat.presets.map((preset) => (
-                <button
-                  key={preset.name}
-                  type="button"
-                  onClick={() => saveHabit({ ...preset, difficulty: 'moderate' })}
-                  className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-[#7c3aed]/10 hover:text-[#7c3aed] transition-colors"
-                >
-                  {preset.icon} {preset.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => setStep('custom')}
-          className="text-xs font-bold text-[#7c3aed] underline"
-        >
-          ✨ Create your own
-        </button>
-      </div>
-    )
+  function handleSave() {
+    onSave({
+      name: form.name,
+      icon: form.icon || '⭐',
+      tracking_type: form.tracking_type,
+      target_value: form.tracking_type === 'boolean' ? null : (form.target_value ? Number(form.target_value) : null),
+      target_unit: form.tracking_type === 'boolean' ? null : (form.target_unit || null),
+      frequency_per_week: form.one_time ? 1 : (Number(form.frequency_per_week) || 7),
+      difficulty: form.difficulty || 'moderate',
+      pillar_tag: form.pillar_tag || null,
+      one_time: form.one_time,
+    })
   }
 
   return (
@@ -220,24 +213,41 @@ function AddHabitFlow({ onClose }) {
           className="input-field text-sm mt-1"
         />
       </div>
-      <div>
-        <label className="text-xs font-semibold text-slate-500">How do you want to track it?</label>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {Object.entries(TRACKING_TYPES).map(([key, t]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, tracking_type: key }))}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                form.tracking_type === key ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+
+      <button
+        type="button"
+        onClick={toggleOneTime}
+        className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold border ${
+          form.one_time ? 'bg-[#7c3aed]/10 border-[#7c3aed]/30 text-[#7c3aed]' : 'bg-slate-50 border-slate-200 text-slate-500'
+        }`}
+      >
+        <span>One-time task (doesn't repeat)</span>
+        <span className={`w-9 h-5 rounded-full relative transition-all ${form.one_time ? 'bg-[#7c3aed]' : 'bg-slate-300'}`}>
+          <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${form.one_time ? 'left-4' : 'left-0.5'}`} />
+        </span>
+      </button>
+
+      {!form.one_time && (
+        <div>
+          <label className="text-xs font-semibold text-slate-500">How do you want to track it?</label>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {Object.entries(TRACKING_TYPES).map(([key, t]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, tracking_type: key }))}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                  form.tracking_type === key ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-      {form.tracking_type !== 'boolean' && (
+      )}
+
+      {!form.one_time && form.tracking_type !== 'boolean' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-slate-500">Target</label>
@@ -261,23 +271,27 @@ function AddHabitFlow({ onClose }) {
           </div>
         </div>
       )}
-      <div>
-        <label className="text-xs font-semibold text-slate-500">Frequency (days/week)</label>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setForm((f) => ({ ...f, frequency_per_week: n }))}
-              className={`w-9 h-9 rounded-full text-xs font-bold ${
-                form.frequency_per_week === n ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {n}×
-            </button>
-          ))}
+
+      {!form.one_time && (
+        <div>
+          <label className="text-xs font-semibold text-slate-500">Frequency (days/week)</label>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, frequency_per_week: n }))}
+                className={`w-9 h-9 rounded-full text-xs font-bold ${
+                  form.frequency_per_week === n ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {n}×
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
       <div>
         <label className="text-xs font-semibold text-slate-500">Difficulty</label>
         <div className="flex gap-2 mt-1">
@@ -295,51 +309,125 @@ function AddHabitFlow({ onClose }) {
           ))}
         </div>
       </div>
+
       <div className="flex gap-2 pt-2">
-        <button type="button" onClick={() => setStep('browse')} className="btn-secondary !py-2 !px-4 text-xs">← Back</button>
+        <button type="button" onClick={onCancel} className="btn-secondary !py-2 !px-4 text-xs">Cancel</button>
         <button
           type="button"
           disabled={!form.name.trim()}
-          onClick={() => saveHabit(form)}
+          onClick={handleSave}
           className="btn-primary !py-2 !px-4 text-xs flex-1"
         >
-          Add habit
+          {onDelete ? 'Save changes' : 'Add habit'}
         </button>
       </div>
+
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="w-full text-xs font-bold text-[#e0527a] py-2"
+        >
+          🗑️ Delete habit
+        </button>
+      )}
     </div>
+  )
+}
+
+function AddHabitFlow({ onClose }) {
+  const { addHabit } = useUserStore()
+  const [step, setStep] = useState('browse')
+
+  if (step === 'browse') {
+    return (
+      <div className="space-y-4">
+        {HABIT_CATEGORIES.map((cat) => (
+          <div key={cat.key}>
+            <p className="text-xs font-bold text-slate-500 mb-2">{cat.label}</p>
+            <div className="flex flex-wrap gap-2">
+              {cat.presets.map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={async () => {
+                    await addHabit({ ...preset, difficulty: 'moderate', one_time: false })
+                    onClose()
+                  }}
+                  className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-[#7c3aed]/10 hover:text-[#7c3aed] transition-colors"
+                >
+                  {preset.icon} {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setStep('custom')}
+          className="text-xs font-bold text-[#7c3aed] underline"
+        >
+          ✨ Create your own
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <HabitForm
+      onSave={async (habitData) => { await addHabit(habitData); onClose() }}
+      onCancel={() => setStep('browse')}
+    />
+  )
+}
+
+function EditHabitFlow({ habit, onClose }) {
+  const { updateHabit, archiveHabit } = useUserStore()
+
+  return (
+    <HabitForm
+      initial={habit}
+      onSave={async (habitData) => { await updateHabit(habit.id, habitData); onClose() }}
+      onCancel={onClose}
+      onDelete={async () => { await archiveHabit(habit.id); onClose() }}
+    />
   )
 }
 
 export default function MyHabitsSection() {
   const { habits, habitLogs } = useUserStore()
   const [adding, setAdding] = useState(false)
+  const [editingHabit, setEditingHabit] = useState(null)
 
   return (
     <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
       <div className="flex items-center justify-between mb-1">
         <span className="label-text mb-0">My Habits</span>
-        <button
-          type="button"
-          onClick={() => setAdding((v) => !v)}
-          className="text-xs font-bold text-[#7c3aed]"
-        >
-          {adding ? '✕ Close' : '+ Add habit'}
-        </button>
+        {!editingHabit && (
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            className="text-xs font-bold text-[#7c3aed]"
+          >
+            {adding ? '✕ Close' : '+ Add habit'}
+          </button>
+        )}
       </div>
 
-      {!adding && <SuggestedHabitCard />}
+      {!adding && !editingHabit && <SuggestedHabitCard />}
 
-      {habits.length === 0 && !adding && (
+      {habits.length === 0 && !adding && !editingHabit && (
         <p className="text-xs text-slate-500 font-medium py-3">
           Add habits for what YOU'RE working on — not just the core pillars.
         </p>
       )}
 
-      {!adding && habits.map((habit) => (
-        <HabitRow key={habit.id} habit={habit} habitLogs={habitLogs} />
+      {!adding && !editingHabit && habits.map((habit) => (
+        <HabitRow key={habit.id} habit={habit} habitLogs={habitLogs} onEdit={setEditingHabit} />
       ))}
 
       {adding && <AddHabitFlow onClose={() => setAdding(false)} />}
+      {editingHabit && <EditHabitFlow habit={editingHabit} onClose={() => setEditingHabit(null)} />}
     </div>
   )
 }

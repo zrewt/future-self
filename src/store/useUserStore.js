@@ -194,6 +194,31 @@ export const useUserStore = create((set, get) => ({
     set((state) => ({ habits: [...state.habits, data] }))
   },
 
+  // NEW — used by the edit flow. Optimistic update with rollback.
+  updateHabit: async (habitId, patch) => {
+    const userId = get().user?.id
+    if (!userId) return
+
+    const prev = get().habits
+    set({ habits: prev.map((h) => (h.id === habitId ? { ...h, ...patch } : h)) })
+
+    const { data, error } = await supabase
+      .from('habits')
+      .update(patch)
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('updateHabit failed:', error.message)
+      set({ habits: prev })
+      return
+    }
+
+    set((state) => ({ habits: state.habits.map((h) => (h.id === habitId ? data : h)) }))
+  },
+
   archiveHabit: async (habitId) => {
     const userId = get().user?.id
     if (!userId) return
@@ -264,6 +289,12 @@ export const useUserStore = create((set, get) => ({
 
       await supabase.from('users_profile').update({ total_xp: newTotalXP, level: newLevel }).eq('id', userId)
       set({ profile: { ...profile, total_xp: newTotalXP, level: newLevel } })
+
+      // NEW — one-time habits auto-archive on completion, so they don't
+      // linger on the Log page asking to be done again.
+      if (habit.one_time) {
+        await get().archiveHabit(habit.id)
+      }
     }
   },
 
