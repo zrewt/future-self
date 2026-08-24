@@ -52,6 +52,20 @@ function NavItem({ tab, compact = false }) {
   )
 }
 
+// NEW — the same brand mark used in the desktop sidebar, sized for a
+// compact top bar. Kept as its own component so both surfaces render
+// literally the same icon markup rather than two hand-tuned copies.
+function BrandMark({ size = 32 }) {
+  return (
+    <div
+      className="flex items-center justify-center rounded-xl text-sm font-extrabold text-white shrink-0 bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)] dark:bg-gradient-to-br dark:from-[#FF7AC6] dark:via-[#7F5AF0] dark:to-[#00E8C6]"
+      style={{ width: size, height: size }}
+    >
+      Q
+    </div>
+  )
+}
+
 export default function NavBar() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -71,6 +85,21 @@ export default function NavBar() {
 
   return (
     <>
+      {/* ── Mobile top bar — NEW: brand mark + wordmark, always visible ── */}
+      <header className="md:hidden fixed top-0 inset-x-0 z-50 flex items-center justify-between border-b border-[rgba(109,40,217,0.10)] bg-white/95 px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-white/10 dark:bg-[#141220]/95">
+        <NavLink to="/dashboard" className="flex items-center gap-2">
+          <BrandMark size={28} />
+          <span className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-[#F1EEF9]">Qyven</span>
+        </NavLink>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(109,40,217,0.10)] bg-white text-slate-600 dark:border-white/10 dark:bg-[#111509] dark:text-green"
+        >
+          <ThemeIcon className="w-[18px] h-[18px]" />
+        </button>
+      </header>
+
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-[rgba(109,40,217,0.10)] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl dark:border-white/10 dark:bg-[#141220]/95">
         <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
           {mobileTabs.map((tab) => <NavItem key={tab.to} tab={tab} compact />)}
@@ -79,7 +108,7 @@ export default function NavBar() {
 
       <aside className="hidden md:flex fixed left-5 top-5 bottom-5 z-50 w-[232px] flex-col rounded-2xl border border-[rgba(109,40,217,0.10)] bg-white p-3 shadow-[0_8px_30px_rgba(109,40,217,0.08)] dark:border-white/10 dark:bg-[#141220] dark:shadow-[0_12px_36px_rgba(0,0,0,0.28)]">
         <div className="flex items-center gap-3 px-2 py-3 mb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-extrabold text-white bg-[linear-gradient(135deg,#ff7ac6,#7c3aed,#00cdb4)] dark:bg-gradient-to-br dark:from-[#FF7AC6] dark:via-[#7F5AF0] dark:to-[#00E8C6]">Q</div>
+          <BrandMark size={36} />
           <div>
             <p className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-[#F1EEF9]">Qyven</p>
             <p className="text-[10px] font-medium text-slate-400 dark:text-[#8A8FA3]">Personal wellbeing</p>
@@ -110,10 +139,6 @@ export default function NavBar() {
           </button>
         </div>
       </aside>
-
-      <button type="button" onClick={toggleTheme} className="md:hidden fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-[rgba(109,40,217,0.10)] bg-white text-slate-600 shadow-[0_2px_10px_rgba(109,40,217,0.08)] dark:border-white/10 dark:bg-[#111509] dark:text-green">
-        <ThemeIcon className="w-5 h-5" />
-      </button>
     </>
   )
 }

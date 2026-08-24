@@ -26,7 +26,7 @@ function AppLayout() {
       <AmbientBackground />
       <div className="relative z-10">
         <NavBar />
-        <main className="relative px-4 pt-6 pb-28 md:pb-8 md:pl-[252px] max-w-2xl lg:max-w-3xl mx-auto animate-fade-in">
+        <main className="relative px-4 pt-20 md:pt-6 pb-28 md:pb-8 md:pl-[252px] max-w-2xl lg:max-w-3xl mx-auto animate-fade-in">
           <Outlet />
         </main>
       </div>
