@@ -32,13 +32,12 @@ function getCurrentWeekAvg(recentScores) {
   return Math.round(slice.reduce((a, b) => a + b, 0) / slice.length)
 }
 
-// Per-pillar colors — fixed semantic meaning in both modes
 const PILLAR_COLORS = {
-  nutrition_score: { bar: 'bg-[#00b8a0]',  text: 'text-[#00a591]',  glow: 'rgba(0,184,160,0.5)'   },
-  fitness_score:   { bar: 'bg-[#7c3aed]',  text: 'text-[#7c3aed]',  glow: 'rgba(124,58,237,0.5)'  },
-  energy_score:    { bar: 'bg-[#3b82c4]',  text: 'text-[#3b82c4]',  glow: 'rgba(59,130,196,0.5)'  },
-  focus_score:     { bar: 'bg-[#d97706]',  text: 'text-[#d97706]',  glow: 'rgba(217,119,6,0.5)'   },
-  longevity_score: { bar: 'bg-[#e0527a]',  text: 'text-[#e0527a]',  glow: 'rgba(224,82,122,0.5)'  },
+  nutrition_score: { bar: 'bg-[#00b8a0]',  text: 'text-[#00a591]',  ring: '#00b8a0' },
+  fitness_score:   { bar: 'bg-[#7c3aed]',  text: 'text-[#7c3aed]',  ring: '#7c3aed' },
+  energy_score:    { bar: 'bg-[#3b82c4]',  text: 'text-[#3b82c4]',  ring: '#3b82c4' },
+  focus_score:     { bar: 'bg-[#d97706]',  text: 'text-[#d97706]',  ring: '#d97706' },
+  longevity_score: { bar: 'bg-[#e0527a]',  text: 'text-[#e0527a]',  ring: '#e0527a' },
 }
 
 const PILLAR_CONFIG = {
@@ -63,6 +62,14 @@ const PILLAR_CONFIG = {
     tips: ['Sleep + nutrition compound', 'Hydration is key', 'Log meditation time'],
   },
 }
+
+const PILLAR_RING_LIST = [
+  { icon: '🥗', label: 'Nutrition', scoreKey: 'nutrition_score' },
+  { icon: '🏋️', label: 'Fitness',   scoreKey: 'fitness_score'   },
+  { icon: '💤', label: 'Sleep',     scoreKey: 'energy_score'    },
+  { icon: '🎯', label: 'Focus',     scoreKey: 'focus_score'     },
+  { icon: '🌿', label: 'Longevity', scoreKey: 'longevity_score' },
+]
 
 function getDailyEdge(log, questsDone, questCount) {
   if (!log?.future_self_score && log?.future_self_score !== 0) {
@@ -89,13 +96,30 @@ function getDailyEdge(log, questsDone, questCount) {
   return { label: 'Next best move', title: `${worst.label} is your weakest pillar today.`, detail: `Even a small improvement there moves your overall score more than polishing what's already strong.`, type: 'attention' }
 }
 
+// Picks the pillar that drove a given day's score highest — used in the
+// Recent Days list so each row has a quick "what carried this day" icon.
+function bestPillarForLog(log) {
+  let best = null
+  let bestVal = -1
+  for (const p of PILLAR_RING_LIST) {
+    const v = log[p.scoreKey] ?? 0
+    if (v > bestVal) { bestVal = v; best = p }
+  }
+  return best
+}
+
+function formatShortDate(iso) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-// NOTE: `score` here is the SMOOTHED Future Self Score, not the raw daily
-// composite. See `dailyScore` for today's raw number, shown separately.
-function ScoreRing({ score }) {
+// NEW — large, minimal hero ring. Lighter chrome than the old ScoreRing:
+// thinner stroke, no card border around it, meant to sit as the single
+// dominant element on the page (Cal-AI-style "one big number" hero).
+function HeroRing({ score, size = 168 }) {
   const { theme } = useTheme()
-  const radius = 40
+  const radius = (size - 14) / 2
   const circumference = 2 * Math.PI * radius
   const progress = (score / 100) * circumference
 
@@ -103,42 +127,104 @@ function ScoreRing({ score }) {
     ? score >= 70 ? '#00E8C6' : score >= 45 ? '#FFB830' : '#FF7AC6'
     : score >= 70 ? '#00cdb4' : score >= 45 ? '#7c3aed' : '#e0527a'
 
-  const trackColor = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(109,40,217,0.08)'
+  const trackColor = theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(109,40,217,0.07)'
 
   return (
-    <div className="relative w-28 h-28 flex items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" width="112" height="112" viewBox="0 0 112 112">
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg className="absolute inset-0 -rotate-90" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
-          <linearGradient id="dashScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="heroScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ff7ac6" />
             <stop offset="50%" stopColor="#7c3aed" />
             <stop offset="100%" stopColor="#00cdb4" />
           </linearGradient>
         </defs>
-        <circle cx="56" cy="56" r={radius} fill="none" stroke={trackColor} strokeWidth="6" />
-        <circle cx="56" cy="56" r={radius} fill="none" stroke={theme === 'dark' ? scoreColor : 'url(#dashScoreGradient)'}
-          strokeWidth="6" strokeLinecap="round"
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={trackColor} strokeWidth="8" />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none"
+          stroke={theme === 'dark' ? scoreColor : 'url(#heroScoreGradient)'}
+          strokeWidth="8" strokeLinecap="round"
           strokeDasharray={`${progress} ${circumference}`}
-          style={{ transition: 'stroke-dasharray 1s ease', filter: `drop-shadow(0 0 8px ${scoreColor}77)` }} />
+          style={{ transition: 'stroke-dasharray 1s ease', filter: `drop-shadow(0 0 10px ${scoreColor}66)` }}
+        />
       </svg>
       <div className="text-center z-10">
-        <p className="text-3xl font-extrabold tabular-nums leading-none" style={{ color: scoreColor }}>{score}</p>
-        <p className="text-[8px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide mt-0.5">FSS</p>
+        <p className="text-5xl font-extrabold tabular-nums leading-none" style={{ color: scoreColor }}>{score}</p>
+        <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide mt-1">Future Self</p>
       </div>
     </div>
   )
 }
 
-function PillarBar({ label, value, icon, scoreKey, highlight }) {
-  const colors = PILLAR_COLORS[scoreKey] || { bar: 'bg-slate-300', text: 'text-slate-500' }
+// NEW — small ring stat, Cal-AI-style, replacing the horizontal pillar bars.
+function MiniRing({ icon, label, value, color, highlight }) {
+  const size = 52
+  const radius = (size - 8) / 2
+  const circumference = 2 * Math.PI * radius
+  const progress = (value / 100) * circumference
+
   return (
-    <div className={`flex-1 min-w-0 rounded-lg px-1 py-0.5 transition-all ${highlight ? 'ring-1 ring-[#7c3aed]/30 dark:ring-[#00E8C6]/30 bg-[#7c3aed]/5 dark:bg-[#00E8C6]/5' : ''}`}>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] leading-none">{icon}</span>
-        <p className={`text-[10px] font-extrabold tabular-nums ${colors.text}`}>{value}</p>
+    <div className={`flex flex-col items-center gap-1 rounded-2xl px-1.5 py-2 transition-all ${highlight ? 'bg-[#7c3aed]/5 dark:bg-[#00E8C6]/5' : ''}`}>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg className="absolute inset-0 -rotate-90" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(109,40,217,0.08)" strokeWidth="4" className="dark:stroke-white/8" />
+          <circle
+            cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color}
+            strokeWidth="4" strokeLinecap="round"
+            strokeDasharray={`${progress} ${circumference}`}
+            style={{ transition: 'stroke-dasharray 0.7s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center text-sm">{icon}</div>
       </div>
-      <div className="h-1.5 bg-slate-100 dark:bg-white/8 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-700 ${colors.bar}`} style={{ width: `${value}%` }} />
+      <p className="text-[10px] font-extrabold tabular-nums text-slate-700 dark:text-[#E8F0E0]">{value}</p>
+      <p className="text-[8px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide leading-none">{label}</p>
+    </div>
+  )
+}
+
+// NEW — small circular badge for streak/level, Cal-AI-style compact top stats.
+function StatBadge({ icon, value, color }) {
+  return (
+    <div className="flex items-center gap-1 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/8 px-2.5 py-1.5">
+      <span style={{ color }}>{icon}</span>
+      <span className="text-xs font-extrabold tabular-nums text-slate-700 dark:text-[#E8F0E0]">{value}</span>
+    </div>
+  )
+}
+
+// NEW — Recent Days list, Cal-AI "recently uploaded" analog.
+function RecentDaysList({ recentLogs }) {
+  const days = (recentLogs || []).slice(0, 6)
+  if (!days.length) return null
+
+  return (
+    <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-4">
+      <p className="text-sm font-bold text-slate-800 dark:text-[#E8F0E0] mb-3">Recent days</p>
+      <div className="space-y-1.5">
+        {days.map((log) => {
+          const best = bestPillarForLog(log)
+          const colors = best ? PILLAR_COLORS[best.scoreKey] : null
+          return (
+            <div key={log.log_date} className="flex items-center gap-3 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] px-3 py-2.5">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0"
+                style={{ background: colors ? `${colors.ring}1A` : 'rgba(109,40,217,0.08)' }}
+              >
+                {best?.icon || '📋'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-800 dark:text-[#E8F0E0]">{formatShortDate(log.log_date)}</p>
+                <p className="text-[10px] text-slate-400 dark:text-[#5A7050] font-medium">
+                  {best ? `${best.label} carried this day` : 'Logged'}
+                </p>
+              </div>
+              <p className={`text-sm font-extrabold tabular-nums shrink-0 ${colors ? colors.text : 'text-slate-500'}`}>
+                {log.future_self_score ?? '—'}
+              </p>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -227,9 +313,7 @@ function WeekPaceCard({ recentScores }) {
   )
 }
 
-// NEW — Daily Score vs. smoothed FSS + Momentum, shown together so the
-// distinction is legible at a glance rather than just via the ring label.
-function DailyVsFutureCard({ dailyScore, smoothedFSS, momentum }) {
+function DailyVsFutureCard({ dailyScore, momentum }) {
   if (dailyScore == null) return null
   return (
     <div className="rounded-2xl px-4 py-3 flex items-center justify-between border bg-slate-50 dark:bg-[#141220] border-slate-200 dark:border-[#29263B]">
@@ -306,12 +390,8 @@ export default function Dashboard() {
 
   const level      = profile.level
   const levelName  = getLevelName(level)
-  const initial    = (profile.username || '?')[0].toUpperCase()
   const log        = todayLog || {}
 
-  // Daily Score = today's raw composite (unchanged meaning, just relabeled).
-  // Future Self Score (ring) = smoothed, slow-moving trailing indicator —
-  // derived client-side from trendLogs, NOT stored anywhere new.
   const dailyScore  = log.future_self_score ?? recentScores[0] ?? null
   const smoothedFSS = calcCurrentSmoothedFSS(trendLogs) ?? dailyScore ?? 0
   const momentum    = calcMomentum(trendLogs)
@@ -323,14 +403,6 @@ export default function Dashboard() {
   const focusScoreKey = focusPillar ? PILLAR_CONFIG[focusPillar]?.scoreKey : null
   const allQuestsDone = habitsDone === quests.length && quests.length > 0
   const pathConfig = getPathConfig(profile.avatar_class)
-
-  const pillars = [
-    { icon: '🥗', label: 'Nutrition', value: log.nutrition_score ?? 0, scoreKey: 'nutrition_score' },
-    { icon: '🏋️', label: 'Fitness',   value: log.fitness_score   ?? 0, scoreKey: 'fitness_score'   },
-    { icon: '💤', label: 'Sleep',     value: log.energy_score    ?? 0, scoreKey: 'energy_score'    },
-    { icon: '🎯', label: 'Focus',     value: log.focus_score     ?? 0, scoreKey: 'focus_score'     },
-    { icon: '🌿', label: 'Longevity', value: log.longevity_score ?? 0, scoreKey: 'longevity_score' },
-  ]
 
   const insightColors = {
     good:      'text-[#00a591] dark:text-[#00E8C6]',
@@ -345,87 +417,71 @@ export default function Dashboard() {
         {profile.username}, {pathConfig.tone.greetingPrefix}
       </p>
 
-      {/* ── Hero card ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
+      {/* ── Hero card — restyled Cal-AI-style: one big centered number,
+           minimal chrome, small stat badges instead of a dense header row ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] px-5 pt-4 pb-5">
         <div className="absolute top-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-white/6">
-          <Link to="/profile" className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-10 h-10 rounded-full text-white flex items-center justify-center text-base font-bold shrink-0"
-              style={{ background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)' }}
-            >
-              {initial}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-[#5A7050]">Dashboard</p>
-              <p className="font-extrabold text-slate-900 dark:text-[#E8F0E0] text-sm truncate">
-                {profile.username}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-500 dark:text-[#9DB890]">
-                Lv.{level} · {levelName}
-              </p>
-            </div>
+
+        <div className="flex items-center justify-between mb-2">
+          <Link to="/profile" className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-[#5A7050]">
+            Lv.{level} · {levelName}
           </Link>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="text-right">
-              <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Streak</p>
-              <div className="flex items-center gap-1 justify-end">
-                <IconFlame className="w-4 h-4 text-[#FFB830]" />
-                <span className="text-base font-extrabold tabular-nums text-slate-900 dark:text-[#E8F0E0]">
-                  {profile.current_streak}
-                </span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <StatBadge icon={<IconFlame className="w-3.5 h-3.5" />} value={profile.current_streak} color="#FFB830" />
             {(profile.streak_shields ?? 0) > 0 && (
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 dark:text-[#5A7050] uppercase tracking-wide">Shields</p>
-                <p className="text-base font-extrabold tabular-nums text-[#7c3aed] dark:text-[#00E8C6]">
-                  🛡️ {profile.streak_shields}
-                </p>
-              </div>
+              <StatBadge icon="🛡️" value={profile.streak_shields} color="#7c3aed" />
             )}
           </div>
         </div>
 
-        <div className="px-5 py-5">
-          <div className="flex items-center gap-4">
-            <ScoreRing score={smoothedFSS} />
-            <div className="flex-1 space-y-2 min-w-0">
-              {pillars.map((p) => (
-                <PillarBar key={p.label} {...p} highlight={focusScoreKey === p.scoreKey} />
-              ))}
-            </div>
-          </div>
-
-          {todayLog && (
-            <div className="flex items-center gap-3 mt-4 rounded-xl bg-slate-50/80 dark:bg-[#141220] border border-slate-200 dark:border-[#29263B] px-3 py-2.5">
-              {allQuestsDone ? (
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="text-[#00a591] dark:text-[#00E8C6] text-sm">✓</span>
-                  <p className="text-xs font-bold text-[#00a591] dark:text-[#00E8C6]">Daily checklist complete</p>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center gap-2">
-                  <div className="flex gap-0.5">
-                    {quests.map((q, i) => (
-                      <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#00b8a0] dark:bg-[#00E8C6]' : 'bg-slate-200 dark:bg-white/15'}`} />
-                    ))}
-                  </div>
-                  <p className="text-xs font-bold text-slate-600 dark:text-[#9DB890]">{habitsDone} of {quests.length} daily actions complete</p>
-                </div>
-              )}
-              <Link to="/log" className="text-xs font-bold text-[#7c3aed] dark:text-green shrink-0">Edit log</Link>
-            </div>
-          )}
+        <div className="flex justify-center py-2">
+          <HeroRing score={smoothedFSS} />
         </div>
 
-        <div className="px-5 pb-5">
+        <div className="grid grid-cols-5 gap-1 mt-3">
+          {PILLAR_RING_LIST.map((p) => (
+            <MiniRing
+              key={p.scoreKey}
+              icon={p.icon}
+              label={p.label}
+              value={log[p.scoreKey] ?? 0}
+              color={PILLAR_COLORS[p.scoreKey].ring}
+              highlight={focusScoreKey === p.scoreKey}
+            />
+          ))}
+        </div>
+
+        {todayLog && (
+          <div className="flex items-center gap-3 mt-4 rounded-xl bg-slate-50/80 dark:bg-[#141220] border border-slate-200 dark:border-[#29263B] px-3 py-2.5">
+            {allQuestsDone ? (
+              <div className="flex-1 flex items-center gap-2">
+                <span className="text-[#00a591] dark:text-[#00E8C6] text-sm">✓</span>
+                <p className="text-xs font-bold text-[#00a591] dark:text-[#00E8C6]">Daily checklist complete</p>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  {quests.map((q, i) => (
+                    <div key={i} className={`w-2 h-2 rounded-full ${q.done ? 'bg-[#00b8a0] dark:bg-[#00E8C6]' : 'bg-slate-200 dark:bg-white/15'}`} />
+                  ))}
+                </div>
+                <p className="text-xs font-bold text-slate-600 dark:text-[#9DB890]">{habitsDone} of {quests.length} daily actions complete</p>
+              </div>
+            )}
+            <Link to="/log" className="text-xs font-bold text-[#7c3aed] dark:text-green shrink-0">Edit log</Link>
+          </div>
+        )}
+
+        <div className="mt-4">
           <XPBar totalXP={profile.total_xp} level={level} />
         </div>
       </div>
 
       {/* ── Daily Score / Momentum ── */}
-      <DailyVsFutureCard dailyScore={dailyScore} smoothedFSS={smoothedFSS} momentum={momentum} />
+      <DailyVsFutureCard dailyScore={dailyScore} momentum={momentum} />
+
+      {/* ── Recent days — Cal-AI "recently uploaded" analog ── */}
+      <RecentDaysList recentLogs={recentLogs} />
 
       {focusPillar && (
         <FocusPillarCard pillar={focusPillar} todayLog={todayLog} />
