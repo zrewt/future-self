@@ -16,13 +16,20 @@
     color: #F1EEF9;
   }
 
+  /* NEW — removes the gray flash-on-tap Android/mobile Safari otherwise
+     show on every button/link tap, which is exactly the "vibe coded"
+     tell — our own tap-scale feedback below should be the only visible
+     press response, not the browser's default. */
+  button, a, [role='button'], input, textarea, select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* ── Range Inputs ── */
   input[type='range'] {
     @apply w-full h-2 rounded-full appearance-none cursor-pointer outline-none;
     background: rgba(127, 90, 240, 0.15);
   }
 
-  /* WebKit Track & Thumb */
   input[type='range']::-webkit-slider-runnable-track {
     @apply h-2 rounded-full;
     background: transparent;
@@ -33,14 +40,17 @@
     background: linear-gradient(135deg, #7F5AF0, #6D44E0);
     box-shadow: 0 0 12px rgba(127, 90, 240, 0.55);
     margin-top: -6px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
   }
 
   input[type='range']::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
   }
 
-  /* Firefox Track & Thumb */
+  input[type='range']::-webkit-slider-thumb:active {
+    transform: scale(1.25);
+  }
+
   input[type='range']::-moz-range-track {
     @apply h-2 rounded-full;
     background: transparent;
@@ -50,14 +60,13 @@
     @apply w-5 h-5 rounded-full border-2 border-white cursor-pointer box-border;
     background: linear-gradient(135deg, #7F5AF0, #6D44E0);
     box-shadow: 0 0 12px rgba(127, 90, 240, 0.55);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
   }
 
   input[type='range']::-moz-range-thumb:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
   }
 
-  /* Range Input Dark Mode */
   .dark input[type='range'] {
     background: rgba(0, 232, 122, 0.12);
   }
@@ -108,17 +117,27 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
                 box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
                 border-color 0.22s;
   }
 
-  .glass-card:hover {
-    transform: none;
-    box-shadow:
-      0 4px 16px rgba(15, 23, 42, 0.07),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
-    border-color: #CBD5E1;
+  /* CHANGED — hover lift was previously disabled (transform: none).
+     Now lifts on real hover-capable devices only (desktop mouse), guarded
+     by @media (hover: hover) so it doesn't create sticky "stuck hover"
+     states on mobile after a tap. */
+  @media (hover: hover) {
+    .glass-card:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 24px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      border-color: #CBD5E1;
+    }
+  }
+
+  .glass-card:active {
+    transform: scale(0.99);
   }
 
   .dark .glass-card {
@@ -131,14 +150,15 @@
       0 2px 8px rgba(0, 0, 0, 0.26);
   }
 
-  .dark .glass-card:hover {
-    border-color: rgba(127, 90, 240, 0.4);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 10px 28px rgba(0, 0, 0, 0.28);
+  @media (hover: hover) {
+    .dark .glass-card:hover {
+      border-color: rgba(127, 90, 240, 0.4);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 12px 28px rgba(0, 0, 0, 0.32);
+    }
   }
 
-  /* Accent Card */
   .accent-card {
     @apply glass-card relative overflow-hidden;
   }
@@ -161,7 +181,7 @@
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
       text-white font-semibold rounded-2xl py-3.5 px-6
-      active:scale-[0.97] transition-all duration-200
+      active:scale-[0.96] transition-all duration-200 ease-spring
       disabled:opacity-50 disabled:pointer-events-none select-none;
     background: linear-gradient(135deg, #7F5AF0 0%, #6D44E0 100%);
     box-shadow:
@@ -169,11 +189,13 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      0 6px 24px rgba(127, 90, 240, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  @media (hover: hover) {
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 6px 24px rgba(127, 90, 240, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
   }
 
   .dark .btn-primary {
@@ -184,26 +206,31 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
-  .dark .btn-primary:hover {
-    box-shadow:
-      0 6px 30px rgba(127, 90, 240, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  @media (hover: hover) {
+    .dark .btn-primary:hover {
+      box-shadow:
+        0 6px 30px rgba(127, 90, 240, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
       font-semibold rounded-2xl py-3.5 px-6 border
-      active:scale-[0.97] transition-all duration-200 select-none;
+      active:scale-[0.96] transition-all duration-200 ease-spring select-none;
     background: rgba(255, 255, 255, 0.9);
     border-color: rgba(127, 90, 240, 0.22);
     color: #6D44E0;
     box-shadow: 0 2px 8px rgba(127, 90, 240, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
-  .btn-secondary:hover {
-    background: rgba(127, 90, 240, 0.05);
-    border-color: rgba(127, 90, 240, 0.38);
-    box-shadow: 0 4px 16px rgba(127, 90, 240, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1);
+  @media (hover: hover) {
+    .btn-secondary:hover {
+      background: rgba(127, 90, 240, 0.05);
+      border-color: rgba(127, 90, 240, 0.38);
+      box-shadow: 0 4px 16px rgba(127, 90, 240, 0.12), inset 0 1px 0 rgba(255, 255, 255, 1);
+      transform: translateY(-1px);
+    }
   }
 
   .dark .btn-secondary {
@@ -213,30 +240,80 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
-  .dark .btn-secondary:hover {
-    background: rgba(0, 232, 198, 0.12);
-    border-color: rgba(0, 232, 198, 0.38);
-    color: #00E8C6;
+  @media (hover: hover) {
+    .dark .btn-secondary:hover {
+      background: rgba(0, 232, 198, 0.12);
+      border-color: rgba(0, 232, 198, 0.38);
+      color: #00E8C6;
+    }
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
-      font-medium rounded-xl py-2 px-4 transition-colors select-none;
+      font-medium rounded-xl py-2 px-4 transition-all duration-150 ease-spring
+      active:scale-95 select-none;
     color: #64748B;
   }
 
-  .btn-ghost:hover {
-    background: rgba(127, 90, 240, 0.07);
-    color: #7F5AF0;
+  @media (hover: hover) {
+    .btn-ghost:hover {
+      background: rgba(127, 90, 240, 0.07);
+      color: #7F5AF0;
+    }
   }
 
   .dark .btn-ghost {
     color: #C3C5DE;
   }
 
-  .dark .btn-ghost:hover {
-    background: rgba(127, 90, 240, 0.12);
-    color: #00E8C6;
+  @media (hover: hover) {
+    .dark .btn-ghost:hover {
+      background: rgba(127, 90, 240, 0.12);
+      color: #00E8C6;
+    }
+  }
+
+  /* NEW — for small pill/chip buttons (quick-tier selects, mood emoji,
+     habit category presets, meal-trigger buttons, etc.) — the single
+     shared press+hover treatment those should all use instead of each
+     one hand-rolling its own bare `active:scale-95`. */
+  .chip {
+    @apply inline-flex items-center justify-center rounded-full font-bold
+      transition-all duration-150 ease-spring select-none
+      active:scale-90 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  @media (hover: hover) {
+    .chip:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  /* NEW — for small circular icon-only buttons (theme toggle, +/- steppers,
+     checkmark completion buttons). */
+  .icon-btn {
+    @apply inline-flex items-center justify-center rounded-full
+      transition-all duration-150 ease-spring select-none
+      active:scale-88;
+  }
+
+  @media (hover: hover) {
+    .icon-btn:hover {
+      transform: translateY(-1px) scale(1.04);
+    }
+  }
+
+  /* NEW — applied to a completion control the instant it flips to "done"
+     (e.g. via a key remount or a conditionally-added class) for the
+     satisfying little overshoot pop instead of an instant color swap. */
+  .success-burst {
+    animation: successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* NEW — staggered list entrance. Pair with inline
+     style={{ animationDelay: `${i * 40}ms` }} per item. */
+  .pop-in {
+    animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   }
 
   /* ══════════════════════════════════════════
@@ -245,7 +322,7 @@
   .input-field {
     @apply w-full rounded-2xl px-4 py-3.5
       text-slate-900 placeholder:text-slate-400
-      focus:outline-none transition-all duration-200;
+      focus:outline-none transition-all duration-200 ease-spring-soft;
     background: rgba(245, 247, 242, 0.85);
     border: 1.5px solid #E2E6DC;
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -309,7 +386,7 @@
      METRIC TILES
   ══════════════════════════════════════════ */
   .metric-tile {
-    @apply flex-1 rounded-2xl px-3 py-2.5 text-center;
+    @apply flex-1 rounded-2xl px-3 py-2.5 text-center transition-transform duration-200 ease-spring;
     background: rgba(255, 255, 255, 0.78);
     border: 1px solid rgba(255, 255, 255, 0.65);
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
@@ -423,6 +500,17 @@
     }
   }
 
+  @keyframes successPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes popIn {
+    0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
   /* ══════════════════════════════════════════
      SAFE AREA
   ══════════════════════════════════════════ */
@@ -455,7 +543,6 @@
   .dark .app-bg .border-surface-border,
   .dark .app-bg .border-slate-200\/50 { border-color: rgba(0, 232, 122, 0.16); }
 
-  /* Primary overrides in dark → green */
   .dark .app-bg .text-primary,
   .dark .app-bg .text-primary-700 { color: #00E8C6; }
 
@@ -471,14 +558,12 @@
 
   .dark .app-bg .shadow-primary\/25 { box-shadow: 0 4px 12px rgba(0, 232, 198, 0.25); }
 
-  /* Teal overrides in dark */
   .dark .app-bg .text-teal,
   .dark .app-bg .text-teal-500 { color: #00E8C6; }
 
   .dark .app-bg .bg-teal\/10 { background-color: rgba(0, 232, 198, 0.08); }
   .dark .app-bg .border-teal\/20 { border-color: rgba(0, 232, 198, 0.18); }
 
-  /* Coral overrides in dark */
   .dark .app-bg .text-coral { color: #FF5C5C; }
   .dark .app-bg .bg-coral\/10 { background-color: rgba(255, 92, 92, 0.1); }
   .dark .app-bg .border-coral\/20 { border-color: rgba(255, 92, 92, 0.2); }
