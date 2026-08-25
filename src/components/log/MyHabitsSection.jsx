@@ -50,8 +50,8 @@ function SuggestedHabitCard() {
   }
 
   return (
-    <div className="rounded-2xl bg-[#7c3aed]/5 dark:bg-[#00E87A]/5 border border-[#7c3aed]/15 dark:border-[#00E87A]/15 p-4 mb-3">
-      <p className="text-[10px] font-bold text-[#7c3aed] dark:text-[#00E87A] uppercase tracking-wide mb-2">
+    <div className="rounded-2xl bg-[#6D5CE7]/5 dark:bg-[#00E87A]/5 border border-[#6D5CE7]/15 dark:border-[#00E87A]/15 p-4 mb-3">
+      <p className="text-[10px] font-bold text-[#6D5CE7] dark:text-[#00E87A] uppercase tracking-wide mb-2">
         One habit to consider
       </p>
       <div className="flex items-center gap-2 mb-1">
@@ -66,15 +66,14 @@ function SuggestedHabitCard() {
           type="button"
           onClick={handleAdd}
           disabled={adding}
-          className="text-xs font-bold text-white px-4 py-2 rounded-xl"
-          style={{ background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)' }}
+          className="btn-primary !py-2 !px-4 text-xs"
         >
           {adding ? 'Adding…' : 'Add habit'}
         </button>
         <button
           type="button"
           onClick={handleDismiss}
-          className="text-xs font-bold text-slate-400 dark:text-[#5A7050] px-3 py-2"
+          className="btn-ghost !py-2 !px-3 text-xs"
         >
           Not now
         </button>
@@ -106,7 +105,7 @@ function HabitRow({ habit, habitLogs, onEdit }) {
   }
 
   return (
-    <div className="py-3 border-b border-slate-100 last:border-b-0">
+    <div className="py-3 border-b border-slate-100 dark:border-[#29263B] last:border-b-0">
       <div
         className="flex items-center gap-3 cursor-pointer"
         onClick={() => onEdit(habit)}
@@ -122,7 +121,7 @@ function HabitRow({ habit, habitLogs, onEdit }) {
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setShowWhy((v) => !v) }}
-                className="text-[10px] text-[#7c3aed] font-bold shrink-0"
+                className="text-[10px] text-[#6D5CE7] dark:text-[#00E87A] font-bold shrink-0"
               >
                 💡 Why
               </button>
@@ -137,20 +136,34 @@ function HabitRow({ habit, habitLogs, onEdit }) {
         </div>
         {habit.tracking_type === 'boolean' ? (
           <button
+            key={String(done)}
             type="button"
             onClick={toggleBoolean}
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all shrink-0 ${
-              done ? 'text-white' : 'bg-slate-100 text-slate-300'
+            className={`icon-btn w-8 h-8 text-sm font-bold shrink-0 ${
+              done
+                ? 'text-white bg-[#6D5CE7] dark:bg-[#00E87A] success-burst'
+                : 'bg-slate-100 dark:bg-[#242033] text-slate-300 dark:text-[#5A5570]'
             }`}
-            style={done ? { background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)' } : undefined}
           >
             ✓
           </button>
         ) : (
           <div className="flex items-center gap-1.5 shrink-0">
-            <button type="button" onClick={(e) => adjustValue(e, -step)} className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-sm font-bold">−</button>
-            <span className="text-xs font-extrabold text-[#7c3aed] tabular-nums w-8 text-center">{todayLog?.value || 0}</span>
-            <button type="button" onClick={(e) => adjustValue(e, step)} className="w-7 h-7 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] text-sm font-bold">+</button>
+            <button
+              type="button"
+              onClick={(e) => adjustValue(e, -step)}
+              className="icon-btn w-7 h-7 bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE] text-sm font-bold"
+            >
+              −
+            </button>
+            <span className="text-xs font-extrabold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums w-8 text-center">{todayLog?.value || 0}</span>
+            <button
+              type="button"
+              onClick={(e) => adjustValue(e, step)}
+              className="icon-btn w-7 h-7 bg-[#6D5CE7]/10 dark:bg-[#00E87A]/10 text-[#6D5CE7] dark:text-[#00E87A] text-sm font-bold"
+            >
+              +
+            </button>
           </div>
         )}
       </div>
@@ -217,12 +230,14 @@ function HabitForm({ initial, onSave, onCancel, onDelete }) {
       <button
         type="button"
         onClick={toggleOneTime}
-        className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold border ${
-          form.one_time ? 'bg-[#7c3aed]/10 border-[#7c3aed]/30 text-[#7c3aed]' : 'bg-slate-50 border-slate-200 text-slate-500'
+        className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold border transition-all duration-150 ease-spring ${
+          form.one_time
+            ? 'bg-[#6D5CE7]/10 dark:bg-[#00E87A]/10 border-[#6D5CE7]/30 dark:border-[#00E87A]/30 text-[#6D5CE7] dark:text-[#00E87A]'
+            : 'bg-slate-50 dark:bg-[#242033] border-slate-200 dark:border-[#3A3650] text-slate-500 dark:text-[#9EA1BD]'
         }`}
       >
         <span>One-time task (doesn't repeat)</span>
-        <span className={`w-9 h-5 rounded-full relative transition-all ${form.one_time ? 'bg-[#7c3aed]' : 'bg-slate-300'}`}>
+        <span className={`w-9 h-5 rounded-full relative transition-all ${form.one_time ? 'bg-[#6D5CE7] dark:bg-[#00E87A]' : 'bg-slate-300 dark:bg-[#3A3650]'}`}>
           <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${form.one_time ? 'left-4' : 'left-0.5'}`} />
         </span>
       </button>
@@ -235,9 +250,10 @@ function HabitForm({ initial, onSave, onCancel, onDelete }) {
               <button
                 key={key}
                 type="button"
+                data-selected={form.tracking_type === key}
                 onClick={() => setForm((f) => ({ ...f, tracking_type: key }))}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                  form.tracking_type === key ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                className={`chip px-3 py-1.5 text-xs ${
+                  form.tracking_type === key ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE]'
                 }`}
               >
                 {t.label}
@@ -280,9 +296,10 @@ function HabitForm({ initial, onSave, onCancel, onDelete }) {
               <button
                 key={n}
                 type="button"
+                data-selected={form.frequency_per_week === n}
                 onClick={() => setForm((f) => ({ ...f, frequency_per_week: n }))}
-                className={`w-9 h-9 rounded-full text-xs font-bold ${
-                  form.frequency_per_week === n ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                className={`chip w-9 h-9 text-xs ${
+                  form.frequency_per_week === n ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE]'
                 }`}
               >
                 {n}×
@@ -299,9 +316,10 @@ function HabitForm({ initial, onSave, onCancel, onDelete }) {
             <button
               key={key}
               type="button"
+              data-selected={form.difficulty === key}
               onClick={() => setForm((f) => ({ ...f, difficulty: key }))}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold capitalize ${
-                form.difficulty === key ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+              className={`chip px-3 py-1.5 text-xs capitalize ${
+                form.difficulty === key ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE]'
               }`}
             >
               {key} · {xp} XP
@@ -354,7 +372,7 @@ function AddHabitFlow({ onClose }) {
                     await addHabit({ ...preset, difficulty: 'moderate', one_time: false })
                     onClose()
                   }}
-                  className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 hover:bg-[#7c3aed]/10 hover:text-[#7c3aed] transition-colors"
+                  className="chip px-3 py-1.5 text-xs bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE] hover:bg-[#6D5CE7]/10 hover:text-[#6D5CE7] dark:hover:bg-[#00E87A]/10 dark:hover:text-[#00E87A]"
                 >
                   {preset.icon} {preset.name}
                 </button>
@@ -365,7 +383,7 @@ function AddHabitFlow({ onClose }) {
         <button
           type="button"
           onClick={() => setStep('custom')}
-          className="text-xs font-bold text-[#7c3aed] underline"
+          className="text-xs font-bold text-[#6D5CE7] dark:text-[#00E87A] underline"
         >
           ✨ Create your own
         </button>
@@ -400,14 +418,14 @@ export default function MyHabitsSection() {
   const [editingHabit, setEditingHabit] = useState(null)
 
   return (
-    <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
+    <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-1">
         <span className="label-text mb-0">My Habits</span>
         {!editingHabit && (
           <button
             type="button"
             onClick={() => setAdding((v) => !v)}
-            className="text-xs font-bold text-[#7c3aed]"
+            className="text-xs font-bold text-[#6D5CE7] dark:text-[#00E87A]"
           >
             {adding ? '✕ Close' : '+ Add habit'}
           </button>

@@ -300,20 +300,11 @@ function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up px-4">
-      <div className="relative overflow-hidden rounded-3xl bg-white p-8 w-full max-w-sm text-center border border-[rgba(109,40,217,0.10)] shadow-[0_20px_60px_rgba(109,40,217,0.14)]">
-        <div className="absolute top-0 left-8 right-8 h-[3px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4]" />
+      <div className="accent-card p-8 w-full max-w-sm text-center">
         <ShieldNotice shieldEvent={shieldEvent} newShieldEarned={newShieldEarned} />
         <p className="text-4xl mb-1">🔒</p>
-        <p className="text-2xl font-extrabold text-slate-900 mb-1">Locked in!</p>
-        <p
-          className="text-3xl font-extrabold tabular-nums mb-6"
-          style={{
-            background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
+        <p className="text-2xl font-extrabold text-slate-900 dark:text-[#F1EEF9] mb-1">Locked in!</p>
+        <p className="text-3xl font-extrabold tabular-nums mb-6 text-[#6D5CE7] dark:text-[#00E87A]">
           +{displayedTotal} XP
         </p>
         <div className="space-y-2 text-left">
@@ -321,19 +312,19 @@ function XPSuccessScreen({ lines, total, shieldEvent, newShieldEarned }) {
             <div
               key={i}
               className={`flex items-center justify-between rounded-xl px-3 py-2 transition-all duration-300 ${
-                i < visible ? 'opacity-100 translate-y-0 bg-[#7c3aed]/5' : 'opacity-0 translate-y-2'
+                i < visible ? 'opacity-100 translate-y-0 bg-[#6D5CE7]/5 dark:bg-[#00E87A]/5' : 'opacity-0 translate-y-2'
               }`}
               style={{ transitionDelay: `${i * 20}ms` }}
             >
-              <span className="text-sm font-semibold text-slate-700">{line.icon} {line.label}</span>
-              <span className="text-sm font-extrabold text-[#7c3aed] tabular-nums">+{line.xp}</span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-[#C3C5DE]">{line.icon} {line.label}</span>
+              <span className="text-sm font-extrabold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums">+{line.xp}</span>
             </div>
           ))}
         </div>
         {visible >= lines.length && lines.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-            <span className="text-sm font-bold text-slate-500">Total</span>
-            <span className="text-xl font-extrabold text-[#7c3aed] tabular-nums">+{total} XP</span>
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-[#29263B] flex justify-between items-center">
+            <span className="text-sm font-bold text-slate-500 dark:text-[#9EA1BD]">Total</span>
+            <span className="text-xl font-extrabold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums">+{total} XP</span>
           </div>
         )}
       </div>
@@ -347,11 +338,11 @@ function GracePrompt({ missedDate, onAnswer, loading }) {
   })
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center animate-slide-up px-4">
-      <div className="rounded-3xl bg-white p-8 w-full max-w-sm text-center border border-[rgba(109,40,217,0.10)] shadow-[0_8px_28px_rgba(109,40,217,0.10)]">
+      <div className="glass-card p-8 w-full max-w-sm text-center">
         <p className="text-4xl mb-2">🤔</p>
-        <p className="text-xl font-extrabold text-slate-900 mb-2">Missed a day?</p>
-        <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">
-          Looks like you didn't log on <span className="font-bold text-slate-700">{formatted}</span>.
+        <p className="text-xl font-extrabold text-slate-900 dark:text-[#F1EEF9] mb-2">Missed a day?</p>
+        <p className="text-sm text-slate-500 dark:text-[#9EA1BD] font-medium leading-relaxed mb-6">
+          Looks like you didn't log on <span className="font-bold text-slate-700 dark:text-[#C3C5DE]">{formatted}</span>.
           Did you roughly hit your basics that day — eating reasonably, some movement, decent sleep?
         </p>
         <div className="space-y-2">
@@ -391,7 +382,7 @@ function StreakBadge({ count }) {
 
 function FocusBadge() {
   return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#7c3aed] bg-[#7c3aed]/10 rounded-full px-2 py-0.5 ml-2">
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#6D5CE7] dark:text-[#00E87A] bg-[#6D5CE7]/10 dark:bg-[#00E87A]/10 rounded-full px-2 py-0.5 ml-2">
       🎯 Your focus
     </span>
   )
@@ -399,17 +390,8 @@ function FocusBadge() {
 
 function DailyScoreHero({ score, deltaVsAvg }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_6px_24px_rgba(109,40,217,0.08)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-6 mb-4 text-center">
-      <div className="absolute top-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-      <p
-        className="text-5xl font-extrabold tabular-nums leading-none mb-1"
-        style={{
-          background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}
-      >
+    <div className="accent-card p-6 mb-4 text-center">
+      <p className="text-5xl font-extrabold tabular-nums leading-none mb-1 text-[#6D5CE7] dark:text-[#00E87A]">
         {score}
       </p>
       <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Today's Score</p>
@@ -418,7 +400,7 @@ function DailyScoreHero({ score, deltaVsAvg }) {
           {deltaVsAvg >= 0 ? '↑' : '↓'} {Math.abs(deltaVsAvg)} from your average
         </p>
       )}
-      <p className="text-sm text-slate-500 font-medium">{dailyScoreMessage(score)}</p>
+      <p className="text-sm text-slate-500 dark:text-[#9EA1BD] font-medium">{dailyScoreMessage(score)}</p>
     </div>
   )
 }
@@ -430,13 +412,13 @@ function SectionHeader({ icon, title, score, isFocusPillar }) {
         <span className="text-lg">{icon}</span>
         <span className="label-text mb-0">{title}</span>
         {isFocusPillar && (
-          <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#7c3aed] bg-[#7c3aed]/10 rounded-full px-2 py-0.5">
+          <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-[#6D5CE7] dark:text-[#00E87A] bg-[#6D5CE7]/10 dark:bg-[#00E87A]/10 rounded-full px-2 py-0.5">
             🎯 Focus
           </span>
         )}
       </div>
       {score != null && (
-        <p className="text-sm font-extrabold text-[#7c3aed] tabular-nums">
+        <p className="text-sm font-extrabold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums">
           {score} <span className="text-slate-400 font-semibold">· {scoreLabel(score)}</span>
         </p>
       )}
@@ -447,10 +429,7 @@ function SectionHeader({ icon, title, score, isFocusPillar }) {
 function SectionCard({ pillar, focusPillar, children }) {
   const isFocus = pillar && focusPillar === pillar
   return (
-    <div className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] p-5 ${isFocus ? 'border border-[#7c3aed]/25 ring-2 ring-[#7c3aed]/30 dark:border-[#29263B] shadow-[0_4px_20px_rgba(124,58,237,0.14)]' : 'border border-[rgba(109,40,217,0.10)] dark:border-[#29263B]'}`}>
-      {isFocus && (
-        <div className="absolute top-0 left-5 right-5 h-[2px] rounded-full bg-gradient-to-r from-[#ff7ac6] via-[#7c3aed] to-[#00cdb4] dark:hidden" />
-      )}
+    <div className={`relative overflow-hidden p-5 ${isFocus ? 'accent-card ring-2 ring-[#6D5CE7]/30 dark:ring-[#00E87A]/30' : 'glass-card'}`}>
       {children}
     </div>
   )
@@ -771,7 +750,7 @@ export default function Log() {
       <header className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="section-title mb-1">Daily Check-in</p>
-          <h1 className="text-xl font-extrabold text-slate-900">Your day so far</h1>
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-[#F1EEF9]">Your day so far</h1>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <button
@@ -791,7 +770,7 @@ export default function Log() {
       </header>
 
       {profile?.streak_shields > 0 && (
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#7c3aed] px-1 mb-3">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-[#6D5CE7] dark:text-[#00E87A] px-1 mb-3">
           <span>🛡️</span>
           <span>{profile.streak_shields} streak shield{profile.streak_shields > 1 ? 's' : ''} banked</span>
         </div>
@@ -828,9 +807,10 @@ export default function Log() {
                   <button
                     key={m.value}
                     type="button"
+                    data-selected={activeMeal === m.value}
                     onClick={() => setActiveMeal(activeMeal === m.value ? null : m.value)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                      activeMeal === m.value ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                    className={`chip px-3 py-1.5 text-xs ${
+                      activeMeal === m.value ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE]'
                     }`}
                   >
                     {m.label}
@@ -869,11 +849,11 @@ export default function Log() {
             onSelect={applyTier}
           />
           {activeFitnessTier && FITNESS_EXPAND_TIERS.has(activeFitnessTier) && (
-            <div className="mt-4 pt-4 border-t border-slate-100/80 space-y-3 animate-fade-in">
+            <div className="mt-4 pt-4 border-t border-slate-100/80 dark:border-[#29263B] space-y-3 animate-fade-in">
               <button
                 type="button"
                 onClick={() => setShowWorkoutLib((v) => !v)}
-                className="w-full text-left text-xs font-bold text-[#7c3aed] flex items-center gap-1"
+                className="w-full text-left text-xs font-bold text-[#6D5CE7] dark:text-[#00E87A] flex items-center gap-1"
               >
                 🏃 {showWorkoutLib ? 'Hide' : 'Pick from library'} ▾
               </button>
@@ -884,11 +864,11 @@ export default function Log() {
                       <button
                         key={tab}
                         type="button"
+                        data-selected={workoutLibTab === tab}
                         onClick={() => setWorkoutLibTab(tab)}
-                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                          workoutLibTab === tab ? 'text-white' : 'bg-slate-100 text-slate-500'
+                        className={`chip flex-1 py-1.5 text-xs ${
+                          workoutLibTab === tab ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-500 dark:text-[#9EA1BD]'
                         }`}
-                        style={workoutLibTab === tab ? { background: 'linear-gradient(135deg, #7c3aed, #00cdb4)' } : undefined}
                       >
                         {tab === 'presets' ? '⚡ Presets' : '⭐ Saved'}
                       </button>
@@ -900,7 +880,7 @@ export default function Log() {
                         key={w.id}
                         type="button"
                         onClick={() => applyWorkout(w)}
-                        className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 border border-[rgba(109,40,217,0.10)] text-xs font-semibold text-slate-700 hover:bg-[#7c3aed]/5 hover:border-[#7c3aed]/30 transition-colors"
+                        className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-slate-50 dark:bg-[#242033] border border-[rgba(109,40,217,0.10)] dark:border-[#3A3650] text-xs font-semibold text-slate-700 dark:text-[#C3C5DE] hover:bg-[#6D5CE7]/5 hover:border-[#6D5CE7]/30 dark:hover:bg-[#00E87A]/5 dark:hover:border-[#00E87A]/30 transition-colors"
                       >
                         <span className="text-lg">{w.emoji}</span>
                         <span className="text-[10px] leading-tight text-center">{w.name}</span>
@@ -917,9 +897,10 @@ export default function Log() {
                     <button
                       key={type}
                       type="button"
+                      data-selected={form.exercise_type === type}
                       onClick={() => updateField('exercise_type', type)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize ${
-                        form.exercise_type === type ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                      className={`chip px-3 py-1.5 text-sm capitalize ${
+                        form.exercise_type === type ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE]'
                       }`}
                     >
                       {type}
@@ -934,9 +915,10 @@ export default function Log() {
                     <button
                       key={d}
                       type="button"
+                      data-selected={form.workout_duration_min === d}
                       onClick={() => updateField('workout_duration_min', d)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                        form.workout_duration_min === d ? 'bg-[#7c3aed] text-white' : 'bg-slate-100 text-slate-600'
+                      className={`chip px-3 py-1.5 text-xs ${
+                        form.workout_duration_min === d ? '' : 'bg-slate-100 dark:bg-[#242033] text-slate-600 dark:text-[#C3C5DE]'
                       }`}
                     >
                       {d === 90 ? '90+' : d}
@@ -954,7 +936,7 @@ export default function Log() {
                   onChange={(e) => updateField('workout_intensity', Number(e.target.value))}
                   className="w-full mt-2"
                 />
-                <p className="text-sm font-bold text-[#7c3aed] tabular-nums">{form.workout_intensity}/10</p>
+                <p className="text-sm font-bold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums">{form.workout_intensity}/10</p>
               </div>
               <DetailToggle label="Workout notes" badge={details.exercise.name || details.exercise.notes ? 1 : 0}>
                 <TextField label="Activity" value={details.exercise.name} onChange={(v) => patchDetails('exercise', { name: v })} placeholder="Upper body, 5k…" />
@@ -1003,20 +985,20 @@ export default function Log() {
                   onChange={(e) => updateField('sleep_quality', Number(e.target.value))}
                   className="w-full mt-3"
                 />
-                <p className="text-sm font-bold text-[#7c3aed] tabular-nums">{form.sleep_quality}/10</p>
+                <p className="text-sm font-bold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums">{form.sleep_quality}/10</p>
               </div>
             </div>
           </DetailToggle>
         </SectionCard>
 
         {/* ── Hydration ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
+        <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">💧</span>
               <span className="label-text mb-0">Hydration</span>
             </div>
-            <p className="text-sm font-extrabold text-[#7c3aed] tabular-nums">{(form.water_ml / 1000).toFixed(1)}L</p>
+            <p className="text-sm font-extrabold text-[#6D5CE7] dark:text-[#00E87A] tabular-nums">{(form.water_ml / 1000).toFixed(1)}L</p>
           </div>
           <QuickTierSelect
             options={HYDRATION_TIERS}
@@ -1049,7 +1031,7 @@ export default function Log() {
         </SectionCard>
 
         {/* ── Mood ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
+        <div className="glass-card p-5">
           <label className="label-text">Mood</label>
           <div className="flex flex-wrap gap-1.5 justify-between">
             {MOOD_EMOJIS.map((emoji, i) => (
@@ -1057,8 +1039,10 @@ export default function Log() {
                 key={i}
                 type="button"
                 onClick={() => handleMoodChange(MOOD_VALUES[i])}
-                className={`text-xl w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  activeMoodIndex === i ? 'bg-[#7c3aed]/10 ring-2 ring-[#7c3aed] scale-110' : 'opacity-50'
+                className={`icon-btn text-xl w-10 h-10 ${
+                  activeMoodIndex === i
+                    ? 'bg-[#6D5CE7]/10 dark:bg-[#00E87A]/10 ring-2 ring-[#6D5CE7] dark:ring-[#00E87A] scale-110'
+                    : 'opacity-50'
                 }`}
               >
                 {emoji}
@@ -1088,7 +1072,7 @@ export default function Log() {
         <MyHabitsSection />
 
         {/* ── Add more ── */}
-        <div className="rounded-3xl bg-white border border-[rgba(109,40,217,0.10)] shadow-[0_4px_16px_rgba(109,40,217,0.06)] dark:bg-[rgba(20,18,32,0.92)] dark:border-[#29263B] p-5">
+        <div className="glass-card p-5">
           <DetailToggle label="+ Add more" badge={0}>
             <div>
               <label className="label-text mb-2">📚 Reading</label>
@@ -1102,7 +1086,7 @@ export default function Log() {
               </DetailToggle>
             </div>
 
-            <div className="pt-3 border-t border-slate-100">
+            <div className="pt-3 border-t border-slate-100 dark:border-[#29263B]">
               <label className="label-text mb-2">🧘 Meditation</label>
               <QuickTierSelect
                 options={MEDITATION_TIERS}
@@ -1114,7 +1098,7 @@ export default function Log() {
               </DetailToggle>
             </div>
 
-            <div className="pt-3 border-t border-slate-100">
+            <div className="pt-3 border-t border-slate-100 dark:border-[#29263B]">
               <label className="label-text mb-2">📱 Screen time</label>
               <QuickTierSelect
                 options={SCREEN_TIME_TIERS}
@@ -1128,11 +1112,7 @@ export default function Log() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full text-lg py-4 rounded-2xl font-bold text-white transition-all hover:brightness-105 active:scale-[0.98]"
-          style={{
-            background: 'linear-gradient(135deg, #ff7ac6, #7c3aed, #00cdb4)',
-            boxShadow: '0 6px 22px rgba(124,58,237,0.32)',
-          }}
+          className="btn-primary w-full text-lg !py-4"
         >
           {loading ? 'Saving…' : 'Lock in today 🔒'}
         </button>
